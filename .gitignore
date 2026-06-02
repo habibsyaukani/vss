@@ -1,0 +1,5 @@
+powershell_profile_content.ps1
+ssh_config
+.env
+node_modules/
+*.log
