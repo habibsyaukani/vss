@@ -94,6 +94,14 @@ class HowenAlarmService
 
     /**
      * Process idle alarms from alarm_raw
+     * 
+     * FIELD MAPPING CORRECTION:
+     * start_detail         = alarmValue (e.g., "avg:0.00 ; cur:0.00 ; dur:0 ; max:0.00 ; min:0.00 ; pre:5.00 ; tt:300 ; vt:2 ; satellites:22")
+     * end_detail           = endDetail (e.g., "dur:59 ; tt:300 ; cur:13.72 ; pre:13.00 ; avg:1.20 ; min:9.71 ; max:13.72 ; vt:2 ; satellites:22")
+     * 
+     * IMPORTANT: Extract dur value from endDetail!
+     * endDetail contains: "dur:59" which is the ACTUAL idle duration in seconds (59 seconds)
+     * This is the final idle duration, NOT alarmTimeLength
      */
     public function processIdleAlarm($alarmData)
     {
@@ -102,11 +110,20 @@ class HowenAlarmService
             return null;
         }
 
-        // Calculate duration in minutes
-        $startTime = strtotime($alarmData['createtime'] ?? $alarmData['start_time'] ?? 'now');
-        $endTime = strtotime($alarmData['endTime'] ?? $alarmData['end_time'] ?? 'now');
-        $durationSeconds = $endTime - $startTime;
-        $durationMinutes = ceil($durationSeconds / 60);
+        // IMPORTANT: Extract 'dur' value from endDetail
+        // endDetail format: "dur:59 ; tt:300 ; cur:13.72 ; ..."
+        $endDetail = $alarmData['endDetail'] ?? $alarmData['end_detail'] ?? '';
+        $durationSeconds = 0;
+        
+        if (preg_match('/dur:\s*(\d+)/', $endDetail, $matches)) {
+            // Extract duration from endDetail
+            $durationSeconds = (int)$matches[1];  // 59 seconds
+        } else {
+            // Fallback: use alarmTimeLength if dur not found in endDetail
+            $durationSeconds = (int)($alarmData['alarmTimeLength'] ?? $alarmData['duration_seconds'] ?? 0);
+        }
+        
+        $durationMinutes = floor($durationSeconds / 60);
 
         // Parse GPS coordinates
         $startGps = $alarmData['alarmGps'] ?? $alarmData['start_gps'] ?? null;
@@ -135,12 +152,12 @@ class HowenAlarmService
             'starting_location' => $startGps,
             'ending_time' => $alarmData['endTime'] ?? $alarmData['end_time'] ?? null,
             'ending_location' => $endGps,
-            'start_detail' => $alarmData['endDetail'] ?? null,
-            'end_detail' => $alarmData['endDetail'] ?? null,
+            'start_detail' => $alarmData['alarmValue'] ?? $alarmData['start_detail'] ?? null,
+            'end_detail' => $endDetail,  // Full endDetail string
             'start_speed' => (float)($alarmData['speed'] ?? $alarmData['start_speed'] ?? 0),
             'end_speed' => (float)($alarmData['endSpeed'] ?? $alarmData['end_speed'] ?? 0),
             'report_time' => $alarmData['reportTime'] ?? $alarmData['report_time'] ?? null,
-            'duration_seconds' => $durationSeconds,
+            'duration_seconds' => $durationSeconds,  // Extracted from endDetail dur field
             'duration_minutes' => $durationMinutes,
             'latitude_start' => $startLat ? (float)$startLat : null,
             'longitude_start' => $startLong ? (float)$startLong : null,
@@ -207,9 +224,13 @@ class HowenAlarmService
                 'reportTime' => now()->subHours(4 - $pageNum)->toDateTimeString(),
                 'endTime' => now()->subHours(3 - $pageNum)->toDateTimeString(),
                 'endGps' => '-6.2197,107.0088',
-                'alarmTimeLength' => '3600',
+                // alarmTimeLength (total time before resuming movement)
+                'alarmTimeLength' => '9200',  // 2.5 hours from createtime to endTime
                 'endSpeed' => '15',
-                'endDetail' => 'Vehicle resumed',
+                // start_detail: idle START conditions
+                'alarmValue' => 'avg:0.00 ; cur:0.00 ; dur:0 ; max:0.00 ; min:0.00 ; pre:5.00 ; tt:300 ; vt:2 ; satellites:22',
+                // end_detail: idle END conditions - dur:59 is ACTUAL idle duration before movement
+                'endDetail' => 'dur:59 ; tt:300 ; cur:13.72 ; pre:13.00 ; avg:1.20 ; min:9.71 ; max:13.72 ; vt:2 ; satellites:22',
             ],
             [
                 'guid' => 'alarm-' . (($pageNum - 1) * 2 + 2),
@@ -223,9 +244,13 @@ class HowenAlarmService
                 'reportTime' => now()->subHours(5 - $pageNum)->toDateTimeString(),
                 'endTime' => now()->subHours(4 - $pageNum)->toDateTimeString(),
                 'endGps' => '-6.1753,107.0147',
-                'alarmTimeLength' => '3600',
+                // alarmTimeLength (total time before resuming movement)
+                'alarmTimeLength' => '7340',  // 2 hours 2 min 20 sec from createtime to endTime
                 'endSpeed' => '20',
-                'endDetail' => 'Idle detected - resumed',
+                // start_detail: idle START conditions
+                'alarmValue' => 'avg:0.00 ; cur:0.00 ; dur:0 ; max:0.00 ; min:0.00 ; pre:4.50 ; tt:280 ; vt:2 ; satellites:21',
+                // end_detail: idle END conditions - dur:120 is ACTUAL idle duration before movement
+                'endDetail' => 'dur:120 ; tt:280 ; cur:11.50 ; pre:12.00 ; avg:0.95 ; min:8.50 ; max:14.00 ; vt:2 ; satellites:21',
             ],
         ];
 

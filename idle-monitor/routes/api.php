@@ -16,22 +16,24 @@ use App\Http\Controllers\Api\IdleAlarmController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-// Dashboard API Routes
-Route::prefix('dashboard')->middleware('auth:sanctum')->group(function () {
+// Dashboard API Routes - Public (no auth required for MVP)
+Route::prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'index']);
     Route::get('/statistics', [DashboardController::class, 'statistics']);
-    Route::get('/recent-alarms', [DashboardController::class, 'recentAlarms']);
+    Route::get('/recent', [DashboardController::class, 'recentAlarms']);
 });
 
-// Idle Alarm API Routes
-Route::prefix('alarms')->middleware('auth:sanctum')->group(function () {
+// Idle Alarm API Routes - Public (no auth required for MVP)
+Route::prefix('idle-alarms')->group(function () {
     Route::get('/', [IdleAlarmController::class, 'index']);
-    Route::post('/', [IdleAlarmController::class, 'store']);
+    Route::get('/device/{deviceId}', [IdleAlarmController::class, 'byDevice']);
+    Route::get('/group/{groupName}', [IdleAlarmController::class, 'byGroup']);
     Route::get('/{id}', [IdleAlarmController::class, 'show']);
     Route::put('/{id}', [IdleAlarmController::class, 'update']);
     Route::delete('/{id}', [IdleAlarmController::class, 'destroy']);
+});
+
+// Authenticated routes (for future use)
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
 });
