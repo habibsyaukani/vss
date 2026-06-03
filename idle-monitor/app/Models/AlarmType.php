@@ -5,13 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ApiToken extends Model
+class AlarmType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['token', 'expires_at'];
-
-    protected $casts = [
-        'expires_at' => 'datetime',
-    ];
+    protected $fillable = ['alarm_code', 'alarm_name'];
 }

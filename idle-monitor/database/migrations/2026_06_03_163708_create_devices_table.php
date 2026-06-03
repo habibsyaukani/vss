@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
+            $table->string('device_id', 100)->unique();
+            $table->string('device_name', 255);
+            $table->string('plate_no', 100)->nullable();
+            $table->string('imei', 100)->nullable();
+            $table->string('sim_number', 100)->nullable();
+            $table->dateTime('last_sync_at')->nullable();
             $table->timestamps();
         });
     }

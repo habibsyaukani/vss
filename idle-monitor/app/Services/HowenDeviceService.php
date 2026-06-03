@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Device;
+
 class HowenDeviceService
 {
     /**
@@ -9,7 +11,8 @@ class HowenDeviceService
      */
     public function fetchDevices()
     {
-        // TODO: Implement fetch devices logic
+        // TODO: Implement fetch devices from Howen API
+        // Use GuzzleHttp to call Howen endpoint
     }
 
     /**
@@ -17,22 +20,24 @@ class HowenDeviceService
      */
     public function getDevice($deviceId)
     {
-        // TODO: Implement get device logic
+        return Device::where('device_id', $deviceId)->firstOrFail();
     }
 
     /**
-     * Sync devices to database
+     * Sync devices to database from Howen API
      */
     public function syncDevices()
     {
-        // TODO: Implement sync devices logic
+        // TODO: Fetch devices from Howen API
+        // Upsert into devices table
     }
 
     /**
-     * Get device location
+     * Get device location from latest alarm
      */
     public function getDeviceLocation($deviceId)
     {
-        // TODO: Implement get device location logic
+        // TODO: Get latest GPS location from idle_alarms
+        // Return latitude and longitude
     }
 }

@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('api_tokens', function (Blueprint $table) {
+        Schema::create('alarm_types', function (Blueprint $table) {
             $table->id();
-            $table->string('token', 255)->unique();
-            $table->dateTime('expires_at')->nullable();
+            $table->integer('alarm_code');
+            $table->string('alarm_name', 255);
             $table->timestamps();
         });
     }
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('api_tokens');
+        Schema::dropIfExists('alarm_types');
     }
 };
