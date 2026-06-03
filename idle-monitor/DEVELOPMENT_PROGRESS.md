@@ -68,57 +68,30 @@ Expires at: 2026-06-03 17:36:33
 
 ---
 
-### ⏳ TAHAP 3 — Sinkronisasi Device
+### 🔄 TAHAP 3 — Sinkronisasi Device (IN PROGRESS)
 **Target**: Fetch devices dari Howen API → Simpan ke devices table
 
-**Deliverables**:
-- [ ] Create system_settings table (key, value) - untuk watermark
-- [ ] SyncDeviceJob implementation
-- [ ] HowenDeviceService::fetchDevices() - call endpoint /vehicle/getDeviceList.action
-- [ ] Batch insert/update ke devices table
-- [ ] Manual test jalankan job
+**Deliverables** ✅:
+- [x] Create system_settings table (key, value) ✅
+- [x] SystemSetting model dengan helper get/set ✅
+- [x] SyncDeviceJob implementation ✅
+- [x] HowenDeviceService::fetchDevices() ✅
+- [x] SyncDevicesCommand untuk test ✅
+- [ ] Fix API endpoint - 404 error on /vehicle/getDeviceList.action
 
-**Flow**:
-```
-Scheduler (1x per hari) 
-  ↓
-SyncDeviceJob
-  ↓
-HowenAuthService::getToken()
-  ↓
-HowenDeviceService::fetchDevices()
-  ↓
-POST /vss/vehicle/getDeviceList.action
-  ↓
-Parse response, map ke device_id, device_name, imei, sim_number
-  ↓
-Batch upsert ke devices table
-  ↓
-Update last_device_sync di system_settings
-```
+**Current Status**:
+- system_settings table created ✅
+- SystemSetting model with helpers ✅
+- HowenDeviceService implemented ✅
+- SyncDeviceJob ready ✅
+- **Issue**: Endpoint /vehicle/getDeviceList.action returns 404
+  - Perlu verify endpoint yang benar
+  - Atau gunakan mock data untuk testing flow
 
-**Expected Fields dari API**:
-```json
-{
-  "deviceId": "99990001",
-  "deviceName": "TRUCK-01",
-  "imei": "869459030007543",
-  "simNumber": "62812345678"
-}
-```
-
-**Mapping**:
-| API Field | Database |
-|-----------|----------|
-| deviceId | device_id |
-| deviceName | device_name |
-| imei | imei |
-| simNumber | sim_number |
-
-**Notes**:
-- Jalankan 1x per hari (bukan setiap 2 menit)
-- Gunakan upsert untuk update existing
-- Pastikan data lengkap sebelum lanjut tahap 4
+**Next Action**:
+- Verify correct endpoint dari Howen documentation
+- Atau proceed dengan mock data untuk test flow
+- Setup scheduler untuk daily sync
 
 ---
 

@@ -25,6 +25,9 @@ class SyncDeviceJob implements ShouldQueue
      */
     public function handle(): void
     {
-        //
+        $deviceService = new \App\Services\HowenDeviceService();
+        $synced = $deviceService->syncDevices();
+        
+        \Illuminate\Support\Facades\Log::info("SyncDeviceJob completed: {$synced} devices synced");
     }
 }
