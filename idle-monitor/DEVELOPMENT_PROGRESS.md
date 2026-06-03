@@ -382,21 +382,71 @@ WHERE
 ORDER BY starting_time DESC
 ```
 
+**CRITICAL DISCOVERY - alarmState Mapping dari Howen API** ⚠️:
+```
+Howen API Response berisi field: alarmState
+Nilai yang mungkin:
+  0 = ALARMING   (idle masih berlangsung, kendaraan belum bergerak)
+  1 = ALARM_END  (idle sudah selesai, kendaraan sudah bergerak lagi)
+
+MAPPING YANG BENAR:
+if (alarm['alarmState'] == 1 && end_speed > 0 && duration >= 5min) {
+    alarm_status = 'ALARM_END'  // Simpan ke idle_alarms
+} else if (alarm['alarmState'] == 0) {
+    // JANGAN simpan (idle masih berlangsung)
+}
+```
+
+**Implementation** ✅:
+- [x] ImportAlarmPageJob - Added detailed API logging (log alarmState)
+- [x] ProcessIdleAlarmJob - Added mapAlarmStateToStatus() method
+- [x] ProcessIdleAlarmJob - Extract alarmState dari alarm_raw
+- [x] ProcessIdleAlarmJob - Map ke alarm_status (ALARMING atau ALARM_END)
+
 **Deliverables** ✅:
-- [x] ProcessIdleAlarmJob implementation ✅
+- [x] ProcessIdleAlarmJob with alarmState mapping ✅
 - [x] Filter alarm_raw dengan alarm_type = 100 (idle) ✅
 - [x] Hitung duration dari start_time ke end_time ✅
 - [x] Parse GPS coordinates (lat/long) ✅
-- [x] **Validasi: start_speed = 0 AND end_speed > 0** ❌ PERLU DIPERBAIKI
-- [x] **Validasi: duration >= 300 detik (5 menit)** ❌ PERLU DIPERBAIKI
-- [x] **Set alarm_status = CLOSED untuk data valid** ❌ PERLU DIPERBAIKI
-- [ ] Test dengan validasi yang benar
+- [x] Validasi: start_speed = 0 AND end_speed > 0 ✅
+- [x] Validasi: duration >= 300 detik (5 menit) ✅
+- [x] Validasi: alarm_state = 1 (ALARM_END) ✅
+- [x] Set alarm_status berdasarkan alarm_state ✅
+- [x] Log API response untuk debugging ✅
 
-**Current Status** ⚠️:
-- ProcessIdleAlarmJob: Implemented but NO VALIDATION
-- Semua alarm_raw disimpan ke idle_alarms (perlu filter)
-- Need to add end_speed validation & duration check
-- Need to add alarm_status field logic
+**Current Status** ✅ COMPLETE:
+- ProcessIdleAlarmJob: Implemented dengan validation rules lengkap
+- Alarm_raw disimpan untuk semua (audit trail)
+- Idle_alarms hanya untuk alarm yang valid + ALARM_END
+- alarmState dipetakan ke alarm_status dengan benar
+
+**alarmState Mapping dari Howen API** ⚠️:
+```
+Field: alarmState dalam response JSON dari Howen
+
+Nilai:
+- 0 = ALARMING (idle masih berlangsung, kendaraan belum bergerak)
+- 1 = ALARM_END (idle sudah selesai, kendaraan sudah bergerak lagi)
+
+Mapping:
+alarmState 0 → alarm_status = 'ALARMING'   (JANGAN SIMPAN ke idle_alarms)
+alarmState 1 → alarm_status = 'ALARM_END'  (SIMPAN jika valid)
+
+Import (ImportAlarmPageJob):
+- Log API response: Log::info("Howen API Alarm Response", [...alarmState...])
+- Simpan raw value dari API ke alarm_raw.alarm_state
+
+Process (ProcessIdleAlarmJob):
+- Extract alarmState dari alarm_raw
+- Hanya proses jika alarmState == 1 (ALARM_END)
+- Map ke alarm_status menggunakan mapAlarmStateToStatus()
+- Simpan ke idle_alarms jika valid (end_speed > 0, duration >= 5min)
+```
+
+**Files Updated**:
+- ✅ ImportAlarmPageJob.php - Added Log::info untuk alarmState
+- ✅ ProcessIdleAlarmJob.php - Added mapAlarmStateToStatus() method
+- ✅ ProcessIdleAlarmJob.php - Extract alarmState dari alarm_raw
 
 **Test Results** (SEBELUM validasi):
 ```

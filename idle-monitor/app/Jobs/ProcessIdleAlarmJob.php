@@ -78,6 +78,21 @@ class ProcessIdleAlarmJob implements ShouldQueue
                     
                     $durationMinutes = ceil($durationSeconds / 60);
                     
+                    // MAP ALARM_STATE TO ALARM_STATUS
+                    // alarmState from Howen API:
+                    // 0 = ALARMING (idle masih berlangsung)
+                    // 1 = ALARM_END (idle sudah selesai, kendaraan bergerak lagi)
+                    // Untuk idle alarm yang valid, pasti sudah ALARM_END (state = 1)
+                    $alarmState = $alarmRaw->alarm_state ?? 1;
+                    $alarmStatus = $this->mapAlarmStateToStatus($alarmState);
+                    
+                    \Illuminate\Support\Facades\Log::info("Processing idle alarm with state mapping", [
+                        'guid' => $alarmRaw->guid,
+                        'alarmState' => $alarmState,
+                        'alarm_status' => $alarmStatus,
+                        'end_speed' => $endSpeed,
+                    ]);
+                    
                     // Parse GPS coordinates
                     $startLat = null;
                     $startLong = null;
@@ -103,8 +118,8 @@ class ProcessIdleAlarmJob implements ShouldQueue
                             'device_id' => $alarmRaw->device_id,
                             'device_name' => $alarmRaw->device_name,
                             'alarm_type' => 'Idle',
-                            'alarm_state' => $alarmRaw->alarm_state ?? 1,
-                            'alarm_status' => 'CLOSED',  // Valid idle is always CLOSED
+                            'alarm_state' => $alarmState,
+                            'alarm_status' => $alarmStatus,  // Mapped from alarmState
                             'starting_time' => $alarmRaw->start_time,
                             'starting_location' => $alarmRaw->start_gps,
                             'ending_time' => $alarmRaw->end_time,
@@ -181,5 +196,27 @@ class ProcessIdleAlarmJob implements ShouldQueue
             return "duration too short ({$minutes}min < 5min minimum)";
         }
         return "unknown validation failure";
+    }
+
+    /**
+     * Map alarmState from Howen API to alarm_status
+     * 
+     * alarmState values from Howen API:
+     * 0 = ALARMING (idle masih berlangsung, kendaraan belum bergerak)
+     * 1 = ALARM_END (idle sudah selesai, kendaraan sudah bergerak lagi)
+     * 
+     * @param int $alarmState
+     * @return string
+     */
+    private function mapAlarmStateToStatus($alarmState)
+    {
+        switch ($alarmState) {
+            case 0:
+                return 'ALARMING';  // Idle masih berlangsung
+            case 1:
+                return 'ALARM_END'; // Idle sudah selesai, kendaraan bergerak
+            default:
+                return 'CLOSED';    // Default untuk valid idle yang sudah selesai
+        }
     }
 }

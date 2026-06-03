@@ -73,6 +73,19 @@ class ImportAlarmPageJob implements ShouldQueue
                     continue;
                 }
 
+                // LOG RESPONSE API - PENTING untuk debugging
+                \Illuminate\Support\Facades\Log::info("Howen API Alarm Response", [
+                    'guid' => $alarm['guid'] ?? null,
+                    'deviceName' => $alarm['deviceName'] ?? null,
+                    'alarmState' => $alarm['alarmState'] ?? null,
+                    'alarmtype' => $alarm['alarmtype'] ?? null,
+                    'createtime' => $alarm['createtime'] ?? null,
+                    'endTime' => $alarm['endTime'] ?? null,
+                    'endSpeed' => $alarm['endSpeed'] ?? null,
+                    'alarmValue' => $alarm['alarmValue'] ?? null,
+                    'endDetail' => $alarm['endDetail'] ?? null,
+                ]);
+
                 // Map API fields to alarm_raw table
                 $alarmRawData = [
                     'guid' => $alarm['guid'] ?? uniqid(),
@@ -89,8 +102,8 @@ class ImportAlarmPageJob implements ShouldQueue
                     'end_speed' => (float)($alarm['endSpeed'] ?? $alarm['end_speed'] ?? 0),
                     'report_time' => $alarm['reportTime'] ?? $alarm['report_time'] ?? null,
                     'duration_seconds' => (int)($alarm['alarmTimeLength'] ?? $alarm['duration_seconds'] ?? 0),
-                    'start_detail' => $alarm['startDetail'] ?? null,
-                    'end_detail' => $alarm['endDetail'] ?? null,
+                    'start_detail' => $alarm['alarmValue'] ?? $alarm['start_detail'] ?? null,
+                    'end_detail' => $alarm['endDetail'] ?? $alarm['end_detail'] ?? null,
                     'raw_json' => json_encode($alarm),
                 ];
 
