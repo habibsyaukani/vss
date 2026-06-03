@@ -16,10 +16,12 @@ use Illuminate\Support\Facades\Artisan;
 
 Artisan::command('check:data', function () {
     $alarmCount = \App\Models\AlarmRaw::count();
+    $idleCount = \App\Models\IdleAlarm::count();
     $importCount = \App\Models\ImportLog::count();
     $jobsCount = \DB::table('jobs')->count();
     
     $this->info("AlarmRaw count: {$alarmCount}");
+    $this->info("IdleAlarm count: {$idleCount}");
     $this->info("ImportLog count: {$importCount}");
     $this->info("Jobs in queue: {$jobsCount}");
     
@@ -31,12 +33,12 @@ Artisan::command('check:data', function () {
         $this->line("- {$log->job_name}: {$log->status} ({$log->total_record} records) - {$log->message}");
     }
     
-    if ($alarmCount > 0) {
+    if ($idleCount > 0) {
         $this->newLine();
-        $this->info("Sample alarms:");
-        $alarms = \App\Models\AlarmRaw::limit(3)->get();
+        $this->info("Sample idle alarms:");
+        $alarms = \App\Models\IdleAlarm::limit(3)->get();
         foreach ($alarms as $alarm) {
-            $this->line("  GUID: {$alarm->guid}, Device: {$alarm->device_id}, Type: {$alarm->alarm_type}");
+            $this->line("  GUID: {$alarm->guid}, Device: {$alarm->device_name}, Duration: {$alarm->duration_minutes}min, Status: {$alarm->alarm_status}");
         }
     }
 })->describe('Check database data status');

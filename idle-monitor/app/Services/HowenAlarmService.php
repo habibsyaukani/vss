@@ -183,46 +183,52 @@ class HowenAlarmService
 
     /**
      * Get mock alarms for development
+     * Using REAL Howen device naming from fleet
      */
     private function getMockAlarms($pageNum = 1)
     {
-        if ($pageNum > 1) {
-            return [];
+        // Return different mock data based on page number
+        // This simulates pagination
+        
+        if ($pageNum > 3) {
+            return []; // Stop after page 3
         }
 
-        return [
+        $baseAlarms = [
             [
-                'guid' => 'alarm-001',
-                'deviceguid' => '99990001',
-                'deviceName' => 'TRUCK-001',
+                'guid' => 'alarm-' . (($pageNum - 1) * 2 + 1),
+                'deviceguid' => '755161145',
+                'deviceName' => 'GPE-B-8322',
                 'alarmtype' => 100,
                 'alarmState' => 1,
-                'createtime' => now()->subHours(2)->toDateTimeString(),
-                'alarmGps' => '117.153,-0.502',
+                'createtime' => now()->subHours(4 - $pageNum)->toDateTimeString(),
+                'alarmGps' => '-6.2197,107.0088',
                 'speed' => '0',
-                'reportTime' => now()->subHours(2)->toDateTimeString(),
-                'endTime' => now()->subHours(1)->toDateTimeString(),
-                'endGps' => '117.153,-0.502',
+                'reportTime' => now()->subHours(4 - $pageNum)->toDateTimeString(),
+                'endTime' => now()->subHours(3 - $pageNum)->toDateTimeString(),
+                'endGps' => '-6.2197,107.0088',
                 'alarmTimeLength' => '3600',
-                'endSpeed' => '0',
-                'endDetail' => 'Engine ON',
+                'endSpeed' => '15',
+                'endDetail' => 'Vehicle resumed',
             ],
             [
-                'guid' => 'alarm-002',
-                'deviceguid' => '99990002',
-                'deviceName' => 'TRUCK-002',
+                'guid' => 'alarm-' . (($pageNum - 1) * 2 + 2),
+                'deviceguid' => '732390518',
+                'deviceName' => 'GPE-FT-873',
                 'alarmtype' => 100,
                 'alarmState' => 1,
-                'createtime' => now()->subHours(3)->toDateTimeString(),
-                'alarmGps' => '117.154,-0.503',
+                'createtime' => now()->subHours(5 - $pageNum)->toDateTimeString(),
+                'alarmGps' => '-6.1753,107.0147',
                 'speed' => '0',
-                'reportTime' => now()->subHours(3)->toDateTimeString(),
-                'endTime' => now()->subHours(2)->toDateTimeString(),
-                'endGps' => '117.154,-0.503',
+                'reportTime' => now()->subHours(5 - $pageNum)->toDateTimeString(),
+                'endTime' => now()->subHours(4 - $pageNum)->toDateTimeString(),
+                'endGps' => '-6.1753,107.0147',
                 'alarmTimeLength' => '3600',
-                'endSpeed' => '0',
-                'endDetail' => 'Idle Detected',
+                'endSpeed' => '20',
+                'endDetail' => 'Idle detected - resumed',
             ],
         ];
+
+        return $baseAlarms;
     }
 }

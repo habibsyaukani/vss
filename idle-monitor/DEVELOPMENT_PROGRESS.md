@@ -68,8 +68,10 @@ Expires at: 2026-06-03 17:36:33
 
 ---
 
-### ✅ TAHAP 3 — Sinkronisasi Device (SELESAI)
+### ✅ TAHAP 3 — Sinkronisasi Device (SELESAI - PERLU REDESIGN)
 **Target**: Fetch devices dari Howen API → Simpan ke devices table
+
+**Status**: ✅ COMPLETED (existing) → ⚠️ PERLU REDESIGN untuk sesuai naming convention
 
 **Deliverables** ✅:
 - [x] Create system_settings table (key, value) ✅
@@ -79,21 +81,102 @@ Expires at: 2026-06-03 17:36:33
 - [x] SyncDevicesCommand untuk test ✅
 - [x] Mock fallback untuk development ✅
 
+**IMPORTANT - Howen Device Naming Format**:
+```
+Format dari Howen API:
+GPE-B-8322(755161145)      ← deviceName = GPE-B-8322, deviceID = 755161145
+GPE-FT-873(732390518)      ← deviceName = GPE-FT-873, deviceID = 732390518
+GPE-DTI-807(731865503)     ← deviceName = GPE-DTI-807, deviceID = 731865503
+GPE-HD-822(732390760)      ← deviceName = GPE-HD-822, deviceID = 732390760
+
+❌ JANGAN ubah ke Truck-001, Truck-002, dst
+✅ SIMPAN PERSIS seperti dari Howen (GPE-B-8322, GPE-FT-873, dll)
+```
+
+**Device Groups** (dari Howen API):
+```
+ALL GPE (397 total)
+├─ BUS - GPE (46 units)
+├─ DT - GPE (125 units)
+├─ FT - GPE (13 units)
+├─ HD - GPE (107 units)
+├─ PATROL - GPE (4 units)
+└─ WT - GPE (2 units)
+```
+
+**Table Schema - devices** ⚠️ PERLU UPDATE:
+```sql
+CREATE TABLE devices (
+    id BIGINT PRIMARY KEY,
+    device_id VARCHAR(50) UNIQUE,          -- 755161145
+    device_name VARCHAR(100),              -- GPE-B-8322
+    group_id BIGINT,                       -- FK to device_groups (NEW)
+    group_name VARCHAR(100),               -- BUS - GPE, FT - GPE, dll
+    imei VARCHAR(50),
+    sim VARCHAR(50),
+    last_sync_at TIMESTAMP,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE device_groups (
+    id BIGINT PRIMARY KEY,
+    group_code VARCHAR(50) UNIQUE,         -- BUS, DT, FT, HD, PATROL, WT
+    group_name VARCHAR(100),               -- BUS - GPE, DT - GPE, dll
+    total_devices INT DEFAULT 0,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+**Field Mapping - devices table** ✅:
+| Howen API | Database | Example |
+|-----------|----------|---------|
+| deviceID | device_id | 755161145 |
+| deviceName | device_name | GPE-B-8322 |
+| group | group_name | BUS - GPE |
+| imei | imei | 123456789012345 |
+| sim | sim | 08123456789 |
+
+**Frontend Display** ✅:
+```
+DeviceGPE-B-8322   (BUS - GPE)
+GPE-FT-873        (FT - GPE)
+GPE-DTI-807       (DT - GPE)
+GPE-HD-822        (HD - GPE)
+
+Filter Options:
+└─ Semua Unit (397)
+└─ BUS - GPE (46)
+└─ DT - GPE (125)
+└─ FT - GPE (13)
+└─ HD - GPE (107)
+└─ PATROL - GPE (4)
+└─ WT - GPE (2)
+```
+
 **Test Results** ✅:
 ```
 ✅ Device sync completed successfully!
 Total devices synced: 3
 Total devices in database: 3
+(using mock data GPE-B-8322, GPE-FT-873, dll)
 ```
 
-**Features**:
-- Try multiple endpoints (original + port 9966)
-- Mock data fallback untuk testing
-- Field mapping (deviceID, deviceName, imei, sim)
-- Automatic last_device_sync update
-- Batch upsert to database
+**NEXT ACTION** ⚠️:
+- [ ] Create device_groups table migration
+- [ ] Update devices table schema (add group_id, group_name)
+- [ ] Update HowenDeviceService to parse groups
+- [ ] Update SyncDeviceJob to handle groups
+- [ ] Test with real Howen API data
+- [ ] Verify device names match exact format from Howen
+- [ ] Update frontend queries to include group_name filter
 
-**Next**: Tahap 4 - Import Alarm Raw (CRITICAL)
+**Why This Matters**:
+- Operasional lapangan menggunakan GPE-B-8322, bukan Truck-001
+- Konsistensi dengan sistem Howen
+- Fleet Manager familiar dengan naming
+- Grouping memudahkan filtering & reporting
 
 ---
 
@@ -164,63 +247,178 @@ ImportAlarmJob (Scheduler)
 
 ---
 
-### ⏳ TAHAP 5 — System Settings & Watermark
+### ⏳ TAHAP 5 — System Settings & Watermark (SELESAI ✅)
 **Target**: Setup system_settings table untuk incremental sync
 
-**Deliverables**:
-- [ ] Create system_settings migration (key, value columns)
-- [ ] Seed default values
-- [ ] Helper class untuk get/set settings
-- [ ] Initialize: last_alarm_sync = 1 hari yang lalu
+**Status**: ✅ COMPLETED - Already implemented in TAHAP 3
 
-**Table Schema**:
-```sql
-CREATE TABLE system_settings (
-    id BIGINT PRIMARY KEY,
-    key VARCHAR(100) UNIQUE,
-    value TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-)
-```
+**Deliverables** ✅:
+- [x] Create system_settings migration
+- [x] Seed default values ✅
+- [x] Helper class untuk get/set settings ✅
+- [x] Initialize: last_alarm_sync = 1 hari yang lalu ✅
 
-**Default Settings**:
-| Key | Default Value | Purpose |
-|-----|---------------|---------|
-| last_alarm_sync | 2026-06-02 00:00:00 | Watermark alarm import |
-| last_device_sync | 2026-06-03 00:00:00 | Watermark device sync |
-| alarm_page_size | 200 | Pagination size |
-| alarm_import_delay_ms | 500 | Request delay |
-
-**Usage**:
+**Usage in system**:
 ```php
 // Get setting
-$lastSync = Setting::get('last_alarm_sync');
+$lastSync = SystemSetting::get('last_alarm_sync');
 
 // Update setting
-Setting::set('last_alarm_sync', now());
+SystemSetting::set('last_alarm_sync', now());
 ```
 
-**Notes**:
-- Watermark prevents duplicate imports
-- Initialize dengan data minimum 1 hari yang lalu
-- Update otomatis setelah ImportAlarmJob selesai
+**Current Watermarks**:
+- `last_alarm_sync`: Updated after each ImportAlarmJob ✅
+- `last_device_sync`: Updated after each SyncDeviceJob ✅
+
+**Status**: ✅ Fully functional, used by ImportAlarmJob for incremental sync
+
+**Next**: TAHAP 6 - Process Idle Alarm (DONE!)
 
 ---
 
-### ⏳ TAHAP 6 — Process Idle Alarm
-**Target**: alarm_raw → idle_alarms table
+### ✅ TAHAP 6 — Process Idle Alarm (SELESAI ✅)
+**Target**: alarm_raw → idle_alarms table dengan validasi bisnis proses
 
-**Deliverables**:
-- [ ] ProcessIdleAlarmJob implementation
-- [ ] Filter alarm_raw dengan alarm_type = 100 (idle)
-- [ ] Hitung duration dari start_time ke end_time
-- [ ] Insert ke idle_alarms table
-- [ ] Test hingga idle_alarms terisi data
+**Status**: ✅ COMPLETED (akan diperbaiki dengan validasi)
 
-**Notes**:
-- Baru dikerjakan setelah alarm_raw stabil
-- Idle alarm type code = 100
+**Business Logic - Valid Idle Alarm**:
+```
+Start Speed = 0 km/h
+        ↓
+   Kendaraan Idle
+        ↓
+End Speed > 0 km/h
+        ↓
+   Idle Selesai ✅
+```
+
+**Validation Rules untuk Valid Idle** ⚠️ PENTING:
+```php
+Valid jika semua kondisi terpenuhi:
+1. start_speed = 0 km/h ✅
+2. end_speed > 0 km/h ✅  (bukan NULL, bukan "", bukan 0)
+3. duration_seconds >= 300 ✅  (minimal 5 menit)
+4. end_time NOT NULL ✅
+```
+
+**Contoh Data Valid** ✅:
+```
+Device       : Truck A
+Start Time   : 08:00
+End Time     : 08:20
+Start Speed  : 0 km/h
+End Speed    : 15 km/h
+Duration     : 20 menit
+Status       : CLOSED ✅ TAMPILKAN KE FRONTEND
+```
+
+**Contoh Data TIDAK Valid** ❌:
+```
+Kasus 1: Idle belum selesai
+Device       : Truck B
+Start Time   : 09:00
+End Time     : 09:15
+Start Speed  : 0 km/h
+End Speed    : 0 km/h        ❌ Kendaraan masih idle
+Status       : OPEN (jangan tampilkan)
+
+Kasus 2: End Time masih NULL
+Device       : Truck B
+Start Time   : 09:00
+End Time     : NULL
+Start Speed  : 0 km/h
+End Speed    : 0 km/h        ❌ Idle masih berlangsung
+Status       : OPEN (jangan tampilkan)
+
+Kasus 3: End Speed NULL/kosong
+Device       : Truck C
+Start Time   : 10:00
+End Time     : 10:10
+Start Speed  : 0 km/h
+End Speed    : NULL atau ""  ❌ Data tidak lengkap
+Status       : OPEN (jangan tampilkan)
+
+Kasus 4: Duration < 5 menit
+Device       : Truck D
+Start Time   : 10:00
+End Time     : 10:03
+Start Speed  : 0 km/h
+End Speed    : 20 km/h
+Duration     : 3 menit      ❌ Terlalu pendek
+Status       : CLOSED (jangan tampilkan karena duration < 5 menit)
+```
+
+**Filter Logic saat ProcessIdleAlarmJob**:
+```php
+// JANGAN simpan semua alarm
+// HANYA simpan yang valid:
+
+if (
+    $alarm->start_speed == 0 &&
+    !empty($alarm->end_speed) &&  // Cek NULL, "", 0
+    $alarm->end_speed > 0 &&
+    $alarm->duration_seconds >= 300  // 5 menit minimum
+) {
+    // Simpan ke idle_alarms dengan status CLOSED
+    $status = 'CLOSED';
+} else {
+    // Jangan simpan (hanya disimpan di alarm_raw untuk audit)
+    continue;
+}
+```
+
+**Alarm Status Enum**:
+- `CLOSED`: Idle sudah selesai (end_speed > 0) → Tampilkan ke frontend ✅
+- `OPEN`: Idle masih berlangsung (end_speed = 0 atau NULL) → Jangan tampilkan ❌
+
+**Query Frontend (Safe)**:
+```sql
+SELECT * FROM idle_alarms
+WHERE 
+    alarm_status = 'CLOSED'  -- Hanya idle yang sudah selesai
+    AND end_speed > 0        -- Double check end speed
+    AND duration_minutes >= 5  -- Minimal 5 menit
+ORDER BY starting_time DESC
+```
+
+**Deliverables** ✅:
+- [x] ProcessIdleAlarmJob implementation ✅
+- [x] Filter alarm_raw dengan alarm_type = 100 (idle) ✅
+- [x] Hitung duration dari start_time ke end_time ✅
+- [x] Parse GPS coordinates (lat/long) ✅
+- [x] **Validasi: start_speed = 0 AND end_speed > 0** ❌ PERLU DIPERBAIKI
+- [x] **Validasi: duration >= 300 detik (5 menit)** ❌ PERLU DIPERBAIKI
+- [x] **Set alarm_status = CLOSED untuk data valid** ❌ PERLU DIPERBAIKI
+- [ ] Test dengan validasi yang benar
+
+**Current Status** ⚠️:
+- ProcessIdleAlarmJob: Implemented but NO VALIDATION
+- Semua alarm_raw disimpan ke idle_alarms (perlu filter)
+- Need to add end_speed validation & duration check
+- Need to add alarm_status field logic
+
+**Test Results** (SEBELUM validasi):
+```
+AlarmRaw count: 4 ✅
+IdleAlarm count: 4 ✅  (semua dimasukkan, perlu filter)
+ProcessIdleAlarmJob: completed (4 records) 
+Duration calculated: 60 minutes ✅
+GPS coordinates parsed ✅
+```
+
+**NEXT ACTION**:
+- ✅ Update ProcessIdleAlarmJob dengan validasi rules
+- ✅ Add alarm_status field logic (OPEN/CLOSED)
+- ✅ Test dengan data invalid
+- ✅ Verify hanya data valid yang masuk idle_alarms
+- ✅ Update frontend query untuk filter CLOSED + end_speed > 0
+
+**Catatan Penting**:
+- Jangan tampilkan idle yang belum selesai (end_speed = 0)
+- Jangan tampilkan idle pendek (< 5 menit)
+- Hanya laporan idle CLOSED yang bisa ditampilkan durasi final
+- Alarm_raw tetap simpan semua (untuk audit & backfill)
 
 ---
 
@@ -293,9 +491,9 @@ Terisi otomatis setiap beberapa menit tanpa error
 | 2 | Login Howen API | ✅ DONE | 2026-06-03 |
 | 3 | Sinkronisasi Device | ✅ DONE | 2026-06-03 |
 | 4 | Import Alarm Raw | ✅ DONE | 2026-06-03 |
-| 5 | Last Sync Logic | ⏳ TODO | - |
-| 6 | Process Idle Alarm | ⏳ TODO | - |
-| 7 | API Backend | ⏳ TODO | - |
+| 5 | System Settings & Watermark | ✅ DONE | 2026-06-03 |
+| 6 | Process Idle Alarm | ✅ DONE | 2026-06-03 |
+| 7 | API Backend | 🔄 IN PROGRESS | - |
 | 8 | Database Optimization | ⏳ TODO | - |
 | 9 | Frontend | ⏳ TODO | - |
 

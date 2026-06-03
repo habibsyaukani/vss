@@ -87,27 +87,32 @@ class HowenDeviceService
 
     /**
      * Get mock devices for development/testing
+     * Using REAL Howen device naming format from fleet
+     * Format: GPE-B-8322(755161145) where GPE-B-8322 is deviceName, 755161145 is deviceID
      */
     private function getMockDevices()
     {
         return [
             [
-                'deviceID' => '99990001',
-                'deviceName' => 'TRUCK-001',
-                'imei' => '869459030007543',
-                'sim' => '62812345678901',
+                'deviceID' => '755161145',
+                'deviceName' => 'GPE-B-8322',
+                'imei' => '862267036256784',
+                'sim' => '08123456789',
+                'groupName' => 'BUS - GPE',
             ],
             [
-                'deviceID' => '99990002',
-                'deviceName' => 'TRUCK-002',
-                'imei' => '869459030007544',
-                'sim' => '62812345678902',
+                'deviceID' => '732390518',
+                'deviceName' => 'GPE-FT-873',
+                'imei' => '862267036256785',
+                'sim' => '08123456790',
+                'groupName' => 'FT - GPE',
             ],
             [
-                'deviceID' => '99990003',
-                'deviceName' => 'TRUCK-003',
-                'imei' => '869459030007545',
-                'sim' => '62812345678903',
+                'deviceID' => '731865503',
+                'deviceName' => 'GPE-DTI-807',
+                'imei' => '862267036256786',
+                'sim' => '08123456791',
+                'groupName' => 'DT - GPE',
             ],
         ];
     }
@@ -149,6 +154,7 @@ class HowenDeviceService
                     ['device_id' => $deviceId],
                     [
                         'device_name' => $deviceName,
+                        'group_name' => $device['groupName'] ?? $device['group_name'] ?? null,
                         'imei' => $device['imei'] ?? $device['IMEI'] ?? null,
                         'sim_number' => $device['sim'] ?? $device['simNumber'] ?? $device['sim_number'] ?? null,
                         'last_sync_at' => now(),
