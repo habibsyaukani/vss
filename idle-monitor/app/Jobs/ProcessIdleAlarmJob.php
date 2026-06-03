@@ -121,9 +121,9 @@ class ProcessIdleAlarmJob implements ShouldQueue
                             'alarm_state' => $alarmState,
                             'alarm_status' => $alarmStatus,  // Mapped from alarmState
                             'starting_time' => $alarmRaw->start_time,
-                            'starting_location' => $alarmRaw->start_gps,
+                            'starting_location' => $alarmRaw->start_gps,  // Keep as "long,lat" string
                             'ending_time' => $alarmRaw->end_time,
-                            'ending_location' => $alarmRaw->end_gps,
+                            'ending_location' => $alarmRaw->end_gps,      // Keep as "long,lat" string
                             'start_detail' => $alarmRaw->start_detail,
                             'end_detail' => $alarmRaw->end_detail,
                             'start_speed' => $startSpeed,

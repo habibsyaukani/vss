@@ -938,3 +938,41 @@ Frontend
 
 **Last Updated**: 2026-06-03 10:30 AM
 **By**: Development Team
+
+
+---
+
+## 📍 GPS FORMAT CORRECTION - IMPORTANT NOTE
+
+**Howen API sends GPS in format: `longitude,latitude`** (NOT latitude,longitude)
+
+Example from Howen API:
+```
+alarmGps: "117.679407,1.029363"
+→ Longitude (X): 117.679407
+→ Latitude (Y): 1.029363
+```
+
+**Database storage** (idle_alarms table):
+```
+starting_location: "117.679407,1.029363"      (full string, long,lat)
+latitude_start: 1.029363                        (extracted latitude)
+longitude_start: 117.679407                     (extracted longitude)
+(same for ending_location, latitude_end, longitude_end)
+```
+
+**API Response** will show:
+```json
+{
+  "starting_location": "117.679407,1.029363",
+  "latitude_start": 1.029363,
+  "longitude_start": 117.679407,
+  "ending_location": "117.679596,1.029208",
+  "latitude_end": 1.029208,
+  "longitude_end": 117.679596
+}
+```
+
+This allows frontend to use:
+- Full string format for display/UI
+- Separated lat/long values for map plotting
