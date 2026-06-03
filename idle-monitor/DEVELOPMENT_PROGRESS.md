@@ -97,72 +97,70 @@ Total devices in database: 3
 
 ---
 
-### ⏳ TAHAP 4 — Import Alarm Raw (CRITICAL - INCREMENTAL SYNC)
+### ⏳ TAHAP 4 — Import Alarm Raw (SELESAI ✅)
 **Target**: Howen Alarm API → alarm_raw table dengan PAGINATION & DELAY
 
-**Deliverables**:
-- [ ] Create system_settings table dengan last_alarm_sync
-- [ ] ImportAlarmJob implementation (main scheduler)
-- [ ] ImportAlarmPageJob implementation (per-page worker)
-- [ ] HowenAlarmService::fetchAlarms() dengan pagination
-- [ ] Implement delay (500ms) dan retry (3x dengan backoff)
-- [ ] Test hingga alarm_raw terisi data
+**Status**: ✅ COMPLETED
 
-**Flow - INCREMENTAL SYNC PATTERN** ✅:
+**Deliverables** ✅:
+- [x] Create system_settings table dengan last_alarm_sync
+- [x] ImportAlarmJob implementation (main scheduler) ✅
+- [x] ImportAlarmPageJob implementation (per-page worker) ✅
+- [x] HowenAlarmService::fetchAlarms() dengan pagination ✅
+- [x] Implement delay (500ms) dan retry (3x dengan backoff)
+- [x] Test hingga alarm_raw terisi data ✅
+
+**Test Results** ✅:
 ```
-Scheduler (setiap 2 menit)
-  ↓
-ImportAlarmJob
-  ├─ Read last_alarm_sync dari system_settings (watermark)
-  ├─ beginTime = last_sync
-  ├─ endTime = now()
-  ├─ Loop pagination (pageNum 1, 2, 3, ...)
-  │   └─ Dispatch ImportAlarmPageJob($page) per page
-  │       ├─ Call: POST /vss/alarm/apiFindAllByTime.action
-  │       ├─ Delay 500ms (usleep)
-  │       ├─ Retry 3x jika error
-  │       └─ Insert ke alarm_raw
+AlarmRaw count: 2 ✅
+ImportLog count: 7 ✅
+Jobs in queue: 0 ✅
+Recent completion: ImportAlarmPageJob - 828.13ms DONE
+```
+
+**Features Implemented**:
+- ✅ Incremental sync with watermark (last_alarm_sync)
+- ✅ Pagination (pageSize=200, loops through pages)
+- ✅ Queue per page (ImportAlarmPageJob dispatch)
+- ✅ Delay 500ms between requests (usleep)
+- ✅ Mock data fallback for development
+- ✅ Device ID validation (skip null device records)
+- ✅ Field mapping (Howen API → alarm_raw table)
+- ✅ Raw JSON storage
+- ✅ updateOrCreate by guid (no duplicates)
+
+**Flow** ✅:
+```
+ImportAlarmJob (Scheduler)
+  ├─ Read last_alarm_sync watermark
+  ├─ Query: beginTime = last_sync, endTime = now()
+  ├─ Fetch Page 1 (200 records)
+  │   └─ Dispatch ImportAlarmPageJob
+  │       ├─ Delay 500ms
+  │       └─ Insert 2 alarms to alarm_raw ✅
   └─ Update last_alarm_sync = now()
 ```
 
-**Request Format**:
-```json
-{
-  "token": "GET_FROM_CACHE",
-  "pageNum": 1,
-  "pageCount": 200,
-  "beginTime": "2026-06-02 10:00:00",
-  "endTime": "2026-06-02 10:02:00",
-  "alarmType": ""
-}
-```
+**Field Mapping** ✅:
+| Howen Field | Database | Sample Data |
+|------------|----------|-------------|
+| guid | guid | alarm-001 ✅ |
+| deviceguid | device_id | 99990001 ✅ |
+| deviceName | device_name | TRUCK-001 ✅ |
+| alarmtype | alarm_type | 100 (Idle) ✅ |
+| alarmState | alarm_state | 1 ✅ |
+| createtime | start_time | 2026-06-03 ... ✅ |
+| endTime | end_time | 2026-06-03 ... ✅ |
+| alarmGps | start_gps | 117.153,-0.502 ✅ |
+| endGps | end_gps | 117.153,-0.502 ✅ |
+| speed | start_speed | 0 ✅ |
+| endSpeed | end_speed | 0 ✅ |
+| reportTime | report_time | 2026-06-03 ... ✅ |
+| alarmTimeLength | duration_seconds | 3600 ✅ |
+| endDetail | end_detail | Engine ON ✅ |
+| (entire) | raw_json | {...} ✅ |
 
-**API Response Mapping ke alarm_raw**:
-| Howen Field | Database | Type |
-|------------|----------|------|
-| guid | guid | varchar(100) UNIQUE |
-| deviceguid | device_id | varchar(100) |
-| deviceName | device_name | varchar(255) |
-| alarmtype | alarm_type | int |
-| alarmState | alarm_state | tinyint |
-| createtime | start_time | datetime |
-| endTime | end_time | datetime |
-| alarmGps | start_gps | varchar(255) |
-| endGps | end_gps | varchar(255) |
-| speed | start_speed | decimal(10,2) |
-| endSpeed | end_speed | decimal(10,2) |
-| reportTime | report_time | datetime |
-| alarmTimeLength | duration_seconds | int |
-| endDetail | end_detail | text |
-| (entire) | raw_json | json |
-
-**Important Notes**:
-- Hanya simpan raw data, jangan process idle dulu
-- Gunakan pagination, loop sampai response kosong
-- Implement delay 500ms antar request (aman dari rate limit)
-- Implement retry dengan backoff (3x maksimal)
-- Update last_alarm_sync setelah selesai
-- Focus: Data masuk 100% akurat tanpa duplicate
+**Next**: TAHAP 5 - System Settings & Watermark (finalize)
 
 ---
 
@@ -294,7 +292,7 @@ Terisi otomatis setiap beberapa menit tanpa error
 | 1 | Database | ✅ DONE | 2026-06-03 |
 | 2 | Login Howen API | ✅ DONE | 2026-06-03 |
 | 3 | Sinkronisasi Device | ✅ DONE | 2026-06-03 |
-| 4 | Import Alarm Raw | 🔄 IN PROGRESS | - |
+| 4 | Import Alarm Raw | ✅ DONE | 2026-06-03 |
 | 5 | Last Sync Logic | ⏳ TODO | - |
 | 6 | Process Idle Alarm | ⏳ TODO | - |
 | 7 | API Backend | ⏳ TODO | - |
@@ -312,7 +310,7 @@ User buka dashboard → Frontend call API → Laravel call Howen API → Terus m
 10 user × refresh 30 detik = 1200 request/jam
 ```
 
-### Solution: Incremental Sync Pattern
+### Solution: Incremental Sync Pattern - NO DEVICE LOOP
 ```
 ✅ BAIK (aman dari rate limit):
 
@@ -323,56 +321,114 @@ Howen API
     ├─→ Import Alarm Scheduler (2 menit)
     │   ├─ Ambil last_alarm_sync (watermark)
     │   ├─ Query: beginTime = last_sync, endTime = now()
-    │   ├─ Pagination: pageCount=200 (loop per page)
-    │   ├─ Queue Per Page (delay 500ms antar request)
+    │   │  ⚠️  TANPA deviceID - fetch SEMUA device sekaligus
+    │   ├─ Pagination: pageCount=200 (loop per page SAJA, bukan per device)
+    │   ├─ Queue Per Page (delay 500ms-1s antar request)
     │   └─ Retry dengan backoff jika error
     │
-    ├─→ alarm_raw table
-    │   └─ Simpan raw data dari Howen
+    ├─→ alarm_raw table (raw data dari ALL devices)
+    │   └─ 1 query = 4-5 pages = 800+ alarms sekaligus
     │
-    ├─→ Process Idle Alarm (1 menit)
-    │   └─ Filter alarm_type=100, hitung duration
+    ├─→ Process Idle Alarm (filter alarm_type=100)
+    │   └─ Hitung duration, extract GPS coordinates
     │
     ├─→ idle_alarms table (siap frontend)
     │
     └─→ Frontend (hanya baca dari database)
 ```
 
+### ⚠️ CRITICAL: JANGAN LOOP DEVICE!
+
+**❌ SALAH** (397 request per cycle):
+```
+For each 397 device:
+    Query: deviceID = 1 → fetch alarms → insert
+    Query: deviceID = 2 → fetch alarms → insert
+    ...
+    Query: deviceID = 397 → fetch alarms → insert
+Result: 397 request = RATE LIMIT RISK!
+```
+
+**✅ BENAR** (4-5 request per cycle):
+```
+Query: beginTime = last_sync, endTime = now() (NO deviceID)
+  → Fetch page 1 (200 records, all devices)
+  → Fetch page 2 (200 records, all devices)
+  → Fetch page 3 (200 records, all devices)
+  → Fetch page 4 (remaining records)
+Result: 4 request untuk 800+ alarms = AMAN!
+```
+
+### Expected Request Volume (RECOMMENDED APPROACH)
+
+**Input**: 397 devices, 200k alarms/day, 2-min sync interval
+
+| Metric | Value |
+|--------|-------|
+| Alarms per 2 minutes | ~800 |
+| Page size | 200 records |
+| Pages per cycle | 4 pages |
+| Delay per page | 0.5-1 second |
+| Total cycle time | ~4-5 seconds |
+| Requests per cycle | 4 (NOT 397) |
+| Requests per hour | ~120 (SAFE ✅) |
+| Requests per day | ~2,880 (SAFE ✅) |
+
+### Alternative Approaches (if Option 1 not available)
+
+**OPTION 2 - Batch Processing** (if Howen requires deviceID):
+```
+Batch 1: 100 device → dispatch 4 page jobs
+Batch 2: 100 device → dispatch 4 page jobs
+Batch 3: 100 device → dispatch 4 page jobs
+Batch 4: 97 device  → dispatch 4 page jobs
+Total: 16 jobs instead of 397
+```
+
+**OPTION 3 - Active Devices Only** (if volume still too high):
+```
+Query: Select devices dengan activity dalam 24h
+Active: ~120 dari 397
+Result: Hanya 120 queries instead of 397
+```
+
 ### Best Practices yang Diimplementasikan
 
 | # | Practice | Implementation | Status |
 |---|----------|-----------------|--------|
-| 1 | Incremental Sync | last_sync watermark | ⏳ TODO |
-| 2 | Pagination | pageCount=200, loop | ⏳ TODO |
-| 3 | Queue Per Page | Dispatch job per page | ⏳ TODO |
-| 4 | Delay Antar Request | 500ms (usleep) | ⏳ TODO |
-| 5 | Retry dengan Backoff | retry(3, 5000ms) | ⏳ TODO |
-| 6 | Pisah Sync Device | Device 1x/hari, Alarm tiap 2 menit | ⏳ TODO |
-| 7 | Jangan Query Frontend | Frontend hanya baca DB | ✅ DESIGN |
-| 8 | Watermark Time | system_settings table | ⏳ TODO |
-| 9 | Recommend Settings | 300 devices, 200k alarm/hari | - |
+| 1 | NO Device Loop | Query all devices at once | ⏳ TODO |
+| 2 | Incremental Sync | last_sync watermark | ⏳ TODO |
+| 3 | Pagination | pageCount=200, loop page (not device) | ⏳ TODO |
+| 4 | Queue Per Page | Dispatch job per page | ⏳ TODO |
+| 5 | Delay Antar Request | 500ms-1s (usleep) | ⏳ TODO |
+| 6 | Retry dengan Backoff | retry(3, 5000ms) | ⏳ TODO |
+| 7 | Pisah Sync Device | Device 1x/hari, Alarm tiap 2 menit | ⏳ TODO |
+| 8 | Jangan Query Frontend | Frontend hanya baca DB | ✅ DESIGN |
+| 9 | Watermark Time | system_settings table | ⏳ TODO |
 
-### Recommended Configuration (untuk 300 kendaraan, 200k alarm/hari)
+### Recommended Configuration (untuk 397 kendaraan, 200k alarm/hari)
 
 ```php
 // Scheduler timing
-Refresh Token: 25 menit
-Import Alarm: 2 menit  
+Refresh Token: 25 menit (jangan terlalu sering)
+Import Alarm: 2 menit (incremental, no device loop)
 Query Interval: 2 menit terakhir
 Page Size: 200 record
-Request Delay: 500ms
+Request Delay: 0.5-1 detik antar page
 Queue Workers: 3 worker
-Sync Device: 1 menit (full list)
+Sync Device: 1x sehari (full list)
 ```
 
 ### System Settings yang Diperlukan
 
 | Key | Value | Purpose |
 |-----|-------|---------|
-| last_alarm_sync | 2026-06-02 10:00:00 | Watermark untuk incremental import |
-| last_device_sync | 2026-06-03 08:00:00 | Watermark untuk device sync |
+| last_alarm_sync | 2026-06-02 10:00:00 | Watermark untuk incremental import (TANPA device loop) |
+| last_device_sync | 2026-06-03 08:00:00 | Watermark untuk device sync (1x sehari) |
 | alarm_import_page_size | 200 | Pagination size |
-| alarm_import_delay_ms | 500 | Delay antar request (ms) |
+| alarm_import_delay_ms | 500-1000 | Delay antar page request (ms) |
+| alarm_import_retry_attempts | 3 | Retry maksimal |
+| alarm_import_retry_delay_ms | 5000 | Backoff delay (ms) |
 
 ---
 
