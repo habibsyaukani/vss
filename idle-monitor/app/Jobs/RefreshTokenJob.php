@@ -25,6 +25,7 @@ class RefreshTokenJob implements ShouldQueue
      */
     public function handle(): void
     {
-        //
+        $authService = new \App\Services\HowenAuthService();
+        $authService->refreshToken();
     }
 }

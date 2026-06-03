@@ -33,21 +33,31 @@
 **Target**: Login berhasil → Token tersimpan di api_tokens → Token bisa dipakai request berikutnya
 
 **Deliverables**:
-- [ ] HowenAuthService::login() - Login ke Howen API
-- [ ] HowenAuthService::refreshToken() - Refresh token jika expired
-- [ ] HowenAuthService::getToken() - Ambil token dari cache atau database
-- [ ] Test login sampai token tersimpan di database
+- [x] HowenAuthService::authenticate() - Login ke Howen API
+- [x] HowenAuthService::refreshToken() - Refresh token jika expired
+- [x] HowenAuthService::getToken() - Ambil token dari cache atau database
+- [x] RefreshTokenJob implementation
+- [x] TestHowenAuth command untuk test login
+- [ ] Fix authentication error - Credentials verification needed
 
 **Progress**:
-- [ ] Cari Howen API documentation
-- [ ] Implementasi login endpoint
-- [ ] Setup token caching dengan Redis
-- [ ] Test login & verify token stored
+- [x] Setup Howen API URL: https://vss.ptdigital.co.id/vss/
+- [x] Setup credentials di .env
+- [x] Implementasi HowenAuthService dengan endpoint /user/login.action
+- [x] Setup token storage di api_tokens table + Redis cache
+- [ ] Verify login response & token storage
+- [ ] Check Howen API credentials validity
 
-**Notes**:
-- Token Howen expired setiap 30 menit jika tidak digunakan
-- Simpan token di api_tokens table + Redis cache
-- Setup error handling untuk retry
+**Current Issue**:
+- Authentication failed: Username or password Wrong
+- Need to verify if credentials are correct or API endpoint format differs
+- Check if password hashing is correct (MD5)
+
+**Next Steps**:
+- Verify credentials dengan Howen admin
+- Check API endpoint format (form_params vs json)
+- Review Howen API documentation untuk exact request format
+- Test dengan Postman/Insomnia
 
 ---
 
