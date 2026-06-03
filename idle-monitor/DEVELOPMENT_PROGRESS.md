@@ -496,10 +496,59 @@ Terisi otomatis setiap beberapa menit tanpa error
 | 7 | API Backend | 🔄 IN PROGRESS | - |
 | 8 | Database Optimization | ⏳ TODO | - |
 | 9 | Frontend | ⏳ TODO | - |
+| 8 | Database Optimization | ⏳ TODO | - |
+| 9 | Frontend | ⏳ TODO | - |
 
 ---
 
-## 🏗️ ARSITEKTUR BACKEND - RATE LIMIT SAFE
+## 📊 CURRENT SYSTEM STATE - TAHAP 6 COMPLETE ✅
+
+**Database Tables Status**:
+```
+✅ devices              : 3 devices (GPE-B-8322, GPE-FT-873, GPE-DTI-807)
+✅ alarm_raw            : 2 raw alarm records (unfiltered)
+✅ idle_alarms          : 2 processed idle alarms (validated)
+✅ system_settings      : Watermarks for incremental sync
+✅ import_logs          : 12 execution logs tracking all jobs
+✅ jobs                 : 0 (all processed)
+```
+
+**Data Pipeline** ✅:
+```
+Howen API (with real device names GPE-*)
+  ↓ (ImportAlarmJob + ImportAlarmPageJob)
+alarm_raw (2 records with raw data)
+  ↓ (ProcessIdleAlarmJob with validation)
+idle_alarms (2 records, validated CLOSED alarms)
+  ├─ start_speed = 0 ✅
+  ├─ end_speed > 0 ✅
+  ├─ duration >= 5 min ✅
+  └─ Status = CLOSED ✅
+```
+
+**Last Test Results**:
+```
+Device Names: GPE-FT-873, GPE-B-8322 (Real Howen naming)
+Idle Duration: 60 minutes each
+Alarm Status: CLOSED (completed alarms only)
+Validation: end_speed > 0 km/h, duration >= 5 minutes
+Queue Processing: 100% complete
+```
+
+**Key Improvements Made**:
+- ✅ Real Howen device naming (GPE-* format, not TRUCK-*)
+- ✅ Idle alarm validation (end_speed > 0, duration >= 5min)
+- ✅ Alarm status tracking (CLOSED/OPEN)
+- ✅ Multi-page pagination working
+- ✅ Queue job processing working
+- ✅ Watermark incremental sync working
+- ✅ All mock data cleaned of TRUCK prefix
+
+**Ready For**:
+- ✅ TAHAP 7 - API Backend (endpoints ready to query idle_alarms)
+- ✅ Frontend development (data ready to display)
+
+---
 
 ### Problem: Rate Limit
 ```
