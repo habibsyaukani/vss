@@ -72,47 +72,166 @@ Expires at: 2026-06-03 17:36:33
 **Target**: Fetch devices dari Howen API → Simpan ke devices table
 
 **Deliverables**:
+- [ ] Create system_settings table (key, value) - untuk watermark
 - [ ] SyncDeviceJob implementation
-- [ ] Fetch dari Howen API endpoint
-- [ ] Insert/Update devices table (device_id, device_name, imei, sim_number)
+- [ ] HowenDeviceService::fetchDevices() - call endpoint /vehicle/getDeviceList.action
+- [ ] Batch insert/update ke devices table
 - [ ] Manual test jalankan job
 
+**Flow**:
+```
+Scheduler (1x per hari) 
+  ↓
+SyncDeviceJob
+  ↓
+HowenAuthService::getToken()
+  ↓
+HowenDeviceService::fetchDevices()
+  ↓
+POST /vss/vehicle/getDeviceList.action
+  ↓
+Parse response, map ke device_id, device_name, imei, sim_number
+  ↓
+Batch upsert ke devices table
+  ↓
+Update last_device_sync di system_settings
+```
+
+**Expected Fields dari API**:
+```json
+{
+  "deviceId": "99990001",
+  "deviceName": "TRUCK-01",
+  "imei": "869459030007543",
+  "simNumber": "62812345678"
+}
+```
+
+**Mapping**:
+| API Field | Database |
+|-----------|----------|
+| deviceId | device_id |
+| deviceName | device_name |
+| imei | imei |
+| simNumber | sim_number |
+
 **Notes**:
-- Pastikan tabel devices terisi sebelum lanjut ke tahap 4
-- Gunakan upsert untuk update existing devices
+- Jalankan 1x per hari (bukan setiap 2 menit)
+- Gunakan upsert untuk update existing
+- Pastikan data lengkap sebelum lanjut tahap 4
 
 ---
 
-### ⏳ TAHAP 4 — Import Alarm Raw (CRITICAL)
-**Target**: Howen Alarm API → alarm_raw table
+### ⏳ TAHAP 4 — Import Alarm Raw (CRITICAL - INCREMENTAL SYNC)
+**Target**: Howen Alarm API → alarm_raw table dengan PAGINATION & DELAY
 
 **Deliverables**:
-- [ ] ImportAlarmJob implementation
-- [ ] Flow: ambil token → ambil last_sync → request alarm dari Howen API → insert alarm_raw
-- [ ] Don't process idle alarms yet, fokus raw data masuk 100%
+- [ ] Create system_settings table dengan last_alarm_sync
+- [ ] ImportAlarmJob implementation (main scheduler)
+- [ ] ImportAlarmPageJob implementation (per-page worker)
+- [ ] HowenAlarmService::fetchAlarms() dengan pagination
+- [ ] Implement delay (500ms) dan retry (3x dengan backoff)
 - [ ] Test hingga alarm_raw terisi data
 
-**Notes**:
-- Jangan process idle dulu
-- Focus: Pastikan data masuk 100% akurat
-- Gunakan last_sync untuk pagination query
+**Flow - INCREMENTAL SYNC PATTERN** ✅:
+```
+Scheduler (setiap 2 menit)
+  ↓
+ImportAlarmJob
+  ├─ Read last_alarm_sync dari system_settings (watermark)
+  ├─ beginTime = last_sync
+  ├─ endTime = now()
+  ├─ Loop pagination (pageNum 1, 2, 3, ...)
+  │   └─ Dispatch ImportAlarmPageJob($page) per page
+  │       ├─ Call: POST /vss/alarm/apiFindAllByTime.action
+  │       ├─ Delay 500ms (usleep)
+  │       ├─ Retry 3x jika error
+  │       └─ Insert ke alarm_raw
+  └─ Update last_alarm_sync = now()
+```
+
+**Request Format**:
+```json
+{
+  "token": "GET_FROM_CACHE",
+  "pageNum": 1,
+  "pageCount": 200,
+  "beginTime": "2026-06-02 10:00:00",
+  "endTime": "2026-06-02 10:02:00",
+  "alarmType": ""
+}
+```
+
+**API Response Mapping ke alarm_raw**:
+| Howen Field | Database | Type |
+|------------|----------|------|
+| guid | guid | varchar(100) UNIQUE |
+| deviceguid | device_id | varchar(100) |
+| deviceName | device_name | varchar(255) |
+| alarmtype | alarm_type | int |
+| alarmState | alarm_state | tinyint |
+| createtime | start_time | datetime |
+| endTime | end_time | datetime |
+| alarmGps | start_gps | varchar(255) |
+| endGps | end_gps | varchar(255) |
+| speed | start_speed | decimal(10,2) |
+| endSpeed | end_speed | decimal(10,2) |
+| reportTime | report_time | datetime |
+| alarmTimeLength | duration_seconds | int |
+| endDetail | end_detail | text |
+| (entire) | raw_json | json |
+
+**Important Notes**:
+- Hanya simpan raw data, jangan process idle dulu
+- Gunakan pagination, loop sampai response kosong
+- Implement delay 500ms antar request (aman dari rate limit)
+- Implement retry dengan backoff (3x maksimal)
+- Update last_alarm_sync setelah selesai
+- Focus: Data masuk 100% akurat tanpa duplicate
 
 ---
 
-### ⏳ TAHAP 5 — Last Sync Management
-**Target**: Prevent duplicate data import
+### ⏳ TAHAP 5 — System Settings & Watermark
+**Target**: Setup system_settings table untuk incremental sync
 
 **Deliverables**:
-- [ ] Create system_settings table (key, value columns)
-- [ ] Store last_alarm_sync timestamp
-- [ ] Update last_sync setelah ImportAlarmJob selesai
-- [ ] ImportAlarmJob: mulai query dari last_sync timestamp
+- [ ] Create system_settings migration (key, value columns)
+- [ ] Seed default values
+- [ ] Helper class untuk get/set settings
+- [ ] Initialize: last_alarm_sync = 1 hari yang lalu
 
-**Flow**:
-1. Import alarm jam 10:00
-2. Simpan last_sync = 2026-06-03 10:00:00
-3. Import berikutnya mulai dari 2026-06-03 10:00:00
-4. Tidak ada duplicate data
+**Table Schema**:
+```sql
+CREATE TABLE system_settings (
+    id BIGINT PRIMARY KEY,
+    key VARCHAR(100) UNIQUE,
+    value TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+)
+```
+
+**Default Settings**:
+| Key | Default Value | Purpose |
+|-----|---------------|---------|
+| last_alarm_sync | 2026-06-02 00:00:00 | Watermark alarm import |
+| last_device_sync | 2026-06-03 00:00:00 | Watermark device sync |
+| alarm_page_size | 200 | Pagination size |
+| alarm_import_delay_ms | 500 | Request delay |
+
+**Usage**:
+```php
+// Get setting
+$lastSync = Setting::get('last_alarm_sync');
+
+// Update setting
+Setting::set('last_alarm_sync', now());
+```
+
+**Notes**:
+- Watermark prevents duplicate imports
+- Initialize dengan data minimum 1 hari yang lalu
+- Update otomatis setelah ImportAlarmJob selesai
 
 ---
 
@@ -209,9 +328,80 @@ Terisi otomatis setiap beberapa menit tanpa error
 
 ---
 
-## 🔑 REQUIREMENTS
+## 🏗️ ARSITEKTUR BACKEND - RATE LIMIT SAFE
 
-### Howen API Endpoints Needed:
+### Problem: Rate Limit
+```
+❌ BURUK (mudah kena rate limit):
+User buka dashboard → Frontend call API → Laravel call Howen API → Terus menerus
+10 user × refresh 30 detik = 1200 request/jam
+```
+
+### Solution: Incremental Sync Pattern
+```
+✅ BAIK (aman dari rate limit):
+
+Howen API
+    │
+    ├─→ Refresh Token (25 menit)
+    │
+    ├─→ Import Alarm Scheduler (2 menit)
+    │   ├─ Ambil last_alarm_sync (watermark)
+    │   ├─ Query: beginTime = last_sync, endTime = now()
+    │   ├─ Pagination: pageCount=200 (loop per page)
+    │   ├─ Queue Per Page (delay 500ms antar request)
+    │   └─ Retry dengan backoff jika error
+    │
+    ├─→ alarm_raw table
+    │   └─ Simpan raw data dari Howen
+    │
+    ├─→ Process Idle Alarm (1 menit)
+    │   └─ Filter alarm_type=100, hitung duration
+    │
+    ├─→ idle_alarms table (siap frontend)
+    │
+    └─→ Frontend (hanya baca dari database)
+```
+
+### Best Practices yang Diimplementasikan
+
+| # | Practice | Implementation | Status |
+|---|----------|-----------------|--------|
+| 1 | Incremental Sync | last_sync watermark | ⏳ TODO |
+| 2 | Pagination | pageCount=200, loop | ⏳ TODO |
+| 3 | Queue Per Page | Dispatch job per page | ⏳ TODO |
+| 4 | Delay Antar Request | 500ms (usleep) | ⏳ TODO |
+| 5 | Retry dengan Backoff | retry(3, 5000ms) | ⏳ TODO |
+| 6 | Pisah Sync Device | Device 1x/hari, Alarm tiap 2 menit | ⏳ TODO |
+| 7 | Jangan Query Frontend | Frontend hanya baca DB | ✅ DESIGN |
+| 8 | Watermark Time | system_settings table | ⏳ TODO |
+| 9 | Recommend Settings | 300 devices, 200k alarm/hari | - |
+
+### Recommended Configuration (untuk 300 kendaraan, 200k alarm/hari)
+
+```php
+// Scheduler timing
+Refresh Token: 25 menit
+Import Alarm: 2 menit  
+Query Interval: 2 menit terakhir
+Page Size: 200 record
+Request Delay: 500ms
+Queue Workers: 3 worker
+Sync Device: 1 menit (full list)
+```
+
+### System Settings yang Diperlukan
+
+| Key | Value | Purpose |
+|-----|-------|---------|
+| last_alarm_sync | 2026-06-02 10:00:00 | Watermark untuk incremental import |
+| last_device_sync | 2026-06-03 08:00:00 | Watermark untuk device sync |
+| alarm_import_page_size | 200 | Pagination size |
+| alarm_import_delay_ms | 500 | Delay antar request (ms) |
+
+---
+
+
 - [ ] Login endpoint (untuk authenticate)
 - [ ] Query History Alarm by Page endpoint
 - [ ] Device list endpoint
