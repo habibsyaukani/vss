@@ -26,52 +26,72 @@ class HowenAuthService
     /**
      * Authenticate with Howen API
      * Endpoint: POST /user/login.action
-     * Response: {"status":10000, "msg":"Success", "data":{"token":"xxxxxxxxxxxx"}}
+     * Try multiple password encoding methods
      */
     public function authenticate()
     {
         try {
-            // Password harus di-MD5 untuk login
-            $passwordMd5 = md5($this->password);
-            
-            $response = $this->client->post("{$this->apiUrl}/user/login.action", [
-                'form_params' => [
+            // Try berbagai format password
+            $passwordAttempts = [
+                'plain' => $this->password,
+                'md5' => md5($this->password),
+                'md5_lower' => strtolower(md5($this->password)),
+                'md5_upper' => strtoupper(md5($this->password)),
+            ];
+
+            foreach ($passwordAttempts as $method => $password) {
+                Log::info("Howen Auth Attempt ({$method})", [
+                    'url' => "{$this->apiUrl}/user/login.action",
                     'username' => $this->username,
-                    'password' => $passwordMd5,
-                ],
-                'timeout' => 10,
-                'verify' => false,
-            ]);
-
-            $data = json_decode($response->getBody(), true);
-
-            \Log::info('Howen API Response', ['data' => $data]);
-
-            if (isset($data['status']) && $data['status'] == 10000 && isset($data['data']['token'])) {
-                $token = $data['data']['token'];
+                    'password' => $password,
+                ]);
                 
-                // Simpan token ke database
-                $expiresAt = now()->addMinutes(30);
-                
-                ApiToken::updateOrCreate(
-                    ['token' => $token],
-                    ['expires_at' => $expiresAt]
-                );
+                try {
+                    $response = $this->client->post("{$this->apiUrl}/user/login.action", [
+                        'form_params' => [
+                            'username' => $this->username,
+                            'password' => $password,
+                        ],
+                        'timeout' => 10,
+                        'verify' => false,
+                    ]);
 
-                // Cache token
-                Cache::put('howen_token', $token, now()->addMinutes(28));
+                    $responseBody = $response->getBody()->getContents();
+                    $data = json_decode($responseBody, true);
 
-                Log::info('Howen authentication successful', ['token' => substr($token, 0, 10) . '...']);
+                    Log::info("Response ({$method})", ['status' => $data['status'] ?? null]);
 
-                return $token;
-            } else {
-                Log::error('Howen authentication failed', $data);
-                throw new \Exception('Authentication failed: ' . ($data['msg'] ?? 'Unknown error'));
+                    // Success condition
+                    if (isset($data['status']) && ($data['status'] == 10000 || $data['status'] === 10000)) {
+                        if (isset($data['data']['token']) && !empty($data['data']['token'])) {
+                            $token = $data['data']['token'];
+                            
+                            $expiresAt = now()->addMinutes(30);
+                            ApiToken::updateOrCreate(
+                                ['token' => $token],
+                                ['expires_at' => $expiresAt]
+                            );
+
+                            Cache::put('howen_token', $token, now()->addMinutes(28));
+                            Log::info("Howen authentication SUCCESS with {$method}", ['token' => substr($token, 0, 10) . '...']);
+
+                            return $token;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Method {$method} failed: " . $e->getMessage());
+                    continue;
+                }
             }
 
-        } catch (GuzzleException $e) {
-            Log::error('Howen API request failed', ['error' => $e->getMessage()]);
-            throw $e;
+            // Semua method gagal
+            Log::error('Howen authentication failed on all attempts', [
+                'username' => $this->username,
+                'last_response' => $data ?? null,
+            ]);
+            
+            throw new \Exception('Authentication failed: Username or password may be incorrect. Please verify credentials.');
+
         } catch (\Exception $e) {
             Log::error('Howen auth exception', ['error' => $e->getMessage()]);
             throw $e;
