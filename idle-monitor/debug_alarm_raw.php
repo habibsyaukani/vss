@@ -1,28 +1,31 @@
 <?php
-require 'vendor/autoload.php';
-$app = require 'bootstrap/app.php';
-$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-// Get raw alarm data
-$alarms = \App\Models\AlarmRaw::where('alarm_type', 100)->get();
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-echo "=== DEBUGGING ALARM RAW DATA ===\n\n";
+use App\Models\AlarmRaw;
 
-foreach ($alarms as $alarm) {
-    echo "GUID: {$alarm->guid}\n";
-    echo "Device: {$alarm->device_name}\n";
-    echo "Duration Seconds: {$alarm->duration_seconds}\n";
-    echo "End Detail: {$alarm->end_detail}\n";
-    echo "\nRAW JSON:\n";
+echo "DEBUG: alarm_raw END records with dur:0\n";
+echo str_repeat("=", 50) . "\n\n";
+
+$sample = AlarmRaw::where('alarm_state', 0)
+    ->where('start_detail', 'LIKE', '%dur:0%')
+    ->first();
+
+if ($sample) {
+    echo "Sample Record Found:\n";
+    echo "  GUID: {$sample->guid}\n";
+    echo "  alarm_value: " . substr($sample->alarm_value, 0, 100) . "...\n";
+    echo "  start_detail: " . substr($sample->start_detail, 0, 100) . "...\n\n";
     
-    $raw = json_decode($alarm->raw_json, true);
-    echo json_encode($raw, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
-    
-    echo "\n" . str_repeat("=", 80) . "\n\n";
+    // Try to extract dur from alarm_value
+    if (preg_match('/dur:\s*(\d+)/', $sample->alarm_value, $matches)) {
+        echo "  ✅ Found dur in alarm_value: {$matches[1]} seconds\n";
+    } else {
+        echo "  ❌ NO dur found in alarm_value\n";
+        echo "  Full alarm_value: {$sample->alarm_value}\n";
+    }
+} else {
+    echo "No sample found!\n";
 }
-
-echo "\nKEY FIELDS TO CHECK:\n";
-echo "- alarmValue (untuk start_detail)\n";
-echo "- endDetail atau alarmDetail (untuk end_detail)\n";
-echo "- alarmTimeLength (untuk duration_seconds - USE THIS, DON'T CALCULATE)\n";
-echo "- speed vs endSpeed\n";

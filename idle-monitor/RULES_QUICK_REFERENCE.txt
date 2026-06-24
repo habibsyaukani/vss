@@ -1,0 +1,342 @@
+================================================================================
+                    SYSTEM RULES - QUICK REFERENCE
+                        (Read before every task)
+================================================================================
+
+🛡️ THE 5 GOLDEN RULES (NEVER BREAK THESE)
+
+1. JANGAN MERUSAK FITUR YANG SUDAH BERJALAN
+   - Tidak boleh mengubah fitur yang sudah berfungsi
+   - Tidak boleh menghapus fitur yang sudah digunakan
+   - Tidak boleh refactor komponen yang sudah stabil
+
+2. JANGAN MENGHAPUS DATA YANG SUDAH ADA
+   - Tidak boleh DROP TABLE
+   - Tidak boleh TRUNCATE TABLE
+   - Tidak boleh DELETE tanpa WHERE
+   - Tidak boleh php artisan migrate:fresh
+
+3. JANGAN MENGUBAH FITUR YANG TIDAK DIMINTA
+   - Fokus pada task yang diminta saja
+   - Jangan mengubah komponen lain
+   - Jangan melakukan perubahan "bonus"
+
+4. FOKUS HANYA PADA TASK YANG DIMINTA
+   - Scope harus jelas
+   - Tidak ada perubahan di luar scope
+   - Jika perlu ubah scope, tanya dulu
+
+5. SEMUA PERUBAHAN HARUS BACKWARD COMPATIBLE
+   - Tidak boleh breaking changes
+   - API harus tetap support request lama
+   - Database harus tetap support data lama
+
+================================================================================
+PROTECTED AREAS - JANGAN DISENTUH
+================================================================================
+
+FITUR-FITUR INI TIDAK BOLEH DIUBAH KECUALI DIMINTA EKSPLISIT:
+
+🔒 Authentication System
+   - app/Http/Controllers/AdminAuthController.php
+   - app/Http/Controllers/FrontendAuthController.php
+   - app/Http/Middleware/AdminMiddleware.php
+   - app/Http/Middleware/FleetManagerMiddleware.php
+
+🔒 Dashboard
+   - app/Http/Controllers/Frontend/DashboardController.php
+   - app/Http/Controllers/AdminDashboardController.php
+   - resources/views/frontend/dashboard.blade.php
+   - resources/views/admin/dashboard.blade.php
+
+🔒 User Management
+   - app/Http/Controllers/UserController.php
+   - app/Models/User.php
+   - Database users table
+
+🔒 Background Jobs & Scheduling
+   - app/Jobs/ImportAlarmJob.php
+   - app/Jobs/ProcessIdleAlarmJob.php
+   - app/Jobs/SyncDeviceJob.php
+   - app/Jobs/RefreshTokenJob.php
+   - app/Console/Kernel.php
+
+🔒 API Endpoints
+   - GET /api/idle-alarms
+   - GET /api/dashboard
+   - GET /api/devices
+   - (Semua endpoint existing)
+
+🔒 Database Tables
+   - users
+   - devices
+   - device_groups
+   - idle_alarms
+   - alarm_raw
+   - system_settings
+   - import_logs
+   - (Semua table existing)
+
+================================================================================
+DATABASE PROTECTION CHECKLIST
+================================================================================
+
+❌ DILARANG MUTLAK:
+
+php artisan migrate:fresh              ❌ Akan menghapus SEMUA data
+php artisan db:wipe                    ❌ Akan menghapus SEMUA database
+php artisan migrate:reset              ❌ Akan menghapus semua migrations
+DROP TABLE table_name;                 ❌ Akan menghapus table
+TRUNCATE TABLE table_name;             ❌ Akan menghapus semua data
+DELETE FROM table WHERE 1=1;           ❌ Akan menghapus semua data
+ALTER TABLE table DROP COLUMN;         ❌ Akan menghapus kolom (data hilang)
+
+✅ YANG BOLEH:
+
+1. Membuat migration BARU:
+   php artisan make:migration add_column_to_table
+   
+2. Tambah kolom (tidak merusak yang lama):
+   Schema::table('table_name', function (Blueprint $table) {
+       $table->string('new_column')->nullable();
+   });
+
+3. Tambah index (improve performa):
+   Schema::table('table_name', function (Blueprint $table) {
+       $table->index('column_name');
+   });
+
+4. Tambah data dengan aman:
+   INSERT INTO table VALUES (...);
+   
+5. Update data dengan WHERE clause:
+   UPDATE table SET field=value WHERE condition;
+
+6. Delete data dengan ID spesifik:
+   DELETE FROM table WHERE id = 123;
+
+================================================================================
+BEFORE WRITING CODE - MANDATORY CHECKLIST
+================================================================================
+
+Sebelum menulis kode apapun, WAJIB cek:
+
+STEP 1 - UNDERSTAND THE TASK (2 menit)
+[ ] Task dijelaskan dengan jelas?
+[ ] Apa yang harus ditambah/diubah?
+[ ] Ada batasan scope?
+[ ] Ada dependency yang harus dipahami?
+
+STEP 2 - ANALYZE EXISTING CODE (5 menit)
+[ ] Apa yang sudah berjalan?
+[ ] File mana saja yang sudah ada?
+[ ] Database tables apa saja yang existing?
+[ ] API endpoints apa saja yang sudah ada?
+[ ] Apa yang akan terdampak?
+
+STEP 3 - PLAN THE CHANGES (5 menit)
+[ ] File mana saja yang akan diubah?
+[ ] File mana saja yang TIDAK akan diubah?
+[ ] Database perubahan apa? (create table, add column, dll)
+[ ] API perubahan apa? (new endpoint, new field, dll)
+[ ] Ada breaking changes?
+
+STEP 4 - RISK ASSESSMENT (2 menit)
+[ ] Risk level: GREEN / YELLOW / RED?
+[ ] Apa yang bisa salah?
+[ ] Bagaimana mitigasinya?
+[ ] Perlu approval?
+
+STEP 5 - SHOW ANALYSIS (1 menit)
+[ ] Tampilkan planned changes
+[ ] Tampilkan protected files
+[ ] Tampilkan risk assessment
+[ ] Minta approval jika HIGH risk
+
+STEP 6 - IMPLEMENT (varies)
+[ ] Ikuti rencana yang sudah disetujui
+[ ] Hanya ubah file yang direncanakan
+[ ] Test perubahan
+[ ] Dokumentasikan
+
+STEP 7 - VERIFY (2 menit)
+[ ] Tidak ada fitur yang rusak?
+[ ] Tidak ada data yang hilang?
+[ ] Backward compatible?
+[ ] Sesuai dengan task?
+[ ] Ready to submit?
+
+================================================================================
+WHEN SHOWING ANALYSIS - TEMPLATE
+================================================================================
+
+Gunakan template ini untuk show analysis:
+
+📋 ANALYSIS:
+   Files to modify:
+   - app/Http/Controllers/XyzController.php
+   - app/Models/Xyz.php
+   - database/migrations/xxxx_create_xyz_table.php
+   - resources/views/admin/xyz/
+   
+   Files to NOT touch:
+   - Auth system ✅
+   - Dashboard ✅
+   - User management ✅
+   - Background jobs ✅
+   
+   Database impact:
+   - New table: xyz_table (created via migration)
+   - No existing tables modified
+   - No data deleted
+   - Backward compatible ✅
+   
+   API impact:
+   - New endpoint: POST /api/xyz
+   - No existing endpoints modified
+   - Response format: {...}
+   
+   Risk assessment:
+   - Risk Level: GREEN (low risk)
+   - Why: Only adding new features, no changes to existing
+   - Mitigation: Testing required before deploy
+   
+   Approval needed?
+   - NO (GREEN risk level)
+
+================================================================================
+PROTECTED FILES - DO NOT TOUCH
+================================================================================
+
+These files are LOCKED unless explicitly requested to change:
+
+❌ Authentication (security critical):
+   - app/Http/Controllers/AdminAuthController.php
+   - app/Http/Controllers/FrontendAuthController.php
+   - app/Http/Middleware/*.php
+   - resources/views/*/auth/
+
+❌ Dashboard (live data):
+   - app/Http/Controllers/*/DashboardController.php
+   - resources/views/*/dashboard.*
+
+❌ Scheduler (timing critical):
+   - app/Console/Kernel.php
+   - app/Console/Commands/*
+
+❌ Queue Jobs (background critical):
+   - app/Jobs/*
+   - app/Listeners/*
+
+❌ Core Models (data critical):
+   - app/Models/User.php
+   - app/Models/Device.php
+   - app/Models/IdleAlarm.php
+
+❌ Old Migrations (data safety):
+   - database/migrations/* (existing files)
+   - Only create NEW migrations, never modify old ones
+
+❌ API Response Structure:
+   - Existing JSON response format
+   - Only add new fields, never remove/rename
+
+================================================================================
+COMMON MISTAKES TO AVOID
+================================================================================
+
+❌ MISTAKE 1: Modifying old migrations
+   WRONG: Edit 2026_06_03_create_users_table.php
+   RIGHT: Create new 2026_06_04_add_column_to_users.php
+
+❌ MISTAKE 2: Using migrate:fresh
+   WRONG: php artisan migrate:fresh
+   RIGHT: php artisan migrate (for new migrations only)
+
+❌ MISTAKE 3: Deleting columns directly
+   WRONG: ALTER TABLE users DROP COLUMN role;
+   RIGHT: Create new migration with dropColumn()
+
+❌ MISTAKE 4: Changing API response
+   WRONG: Change 'data' field name to 'records'
+   RIGHT: Add new field, keep old field
+
+❌ MISTAKE 5: Modifying protected files
+   WRONG: Change app/Jobs/ImportAlarmJob.php
+   RIGHT: Only if explicitly requested
+
+❌ MISTAKE 6: Scope creep
+   WRONG: Task "Add Device Group" → also refactor User model
+   RIGHT: Task "Add Device Group" → only Device Group related
+
+❌ MISTAKE 7: No backward compatibility
+   WRONG: Update API to new version only
+   RIGHT: Support both old and new version
+
+❌ MISTAKE 8: Breaking changes without notice
+   WRONG: Delete old API endpoint quietly
+   RIGHT: Keep old endpoint, add new version, deprecate old
+
+================================================================================
+QUICK DECISION TREE
+================================================================================
+
+Need to make a change?
+
+1. Is it part of the requested task?
+   NO  → Don't do it (scope creep)
+   YES → Go to step 2
+
+2. Will it break existing features?
+   YES → Find different approach (go back to step 1)
+   NO  → Go to step 3
+
+3. Will it delete data?
+   YES → Need explicit approval
+   NO  → Go to step 4
+
+4. Is it backward compatible?
+   NO  → Make it backward compatible (go back to step 3)
+   YES → Go to step 5
+
+5. All checked?
+   YES → Implement it ✅
+   NO  → Go back through steps
+
+================================================================================
+REFERENCE DOCUMENTS
+================================================================================
+
+For complete information, read these files:
+
+📄 Main Rules File:
+   g:\project\vss\idle-monitor\.kiro\SYSTEM_RULES.md
+   (Complete detailed rules with examples)
+
+📄 Quick Reference (this file):
+   g:\project\vss\idle-monitor\RULES_QUICK_REFERENCE.txt
+   (Quick checklist and decision tree)
+
+📄 Development Progress:
+   g:\project\vss\idle-monitor\DEVELOPMENT_PROGRESS.md
+   (What's already built, what's working)
+
+📄 System Status:
+   g:\project\vss\idle-monitor\SYSTEM_STATUS.txt
+   (Current system state, what's protected)
+
+================================================================================
+
+⚠️ REMEMBER:
+
+"Breaking existing features is WORSE than not adding new features."
+
+If in doubt, ask. If not sure, check. If worried, don't do it.
+
+PROTECT what we have. IMPROVE carefully. BUILD safely.
+
+================================================================================
+Last Updated: 2026-06-03
+Status: 🔒 MANDATORY FOR ALL TASKS
+Read this EVERY time before starting work.
+================================================================================

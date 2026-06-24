@@ -1,0 +1,271 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                  STEP 2: DATABASE SETUP & SERVER RUNNING                      ║
+║                      (After PHP Download & Extract)                           ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+STATUS: PHP sudah didownload dan di-extract ke C:\php ✓
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 2A: SETUP PHP KONFIGURASI
+──────────────────────────────────
+
+PHP membutuhkan extension MySQL untuk terhubung ke database.
+
+OPSI 1: Gunakan Script (Otomatis)
+─────────────────────────────────
+
+1. Navigate ke project folder:
+   cd g:\project\vss\idle-monitor
+
+2. Jalankan setup script:
+   setup_php.bat
+
+   (Script ini akan):
+   - Buka php.ini di C:\php
+   - Uncomment MySQL extensions (pdo_mysql, mysql, mysqli)
+   - Save php.ini
+   - Backup php.ini.backup
+
+3. Selesai!
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+OPSI 2: Manual Setup (Jika script tidak bekerja)
+────────────────────────────────────────────────
+
+1. Buka file: C:\php\php.ini (dengan Notepad)
+
+2. Cari baris berikut (biasanya di line ~900-950):
+   
+   ;extension=pdo_mysql
+   ;extension=mysql
+   ;extension=mysqli
+
+3. Hilangkan semicolon (;) di depan:
+   
+   extension=pdo_mysql
+   extension=mysql
+   extension=mysqli
+
+4. Save file (Ctrl+S)
+
+5. Close Notepad
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 2B: SETUP DATABASE & SEED DATA
+──────────────────────────────────────
+
+Pastikan MySQL/MariaDB sudah RUNNING di system
+
+1. Buka Command Prompt atau PowerShell
+
+2. Navigate ke project:
+   cd g:\project\vss\idle-monitor
+
+3. Setup database:
+   C:\php\php.exe artisan migrate --fresh --seed
+
+   Ini akan:
+   - Create semua database tables
+   - Insert seed data (2 users, 6 device groups)
+   - Create sample data
+
+   Expected output:
+   ✓ Migration: 2026_06_03_163708_create_devices_table
+   ✓ Migration: 2026_06_03_163709_create_alarm_raw_table
+   ... (lebih banyak migrations)
+   ✓ Database seeded successfully!
+
+4. Jika error "could not find driver":
+   - Pastikan sudah uncomment extensions di php.ini
+   - Restart Command Prompt
+   - Try lagi: C:\php\php.exe artisan migrate --fresh --seed
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 2C: JALANKAN DEVELOPMENT SERVER
+────────────────────────────────────────
+
+1. Di Command Prompt yang sama, jalankan:
+   
+   C:\php\php.exe artisan serve
+
+   Atau dengan port tertentu:
+   C:\php\php.exe artisan serve --port=8000
+
+2. Expected output:
+   
+   Laravel development server started: http://127.0.0.1:8000
+   [Tue Jun 03 12:00:00 2026] PHP 8.3.31 Development Server (http://127.0.0.1:8000)
+   [Tue Jun 03 12:00:00 2026] Listening on http://127.0.0.1:8000
+   [Tue Jun 03 12:00:00 2026] Press Ctrl-C to quit
+
+3. Server sudah running!
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 2D: BUKA BROWSER & LOGIN
+─────────────────────────────────
+
+1. Buka browser (Chrome, Firefox, Edge, Safari)
+
+2. Ketik URL:
+   http://localhost:8000
+
+   Atau sesuai port yang digunakan:
+   http://localhost:8001
+   http://localhost:3000
+   etc.
+
+3. Klik Enter
+
+4. Anda akan melihat Login Page
+
+5. Login dengan akun Fleet Manager:
+   
+   Email:    manager@vss.com
+   Password: manager123
+   
+   Klik "Login"
+
+6. Redirect ke Dashboard
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+ANDA SUDAH MASUK! 🎉
+───────────────────
+
+Sekarang anda akan melihat:
+
+✓ Dashboard dengan 4 Stat Cards:
+  - Today's Idle Events
+  - Total Idle Events
+  - Average Duration
+  - Total Duration Hours
+
+✓ 2 Charts:
+  - Idle Events per Hour
+  - Idle Events per Day
+
+✓ Top 5 Devices Table
+
+✓ Navigation Menu (top-left):
+  - Dashboard (current page)
+  - Idle Alarms
+  - Devices
+  - Logout (top-right)
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING
+───────────────
+
+Problem 1: "could not find driver" error saat run migrate
+Solution:
+  1. Edit C:\php\php.ini manually
+  2. Uncomment: extension=pdo_mysql
+  3. Save file
+  4. Restart Command Prompt
+  5. Run migrate again
+
+Problem 2: "Port 8000 already in use"
+Solution:
+  Use different port:
+  C:\php\php.exe artisan serve --port=3001
+
+Problem 3: "SQLSTATE[HY000] [2002] No such file or directory"
+Solution:
+  1. Make sure MySQL is running
+  2. Check .env file:
+     DB_HOST=127.0.0.1
+     DB_PORT=3306
+     DB_USERNAME=root
+  3. Try migrate again
+
+Problem 4: Database table tidak ada
+Solution:
+  1. Run migrations: C:\php\php.exe artisan migrate --fresh --seed
+  2. Or reset: C:\php\php.exe artisan migrate:refresh --seed
+
+Problem 5: Login tidak bekerja atau user not found
+Solution:
+  1. Check migrations ran successfully
+  2. Run: C:\php\php.exe artisan db:seed --class=InitialDataSeeder
+  3. Verify user exists: C:\php\php.exe artisan tinker
+     User::all()
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+NEXT STEPS SETELAH LOGIN
+────────────────────────
+
+1. EXPLORE DASHBOARD
+   - View statistics
+   - Check charts
+   - See top devices
+
+2. NAVIGATE PAGES
+   - Click "Idle Alarms" → Browse idle events with filters
+   - Click "Devices" → View all vehicles with status
+   - Click on any item → View detail information
+
+3. TRY FEATURES
+   - Filter by date range
+   - Search by device name
+   - Export to CSV
+   - Click "View" to see details
+   - Check Google Maps links
+
+4. ADMIN PANEL (Optional - if you have admin credentials)
+   - Logout
+   - Go to: http://localhost:8000/admin/login
+   - Login: admin@vss.com / admin123
+   - Access admin dashboard with more features
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+USEFUL COMMANDS
+───────────────
+
+Check if server is running:
+  C:\php\php.exe artisan optimize
+
+View database tables:
+  C:\php\php.exe artisan tinker
+  Table::all();
+  User::all();
+  Device::count();
+
+Reset everything:
+  C:\php\php.exe artisan migrate:refresh --seed
+
+View logs:
+  type storage\logs\laravel.log (Windows CMD)
+  Get-Content storage\logs\laravel.log -Tail 50 (PowerShell)
+
+Clear cache:
+  C:\php\php.exe artisan cache:clear
+  C:\php\php.exe artisan config:clear
+  C:\php\php.exe artisan view:clear
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+STOP SERVER
+───────────
+
+Press Ctrl+C in Command Prompt where server is running
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+READY? LET'S GO!
+
+1. Run: setup_php.bat (untuk enable MySQL extensions)
+2. Run: C:\php\php.exe artisan migrate --fresh --seed
+3. Run: C:\php\php.exe artisan serve
+4. Open: http://localhost:8000
+5. Login: manager@vss.com / manager123
+6. ENJOY! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════════

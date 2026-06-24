@@ -103,8 +103,8 @@ class PullGpsTracksCommand extends Command
                         $devicesWithData++;
                     }
                     
-                    // Delay 300ms between devices
-                    usleep(300000);
+                    // Delay 50ms between devices
+                    usleep(50000);
                     
                 } catch (\Exception $e) {
                     $deviceErrors[] = [

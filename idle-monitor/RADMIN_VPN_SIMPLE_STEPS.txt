@@ -1,0 +1,139 @@
+================================================================================
+CARA SETUP RADMIN VPN ACCESS - SIMPLE VERSION
+================================================================================
+
+TUJUAN:
+  Client bisa akses aplikasi lewat VPN IP 26.29.218.176:8000
+
+LANGKAH:
+
+================================================================================
+STEP 1: BUKA FILE APACHE CONFIG
+================================================================================
+
+1. Press: WIN + R (buka Run dialog)
+2. Type: notepad C:\laragon\bin\apache\httpd-2.4.54-win64-VS16\conf\httpd.conf
+3. Press: Enter
+
+(File terbuka di Notepad)
+
+================================================================================
+STEP 2: CARI "LISTEN" DIRECTIVE
+================================================================================
+
+1. Press: Ctrl+F (Find dialog)
+2. Type: Listen
+3. Press: Enter
+
+Anda akan menemukan:
+  Listen 127.0.0.1:80
+  atau
+  Listen localhost:80
+
+================================================================================
+STEP 3: UBAH LISTEN LINE
+================================================================================
+
+SEBELUM:
+  Listen 127.0.0.1:80
+
+SESUDAH:
+  Listen 0.0.0.0:80
+
+ATAU cukup:
+  Listen 80
+
+(Hapus "127.0.0.1:" atau "localhost:" bagian)
+
+================================================================================
+STEP 4: SAVE FILE
+================================================================================
+
+1. Press: Ctrl+S
+2. Close Notepad
+
+================================================================================
+STEP 5: RESTART APACHE DI LARAGON
+================================================================================
+
+1. Buka Laragon window (lihat taskbar)
+2. Click tombol: [Stop]
+3. Wait 5 seconds
+4. Click tombol: [Start] atau klik icon Laragon
+5. Wait sampai "Apache" status jadi "started"
+
+================================================================================
+STEP 6: CLEAR CACHE LARAVEL
+================================================================================
+
+Buka Terminal/CMD:
+
+1. Navigate ke project:
+   cd g:\project\vss\idle-monitor
+
+2. Run commands:
+   php artisan config:clear
+   php artisan cache:clear
+
+================================================================================
+TEST: APAKAH WORK?
+================================================================================
+
+DARI KOMPUTER ANDA:
+
+1. Local: http://localhost:8000
+   ✅ Harus work
+
+2. VPN Network: http://26.29.218.176:8000
+   ✅ Harus work (kalo Radmin VPN active)
+
+DARI CLIENT LAIN (Connected to Radmin VPN):
+
+1. http://26.29.218.176:8000
+   ✅ Harus work
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Q: Apache tidak mau start?
+A: - Check typo di httpd.conf
+  - Pastikan format: Listen 0.0.0.0:80
+  - Try: Listen 80 (simpler)
+  - Restart Laragon
+
+Q: Tetap tidak bisa akses dari network?
+A: - Check Windows Firewall
+  - Allow Apache through firewall
+  - Or disable firewall temporarily untuk testing
+
+Q: Localhost jadi lambat?
+A: - Normal behavior
+  - Use 127.0.0.1 instead (faster)
+  - Or: 26.29.218.176:8000 for network
+
+Q: Certificate/SSL error?
+A: - Use HTTP (port 80) untuk sekarang
+  - SSL butuh certificate setup (advanced)
+
+================================================================================
+SUMMARY
+================================================================================
+
+Sekarang bisa diakses dari:
+
+  ✅ http://localhost:8000 (lokal)
+  ✅ http://26.29.218.176:8000 (via Radmin VPN)
+  ✅ http://192.168.1.x:8000 (local network, ganti x)
+
+Client bisa connect lewat:
+
+  1. Buka Radmin VPN client
+  2. Connect ke network vss_gpe
+  3. Buka browser: http://26.29.218.176:8000
+  4. ✅ Aplikasi muncul
+
+================================================================================
+SELESAI!
+================================================================================
+

@@ -1,0 +1,170 @@
+═══════════════════════════════════════════════════════════════
+   🗺️ GPS TRACK PULL SYSTEM - SIMPLE FLOW
+═══════════════════════════════════════════════════════════════
+
+📋 CARA KERJA SISTEM GPS TRACK:
+
+┌─────────────────────────────────────────────────────────────┐
+│  1. COMMAND DIJALANKAN                                       │
+└─────────────────────────────────────────────────────────────┘
+   php artisan vss:pull-gps-tracks --date=2026-06-12
+   
+   ↓
+   
+┌─────────────────────────────────────────────────────────────┐
+│  2. GET VSS TOKEN                                            │
+└─────────────────────────────────────────────────────────────┘
+   VssAuthService → Login ke VSS API → Get Token
+   
+   ↓
+   
+┌─────────────────────────────────────────────────────────────┐
+│  3. LOAD DEVICES                                             │
+└─────────────────────────────────────────────────────────────┘
+   Query database: SELECT * FROM devices 
+                   WHERE status='active' 
+                   AND device_id IS NOT NULL
+   
+   Result: 397 devices
+   
+   ↓
+   
+┌─────────────────────────────────────────────────────────────┐
+│  4. LOOP PER DEVICE (WAJIB SATU-SATU!)                      │
+└─────────────────────────────────────────────────────────────┘
+   
+   FOR EACH device (1 to 397):
+   
+      ┌──────────────────────────────────────────────────────┐
+      │ API Call ke VSS                                       │
+      ├──────────────────────────────────────────────────────┤
+      │ POST /vss/track/getApiTrackList.action               │
+      │ Parameters:                                           │
+      │   - token: [VSS token]                                │
+      │   - deviceID: [device_id dari database]               │
+      │   - beginTime: 2026-06-12 00:00:00                    │
+      │   - endTime: 2026-06-12 23:59:59                      │
+      │   - pageNum: 1, 2, 3... (loop per page)               │
+      │   - pageCount: 200 (records per page)                 │
+      └──────────────────────────────────────────────────────┘
+      
+      ↓
+      
+      VSS API Response:
+      - deviceID: 75482223
+      - deviceName: GPE-B-806
+      - data: [200 GPS records or 0 if offline]
+      
+      ↓
+      
+      ┌──────────────────────────────────────────────────────┐
+      │ SAVE to gps_tracks_raw                                │
+      ├──────────────────────────────────────────────────────┤
+      │ INSERT INTO gps_tracks_raw (                          │
+      │   device_id, device_name,                             │
+      │   longitude, latitude, speed,                         │
+      │   gps_time, report_time,                              │
+      │   acc_state, record_state, ...                        │
+      │ )                                                     │
+      └──────────────────────────────────────────────────────┘
+      
+      ↓
+      
+      Delay 300ms (jangan overload API)
+      
+      ↓
+      
+      NEXT DEVICE...
+   
+   END FOR
+   
+   ↓
+   
+┌─────────────────────────────────────────────────────────────┐
+│  5. SUMMARY                                                  │
+└─────────────────────────────────────────────────────────────┘
+   Devices processed: 397
+   Devices with data: 40 (example June 12)
+   Total records saved: 26,801
+   
+   ↓
+   
+┌─────────────────────────────────────────────────────────────┐
+│  6. DISPATCH PROCESS JOB (Optional)                          │
+└─────────────────────────────────────────────────────────────┘
+   ProcessGpsTrackJob::dispatch()
+   → Map gps_tracks_raw → gps_tracks (display format)
+
+═══════════════════════════════════════════════════════════════
+
+⚠️  PENTING - KENAPA SATU-SATU?
+
+VSS GPS API REQUIREMENT:
+❌ TIDAK support: "Tarik semua device sekaligus"
+✅ WAJIB: deviceID parameter (satu device per request)
+
+Contoh:
+❌ BAD: /getApiTrackList?beginTime=...&endTime=... (tanpa deviceID)
+       → Error: "deviceID required"
+       
+✅ GOOD: /getApiTrackList?deviceID=75482223&beginTime=...
+        → Success: Return GPS data untuk device ini
+
+Ini berbeda dengan Howen Alarm API yang bisa per-page!
+
+═══════════════════════════════════════════════════════════════
+
+📊 ESTIMASI WAKTU:
+
+397 devices × 0.3-0.5 detik = ~2-3 menit total
+
+Breakdown:
+- Device dengan data: ~1-2 detik (200-2000 records)
+- Device tanpa data: ~0.1 detik (response kosong cepat)
+- Delay antar device: 0.3 detik
+
+═══════════════════════════════════════════════════════════════
+
+🎯 HASIL AKHIR:
+
+Database: gps_tracks_raw
+├─ device_id      (75482223)
+├─ device_name    (GPE-B-806)
+├─ longitude      (117.153)
+├─ latitude       (-0.502)
+├─ speed          (35 km/h)
+├─ direction      (180°)
+├─ gps_time       (2026-06-12 08:30:45)
+├─ acc_state      (1 = ON)
+├─ record_state   (bitmask)
+└─ ... (20+ fields)
+
+Total records tergantung hari:
+- June 9:  61,523 records (54 devices) ⭐ Best
+- June 11: 19,693 records (13 devices) - Low
+- June 12: 26,801 records (40 devices) - Medium
+
+═══════════════════════════════════════════════════════════════
+
+📝 COMMAND USAGE:
+
+# Pull hari ini
+php artisan vss:pull-gps-tracks
+
+# Pull tanggal spesifik
+php artisan vss:pull-gps-tracks --date=2026-06-09
+
+# Pull dengan limit (testing)
+php artisan vss:pull-gps-tracks --date=2026-06-09 --limit=10
+
+# Pull device spesifik
+php artisan vss:pull-gps-tracks --devices=75482223,73189119
+
+═══════════════════════════════════════════════════════════════
+
+✅ SYSTEM STATUS: WORKING PERFECTLY
+✅ Data Quality: Excellent
+✅ Speed: ~2-3 minutes for 397 devices
+
+Created: 2026-06-12
+File: GPS_TRACK_FLOW_SIMPLE.txt

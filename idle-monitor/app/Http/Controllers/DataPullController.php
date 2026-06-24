@@ -51,14 +51,24 @@ class DataPullController extends Controller
         $concurrency = $request->input('concurrency', 5);
 
         try {
-            // FORCE ALWAYS SEQUENTIAL & ASYNC (Abaikan input dari frontend untuk sementara demi keamanan)
-            // Tanpa --wait agar ditaruh di antrean (Queue) sehingga tidak terjadi Error 600 seconds timeout
-            $command = sprintf(
-                'howen:pull-alarms-date-range --from=%s --to=%s --pages=%d',
-                $fromDate,
-                $toDate,
-                $pages
-            );
+            if ($concurrency > 1) {
+                // Parallel mode (synchronous fetch)
+                $command = sprintf(
+                    'howen:pull-alarms-date-range --from=%s --to=%s --pages=%d --parallel --concurrency=%d --wait',
+                    $fromDate,
+                    $toDate,
+                    $pages,
+                    $concurrency
+                );
+            } else {
+                // Sequential mode (synchronous with wait to avoid queue issues)
+                $command = sprintf(
+                    'howen:pull-alarms-date-range --from=%s --to=%s --pages=%d --wait',
+                    $fromDate,
+                    $toDate,
+                    $pages
+                );
+            }
 
             Artisan::call($command);
             $output = Artisan::output();
@@ -160,22 +170,42 @@ class DataPullController extends Controller
         $limit = $request->input('limit', 0);
 
         try {
-            // Dispatched asynchronously in real world, but for now we call it directly or run via artisan
-            // Since this takes a long time, we should dispatch a job or run artisan command in background
-            $command = sprintf(
-                'vss:pull-gps-tracks --date=%s --devices=%s --limit=%d',
-                $date,
-                $deviceFilter ?: 'all',
-                $limit
-            );
-
-            // Execute the artisan command
-            Artisan::call($command);
-            $output = Artisan::output();
-
             $recordsSaved = 0;
-            if (preg_match('/Total records saved: (\d+)/', $output, $matches)) {
-                $recordsSaved = (int)$matches[1];
+            $output = '';
+
+            // Jika dipanggil untuk 1 device saja (dari frontend loop), bypass Artisan untuk menghemat overhead booting
+            if ($deviceFilter !== 'all' && strpos($deviceFilter, ',') === false) {
+                $beginTime = Carbon::parse("{$date} 00:00:00");
+                $endTime = Carbon::parse("{$date} 23:59:59");
+                
+                $authService = app(\App\Services\VssAuthService::class);
+                $token = $authService->getToken();
+                
+                $syncService = app(\App\Services\GpsTrackSyncService::class);
+                $result = $syncService->syncDevice(
+                    $token,
+                    $deviceFilter,
+                    $beginTime->format('Y-m-d H:i:s'),
+                    $endTime->format('Y-m-d H:i:s')
+                );
+                
+                $recordsSaved = $result['total_saved'];
+                $output = "Direct fetch completed. Total records saved: {$recordsSaved}\n";
+            } else {
+                // Eksekusi via command jika bulk/all
+                $command = sprintf(
+                    'vss:pull-gps-tracks --date=%s --devices=%s --limit=%d',
+                    $date,
+                    $deviceFilter ?: 'all',
+                    $limit
+                );
+
+                Artisan::call($command);
+                $output = Artisan::output();
+
+                if (preg_match('/Total records saved: (\d+)/', $output, $matches)) {
+                    $recordsSaved = (int)$matches[1];
+                }
             }
 
             return response()->json([

@@ -1,0 +1,184 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                  SETUP MENGGUNAKAN LARAGON (SUDAH ADA!)                       ║
+║                                                                                ║
+║  Good news: Laragon sudah terinstall di system                                ║
+║  PHP 8.1.10 + MySQL + Apache sudah tersedia di C:\laragon                     ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 1: START LARAGON SERVICES
+──────────────────────────────────
+
+Laragon terdiri dari:
+  ✓ PHP (C:\laragon\bin\php\)
+  ✓ MySQL (built-in)
+  ✓ Apache (built-in)
+  ✓ Other services
+
+CARA 1: Mulai dari System Tray
+  1. Cari Laragon icon di system tray (bottom-right)
+  2. Klik icon Laragon
+  3. Klik "Start All" atau cukup click icon untuk toggle
+
+CARA 2: Jalankan Laragon langsung
+  1. Buka File Explorer
+  2. Go to: C:\laragon
+  3. Double-click: laragon.exe
+  4. Klik "Start All"
+
+CARA 3: Command Line (Windows CMD)
+  1. Buka Command Prompt
+  2. Run: "C:\laragon\laragon.exe"
+
+Expected: Laragon tray icon akan menampilkan "All Running" (berwarna hijau)
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 2: JALANKAN SETUP SCRIPT
+─────────────────────────────────
+
+Setelah Laragon services berjalan:
+
+1. Buka Command Prompt di folder project:
+   
+   cd g:\project\vss\idle-monitor
+
+2. Jalankan script yang menggunakan Laragon PHP:
+   
+   RUN_WITH_LARAGON.bat
+
+   Script ini akan:
+   ✓ Detect PHP di C:\laragon\bin\php
+   ✓ Run migrations
+   ✓ Seed database dengan data
+   ✓ Start development server
+
+3. Expected output:
+   
+   ✓ Found PHP: C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe
+   ✓ Database setup complete
+   Laravel development server started: http://127.0.0.1:8000
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+LANGKAH 3: BUKA BROWSER & LOGIN
+────────────────────────────────
+
+1. Buka browser:
+   http://localhost:8000
+
+2. Login dengan:
+   Email:    manager@vss.com
+   Password: manager123
+
+3. Click Login
+
+4. DONE! 🎉 Dashboard will load
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+QUICK STEPS (All-in-One)
+────────────────────────
+
+1. Start Laragon (from tray or C:\laragon\laragon.exe)
+   
+2. Open Command Prompt:
+   cd g:\project\vss\idle-monitor
+   RUN_WITH_LARAGON.bat
+
+3. Open browser:
+   http://localhost:8000
+
+4. Login:
+   Email: manager@vss.com
+   Password: manager123
+
+5. ENJOY! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+WHAT LARAGON PROVIDES
+─────────────────────
+
+MySQL Server:
+  Host: 127.0.0.1 atau localhost
+  Port: 3306
+  Username: root
+  Password: (empty)
+
+PHP:
+  Version: 8.1.10
+  Location: C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe
+  Already has: PDO, MySQLi, extensions enabled
+
+Apache:
+  Port: 80 (for serving websites)
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+STOP SERVER
+───────────
+
+Press: Ctrl + C (dalam Command Prompt yang running artisan serve)
+
+To stop Laragon services:
+  1. Click Laragon icon
+  2. Click "Stop All"
+  Or just close Laragon
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING
+───────────────
+
+Problem: "MySQL port already in use" atau "Port 3306 in use"
+Solution:
+  1. Laragon mungkin sudah running
+  2. Buka Laragon tray icon
+  3. Stop services → Start services lagi
+  4. Atau restart Laragon completely
+
+Problem: "php.exe not found"
+Solution:
+  1. Ensure Laragon is installed at C:\laragon
+  2. Verify C:\laragon\bin\php exists
+  3. If not, reinstall Laragon
+
+Problem: "Connection refused" atau "Cannot connect to database"
+Solution:
+  1. Make sure Laragon MySQL is running (green icon)
+  2. Check .env file:
+     DB_HOST=127.0.0.1
+     DB_PORT=3306
+     DB_USERNAME=root
+     DB_PASSWORD=
+
+Problem: Port 8000 already in use
+Solution:
+  Use different port:
+  "C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe" artisan serve --port=3001
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+ADVANTAGES OF USING LARAGON
+────────────────────────────
+
+✓ All-in-one: PHP, MySQL, Apache ready
+✓ No manual configuration needed
+✓ Extensions already enabled (PDO, MySQLi, etc)
+✓ MySQL already running
+✓ Just start services and go!
+✓ Perfect for local development
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+READY? FOLLOW THESE STEPS:
+
+1. Start Laragon services (tray icon or C:\laragon\laragon.exe)
+2. Run: RUN_WITH_LARAGON.bat
+3. Open: http://localhost:8000
+4. Login: manager@vss.com / manager123
+5. DONE! 🎉
+
+═══════════════════════════════════════════════════════════════════════════════════

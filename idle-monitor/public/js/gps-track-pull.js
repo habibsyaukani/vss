@@ -105,13 +105,14 @@
             if (devicesWithData) devicesWithData.textContent = 0;
             if (recordsSaved) recordsSaved.textContent = 0;
 
-            // Step 2: Loop devices sequentially
-            for (let i = 0; i < targetDevices.length; i++) {
-                const device = targetDevices[i];
-                
+            // Step 2: Loop devices in parallel batches (Concurrency: 20)
+            const concurrencyLimit = 20;
+            let currentIndex = 0;
+
+            const processDevice = async (device, index) => {
                 // Update progress text
-                const currentPercent = 5 + Math.floor((i / targetDevices.length) * 95);
-                updateProgress(currentPercent, `Memproses device ${i + 1} dari ${targetDevices.length}...`, `Device: ${device.device_name} (${device.device_id})`);
+                const currentPercent = 5 + Math.floor((totalProcessed / targetDevices.length) * 95);
+                updateProgress(currentPercent, `Memproses paralel... (${totalProcessed}/${targetDevices.length})`, `Berjalan secara paralel (${concurrencyLimit} alat sekaligus)`);
                 
                 // Prepare request for this specific device
                 const deviceFormData = new FormData();
@@ -120,7 +121,7 @@
                 deviceFormData.append('device_filter', device.device_id);
                 deviceFormData.append('limit', '0'); // Limit applies to overall, not per device
                 
-                addLog('detail', `Mengambil data ${device.device_name}...`);
+                // addLog('detail', `Mengambil data ${device.device_name}...`); // Dihilangkan agar log tidak terlalu penuh
                 
                 try {
                     const response = await fetch(executeUrl, {
@@ -141,9 +142,6 @@
                             totalWithData++;
                             totalRecords += recSaved;
                             addLog('success', `✅ [${device.device_name}] Data ditarik: ${recSaved} records`);
-                        } else {
-                            // Don't clutter logs with empty ones unless needed, but let's show detail
-                            // addLog('detail', `[${device.device_name}] Tidak ada data`);
                         }
                         
                         // Update stats UI incrementally
@@ -152,15 +150,29 @@
                         if (recordsSaved) recordsSaved.textContent = formatNumber(totalRecords);
                         
                     } else {
+                        totalProcessed++;
                         addLog('error', `❌ [${device.device_name}] Error: ${result.message}`);
                     }
                 } catch (devError) {
+                    totalProcessed++;
                     addLog('error', `❌ [${device.device_name}] Network Error: ${devError.message}`);
                 }
-                
-                // Small delay to prevent browser freeze
-                await new Promise(r => setTimeout(r, 100));
+            };
+
+            const worker = async () => {
+                while (currentIndex < targetDevices.length) {
+                    const idx = currentIndex++;
+                    const device = targetDevices[idx];
+                    await processDevice(device, idx);
+                }
+            };
+
+            const workers = [];
+            for (let i = 0; i < Math.min(concurrencyLimit, targetDevices.length); i++) {
+                workers.push(worker());
             }
+
+            await Promise.all(workers);
 
             // Step 3: Finish
             updateProgress(100, 'Pull selesai!', 'Completed successfully');

@@ -1,0 +1,195 @@
+================================================================================
+TAHAP 10 PHASE 2 - QUICK SETUP INSTRUCTIONS
+================================================================================
+
+OPTION 1: Automatic Setup (Windows)
+================================================================================
+
+1. Double-click: PHASE_2_INSTALLER.bat
+   - Installs all packages
+   - Runs migrations
+   - Seeds initial data
+   - Clears cache
+
+2. Start Laravel server:
+   php artisan serve
+
+3. Open browser:
+   http://localhost:8000/admin/login
+
+4. Login with:
+   Email: admin@vss.com
+   Password: admin123
+
+================================================================================
+OPTION 2: Manual Setup (All Platforms)
+================================================================================
+
+1. Install Yajra DataTables package:
+   composer require yajra/laravel-datatables-oracle
+
+2. Publish DataTables assets:
+   php artisan vendor:publish --provider="Yajra\DataTables\DataTablesServiceProvider"
+
+3. Run migrations:
+   php artisan migrate
+
+4. Seed initial data:
+   php artisan db:seed --class=InitialDataSeeder
+
+5. Clear cache:
+   php artisan cache:clear
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:clear
+
+6. Start server:
+   php artisan serve
+
+7. Open browser:
+   http://localhost:8000/admin/login
+
+================================================================================
+DEFAULT CREDENTIALS
+================================================================================
+
+Admin Account:
+- Email: admin@vss.com
+- Password: admin123
+
+Fleet Manager Account:
+- Email: manager@vss.com
+- Password: manager123
+
+================================================================================
+WHAT'S INCLUDED IN PHASE 2
+================================================================================
+
+Backend Admin Panel:
+✓ Dashboard with charts and statistics
+✓ User Management (CRUD)
+✓ Device Management (CRUD + CSV Import)
+✓ Idle Alarms Monitoring (List + Filter + Export CSV)
+✓ Import Logs Viewer (Auto-refresh)
+✓ System Settings & Status
+✓ Responsive Design (Bootstrap 5)
+✓ Server-side DataTables (Yajra)
+
+Features:
+✓ Real-time statistics
+✓ Advanced filtering
+✓ CSV export/import
+✓ Auto-refresh logs
+✓ Role-based access
+✓ Form validation
+✓ Error handling
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+See: PHASE_2_TESTING_CHECKLIST.txt for complete step-by-step testing
+
+Quick test:
+1. Login as admin
+2. Go to Dashboard - verify charts load
+3. Go to Device Management - verify DataTables work
+4. Go to Idle Alarms - verify filtering works
+5. Go to Import Logs - verify auto-refresh works
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If "Class not found: DataTables":
+- Run: php artisan vendor:publish --provider="Yajra\DataTables\DataTablesServiceProvider"
+
+If "View not found":
+- Run: php artisan view:clear
+
+If "Route not found":
+- Run: php artisan route:cache
+
+If "Migrations not found":
+- Run: php artisan migrate:refresh --seed
+
+If "Package not found":
+- Run: composer install
+- Run: composer update
+
+================================================================================
+FILES CREATED (Phase 2)
+================================================================================
+
+Controllers (8):
+- app/Http/Controllers/AdminDashboardController.php
+- app/Http/Controllers/UserController.php
+- app/Http/Controllers/DeviceController.php
+- app/Http/Controllers/DeviceGroupController.php
+- app/Http/Controllers/AlarmTypeController.php
+- app/Http/Controllers/IdleAlarmController.php
+- app/Http/Controllers/ImportLogController.php
+- app/Http/Controllers/SystemSettingController.php
+
+Routes:
+- routes/admin.php
+
+Views (11):
+- resources/views/admin/layouts/app.blade.php
+- resources/views/admin/dashboard.blade.php
+- resources/views/admin/user/index.blade.php
+- resources/views/admin/user/form.blade.php
+- resources/views/admin/device/index.blade.php
+- resources/views/admin/device/form.blade.php
+- resources/views/admin/device/import.blade.php (NEW)
+- resources/views/admin/idle-alarm/index.blade.php
+- resources/views/admin/idle-alarm/show.blade.php
+- resources/views/admin/import-log/index.blade.php
+- resources/views/admin/system-setting/index.blade.php
+
+Support:
+- PHASE_2_INSTALLER.bat
+- PHASE_2_TESTING_CHECKLIST.txt
+- SETUP_INSTRUCTIONS.txt
+
+================================================================================
+AFTER SETUP COMPLETE
+================================================================================
+
+Next Phase: TAHAP 10 Phase 3 (Frontend for Fleet Manager)
+
+When Phase 2 is tested and working:
+1. Create Frontend Dashboard (read-only)
+2. Create Frontend Views
+3. Create Frontend Login (/login)
+4. Test role-based access control
+
+See: DEVELOPMENT_PROGRESS.md for complete documentation
+
+================================================================================
+Need Help?
+================================================================================
+
+Check these files:
+- DEVELOPMENT_PROGRESS.md - Complete architecture & documentation
+- PHASE_2_TESTING_CHECKLIST.txt - Step-by-step testing
+- PHASE_2_INSTALLER.bat - Automated setup
+
+For database issues:
+- Check .env file for DB_HOST, DB_USERNAME, DB_PASSWORD
+- Verify MySQL/MariaDB is running
+- Verify database "vss" exists and has permissions
+
+For permission issues:
+- Windows: Run Command Prompt as Administrator
+- Linux/Mac: Use sudo if needed
+
+================================================================================
+READY TO GO!
+================================================================================
+
+Next step: Run PHASE_2_INSTALLER.bat or follow Manual Setup above
+
+Questions? See DEVELOPMENT_PROGRESS.md for detailed documentation
+
+================================================================================

@@ -1,30 +1,12 @@
 <?php
-// Simple API test script
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
-$endpoints = [
-    'http://localhost:8000/api/dashboard',
-    'http://localhost:8000/api/idle-alarms',
-    'http://localhost:8000/api/idle-alarms/device/732390518',
-];
+$service = new \App\Services\HowenAlarmService();
+$res = $service->fetchAlarmsPage(1, 10, '2026-05-01 00:00:00', '2026-05-01 23:59:59');
+echo "Records for May 1: " . count($res) . "\n";
 
-foreach ($endpoints as $url) {
-    echo "Testing: $url\n";
-    
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
-    if ($response === false) {
-        echo "  ERROR: " . curl_error($ch) . "\n";
-    } else {
-        $data = json_decode($response, true);
-        echo "  Status: $httpCode\n";
-        echo "  Response: " . json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
-    }
-    
-    curl_close($ch);
-    echo "\n";
-}
+$res2 = $service->fetchAlarmsPage(1, 10, '2026-05-15 00:00:00', '2026-05-15 23:59:59');
+echo "Records for May 15: " . count($res2) . "\n";

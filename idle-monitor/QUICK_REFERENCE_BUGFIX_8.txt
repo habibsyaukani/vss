@@ -1,0 +1,131 @@
+═══════════════════════════════════════════════════════════════
+  BUGFIX 8: DURATION FILTER SIDEBAR ISSUE - QUICK REFERENCE
+═══════════════════════════════════════════════════════════════
+
+DATE: June 10, 2026
+STATUS: ✅ FIXED & TESTED
+RISK: 🟢 GREEN (Low - UI only, no backend changes)
+
+───────────────────────────────────────────────────────────────
+ PROBLEM
+───────────────────────────────────────────────────────────────
+❌ Duration filter was hiding/showing devices in sidebar
+❌ Users confused when devices disappeared after duration change
+❌ Sidebar behavior inconsistent with Location/Series filters
+
+───────────────────────────────────────────────────────────────
+ SOLUTION
+───────────────────────────────────────────────────────────────
+✅ Removed duration filter sidebar sync logic from drawCallback
+✅ Duration filter now ONLY affects table data display
+✅ Sidebar always shows all devices (or filtered by Location/Series)
+
+───────────────────────────────────────────────────────────────
+ FILES CHANGED
+───────────────────────────────────────────────────────────────
+📄 resources/views/frontend/idle-alarm/index.blade.php
+   Lines 1063-1143: Simplified drawCallback (83 → 10 lines)
+
+───────────────────────────────────────────────────────────────
+ FILTER BEHAVIOR AFTER FIX
+───────────────────────────────────────────────────────────────
+Filter Type        | Table Data | Sidebar Visibility | Checkboxes
+─────────────────────────────────────────────────────────────────
+Duration           | ✅ YES     | ❌ NO (FIXED)      | ❌ NO
+Location           | ✅ YES     | ✅ YES             | ❌ NO
+Series             | ✅ YES     | ✅ YES             | ❌ NO
+Device Checkbox    | ✅ YES     | ❌ NO              | ✅ User Control
+Date Range         | ✅ YES     | ❌ NO              | ❌ NO
+
+───────────────────────────────────────────────────────────────
+ TESTING
+───────────────────────────────────────────────────────────────
+✅ Test 1: Duration filter doesn't hide sidebar devices
+✅ Test 2: Duration + device selection works correctly
+✅ Test 3: Location filter still controls sidebar
+✅ Test 4: Clear duration filter works smoothly
+✅ Test 5: Multiple filter combinations work together
+✅ Test 6: Checkbox preservation (TASK 7) still works
+
+Full test plan: TEST_DURATION_FILTER.md
+
+───────────────────────────────────────────────────────────────
+ DOCUMENTATION
+───────────────────────────────────────────────────────────────
+📚 BUGFIX_DURATION_FILTER_SIDEBAR.md  - Technical details
+📚 SUMMARY_BUGFIX_8.md                - Executive summary
+📚 VISUAL_GUIDE_DURATION_FILTER.md    - Visual examples
+📚 TEST_DURATION_FILTER.md            - Test plan
+📚 QUICK_REFERENCE_BUGFIX_8.txt       - This file
+
+Updated: DEVELOPMENT_PROGRESS.md
+
+───────────────────────────────────────────────────────────────
+ DEPLOYMENT
+───────────────────────────────────────────────────────────────
+1. Copy modified file: index.blade.php
+2. No migration needed ✅
+3. No cache clear needed (optional: php artisan view:clear)
+4. Test: Open Idle Monitor page, change duration filter
+5. Verify: Sidebar devices NOT hidden ✅
+
+───────────────────────────────────────────────────────────────
+ ROLLBACK (if needed)
+───────────────────────────────────────────────────────────────
+Git revert index.blade.php to previous version
+No database/config impact
+
+───────────────────────────────────────────────────────────────
+ SYSTEM RULES COMPLIANCE
+───────────────────────────────────────────────────────────────
+✅ No breaking changes
+✅ No data deletion
+✅ No feature modifications (only bug fix)
+✅ Backward compatible
+✅ Focused change (only duration filter behavior)
+
+───────────────────────────────────────────────────────────────
+ BROWSER CONSOLE VERIFICATION
+───────────────────────────────────────────────────────────────
+EXPECTED LOG (when changing duration):
+  ⏱️ Duration filter CHANGED: gt30
+  ✅ Table reloaded - record count: 87
+
+SHOULD NOT SEE (removed):
+  🔄 Syncing sidebar visibility...  ❌ (removed)
+  ✅ Sidebar visibility synced...   ❌ (removed)
+
+───────────────────────────────────────────────────────────────
+ QUICK TEST
+───────────────────────────────────────────────────────────────
+1. Open: http://127.0.0.1:8000 → Idle Monitor
+2. Count sidebar devices (e.g., 397 devices)
+3. Select duration: "> 30 Menit"
+4. Verify: Sidebar STILL shows 397 devices ✅
+5. Verify: Table shows only > 30 min records ✅
+
+───────────────────────────────────────────────────────────────
+ IMPACT
+───────────────────────────────────────────────────────────────
+User Experience:
+  ✅ Less confusion (devices always visible)
+  ✅ Better usability (duration = table filter only)
+  ✅ Improved workflow (multi-filter combinations)
+
+Code Quality:
+  ✅ Reduced complexity (83 → 10 lines)
+  ✅ Better maintainability (single responsibility)
+  ✅ Performance improvement (less DOM manipulation)
+
+───────────────────────────────────────────────────────────────
+ RELATED FIXES
+───────────────────────────────────────────────────────────────
+TASK 7 (BUGFIX_CHECKBOX_SIDEBAR.md):
+  ✅ Checkbox selections preserved across filter changes
+  ✅ Works together with this fix for optimal UX
+
+───────────────────────────────────────────────────────────────
+
+✅ FIX COMPLETE - READY FOR DEPLOYMENT
+
+═══════════════════════════════════════════════════════════════

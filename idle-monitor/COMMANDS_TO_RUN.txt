@@ -1,0 +1,132 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    COPY & PASTE COMMANDS TO RUN                              ║
+║                          (Langsung jalankan ini)                              ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+Buka Command Prompt atau PowerShell, kemudian copy & paste commands di bawah:
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+COMMAND 1: Enable MySQL di PHP
+───────────────────────────────
+
+Jalankan batch file (ini akan uncomment MySQL extension di php.ini):
+
+    setup_php.bat
+
+Atau manual di PowerShell:
+
+    powershell -Command "$content = Get-Content 'C:\php\php.ini' -Raw; $content = $content -replace ';\s*extension=pdo_mysql', 'extension=pdo_mysql'; Set-Content -Path 'C:\php\php.ini' -Value $content"
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+COMMAND 2: Setup Database
+────────────────────────
+
+Navigate ke folder project dan setup database:
+
+    cd g:\project\vss\idle-monitor
+    C:\php\php.exe artisan migrate --fresh --seed
+
+Expected output:
+    ✓ Migrated: 2026_06_03_163708_create_devices_table
+    ✓ Migrated: 2026_06_03_163709_create_alarm_raw_table
+    ... (more migrations)
+    ✓ Database seeded successfully!
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+COMMAND 3: Start Development Server
+────────────────────────
+
+(Masih di folder yang sama)
+
+    C:\php\php.exe artisan serve
+
+Expected output:
+    Laravel development server started: http://127.0.0.1:8000
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+COMMAND 4: Open Browser
+──────────
+
+(Buka browser URL):
+
+    http://localhost:8000
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+COMMAND 5: Login
+─────────
+
+Di login form, masukkan:
+
+    Email:    manager@vss.com
+    Password: manager123
+
+    Klik: Login
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+ALL COMMANDS TOGETHER
+─────────────────────
+
+Copy semua commands ini ke Command Prompt/PowerShell:
+
+    setup_php.bat
+    cd g:\project\vss\idle-monitor
+    C:\php\php.exe artisan migrate --fresh --seed
+    C:\php\php.exe artisan serve
+
+Then:
+    1. Open browser: http://localhost:8000
+    2. Login: manager@vss.com / manager123
+    3. DONE! 🎉
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING COMMANDS
+───────────────────────
+
+If "could not find driver" error:
+
+    1. Check php.ini was updated:
+       findstr /M "extension=pdo_mysql" C:\php\php.ini
+    
+    2. If not found, edit manually:
+       notepad C:\php\php.ini
+       (Find ;extension=pdo_mysql and remove semicolon)
+       (Save & Close)
+    
+    3. Try migrate again:
+       C:\php\php.exe artisan migrate --fresh --seed
+
+If port 8000 in use, use different port:
+
+    C:\php\php.exe artisan serve --port=3001
+
+If database errors, reset everything:
+
+    C:\php\php.exe artisan migrate:refresh --seed
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+STOP SERVER
+───────────
+
+Press:  Ctrl + C
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+READY TO START? Follow these steps:
+
+1. Run COMMAND 1 (Enable MySQL)
+2. Run COMMAND 2 (Setup Database)
+3. Run COMMAND 3 (Start Server)
+4. Run COMMAND 4 (Open Browser)
+5. Run COMMAND 5 (Login)
+
+That's it! Application sudah running 🚀
+
+═══════════════════════════════════════════════════════════════════════════════════

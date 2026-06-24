@@ -1,0 +1,66 @@
+✅ HORIZONTAL STICKY COLUMNS - FIXED
+=====================================
+
+DATE: 2026-06-11
+TIME: 19:00
+
+PROBLEM:
+--------
+Columns DEVICE ID, DEVICE NAME, ALARM TYPE, ALARM STATUS were scrolling horizontally 
+when they should stay FROZEN (visible) when scrolling to the right.
+
+ROOT CAUSE:
+-----------
+1. Duplicate CSS rules conflicting with each other
+2. Incorrect `left` positions (too small/overlapping)
+3. Z-index too low
+4. Background colors not solid (transparency issues)
+
+SOLUTION:
+---------
+✅ Cleaned up all duplicate CSS
+✅ Fixed `left` positions with proper spacing:
+   - Column 1 (Checkbox): left: 0px
+   - Column 2 (DEVICE ID): left: 50px  
+   - Column 3 (DEVICE NAME): left: 170px
+   - Column 4 (ALARM TYPE): left: 350px
+   - Column 5 (ALARM STATUS): left: 470px
+
+✅ Increased z-index (15 for headers, 10 for body)
+✅ Added !important to all background colors
+✅ Added shadow to column 5 (visual separator)
+
+EXPECTED BEHAVIOR:
+------------------
+When scrolling HORIZONTALLY to the right:
+- ✅ Checkbox column STAYS VISIBLE (frozen)
+- ✅ DEVICE ID column STAYS VISIBLE (frozen)
+- ✅ DEVICE NAME column STAYS VISIBLE (frozen)
+- ✅ ALARM TYPE column STAYS VISIBLE (frozen)
+- ✅ ALARM STATUS column STAYS VISIBLE (frozen)
+- ✅ Other columns scroll normally
+
+When scrolling VERTICALLY down:
+- ✅ Filter row scrolls away (not frozen)
+- ✅ Header row scrolls away (not frozen)
+- ✅ All content scrolls naturally
+
+NEXT STEPS:
+-----------
+1. Open: http://127.0.0.1:8000/frontend/idle-alarm
+2. Hard refresh: Ctrl+F5 or Ctrl+Shift+R
+3. Scroll table horizontally to the right
+4. Verify first 5 columns stay frozen
+
+FILES MODIFIED:
+---------------
+- resources/views/frontend/idle-alarm/index.blade.php (CSS section only)
+
+SAFETY:
+-------
+✅ No database changes
+✅ No logic changes
+✅ CSS only (highly reversible)
+✅ Risk level: GREEN
+
+STATUS: ✅ READY FOR TESTING

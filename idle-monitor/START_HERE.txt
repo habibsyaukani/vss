@@ -1,0 +1,82 @@
+================================================================================
+                       🚀 START HERE - SIMPLE GUIDE
+================================================================================
+
+FIRST TIME SETUP (Do this ONCE):
+================================
+
+1. Double-click: RUN_WITH_LARAGON.bat
+2. Wait for it to finish
+3. Browser automatically opens to: http://localhost:8000/login
+4. Login: manager@vss.com / manager123
+
+That's it! System is running.
+
+
+NEXT TIMES (Just start the server):
+===================================
+
+1. Double-click: RUN_DASHBOARD.bat
+   OR
+2. Double-click: RUN_WITH_LARAGON.bat (does both setup + start)
+
+Both work fine. Use whichever you prefer.
+
+
+WHAT HAPPENS:
+=============
+
+RUN_WITH_LARAGON.bat:
+  ✓ Setup database (if needed)
+  ✓ Create users (if needed)
+  ✓ Start server
+  ✓ Open browser
+  
+RUN_DASHBOARD.bat:
+  ✓ Start server immediately
+  ✓ No setup (assumes already done)
+  ✓ Quick start for next times
+
+
+ACCESS URL:
+===========
+
+http://localhost:8000/login
+
+Email:    manager@vss.com
+Password: manager123
+
+
+STOP SERVER:
+============
+
+Press Ctrl+C in the command window
+
+
+COMMON ISSUES:
+==============
+
+Q: "Connection refused"
+A: Laragon MySQL not running. Start Laragon in system tray.
+
+Q: "Port 8000 already in use"
+A: Another process using port 8000. Kill it or wait a minute.
+
+Q: "Database error"
+A: Make sure .env file is correct and MySQL is running.
+
+
+FILES:
+======
+
+RUN_WITH_LARAGON.bat    → Setup + Start (First time)
+RUN_DASHBOARD.bat       → Quick start (Next times)
+START_HERE.txt          → This file
+
+
+ENJOY!
+======
+
+System is ready to use. Happy coding!
+
+================================================================================

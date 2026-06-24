@@ -270,7 +270,7 @@ class PullIdleAlarmsDateRangeCommand extends Command
         $this->info('📋 SUMMARY:');
         
         // Show import logs
-        $logs = \App\Models\ImportLog::where('job_name', 'ImportAlarmPageJob')
+        $logs = \App\Models\ImportLog::whereIn('job_name', ['ImportAlarmPageJob', 'ParallelImportAlarmJob'])
             ->where('created_at', '>=', now()->subMinutes(10))
             ->get();
         
@@ -292,6 +292,10 @@ class PullIdleAlarmsDateRangeCommand extends Command
                 ['Valid idle alarms processed', $totalIdleAlarms],
             ]
         );
+
+        // Required for JS frontend extraction
+        $this->info("FrontendMatch: Fetched {$totalRecords} records");
+        $this->info("FrontendMatch: {$totalIdleAlarms} idle alarms processed");
 
         if ($totalIdleAlarms > 0) {
             $this->newLine();

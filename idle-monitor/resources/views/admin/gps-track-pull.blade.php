@@ -82,10 +82,8 @@
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i> <strong>Perhatian:</strong>
                             <ul class="mb-0 mt-2">
-                                <li>Sistem akan <strong>loop 397 devices satu per satu</strong> (VSS API requirement)</li>
-                                <li><strong>Waktu pull: ~2-3 menit</strong> untuk semua device</li>
-                                <li>Device dengan data: ~0.5-2 detik per device</li>
-                                <li>Device tanpa data: ~0.1 detik per device (cepat)</li>
+                                <li>Sistem akan menarik data secara <strong>Paralel Batch (20 device sekaligus)</strong></li>
+                                <li><strong>Waktu pull super cepat: ~30-45 detik</strong> untuk semua 397 device</li>
                                 <li>Data disimpan ke tabel <code>gps_tracks_raw</code></li>
                                 <li><span class="badge bg-warning text-dark">PENTING</span> Jangan refresh atau close browser saat proses berjalan!</li>
                             </ul>

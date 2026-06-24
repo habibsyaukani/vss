@@ -1,0 +1,237 @@
+================================================================================
+                        ⚠️  DATA SAFETY WARNING  ⚠️
+                    PROTECT YOUR DATABASE AND DATA
+================================================================================
+
+DANGER: DO NOT RUN THESE COMMANDS
+================================================================================
+
+❌ NEVER RUN THESE (Will DELETE all data):
+
+    php artisan migrate:fresh
+    php artisan migrate:fresh --seed
+    php artisan migrate:refresh --seed
+    php artisan db:wipe
+    php artisan db:seed (alone, without migrate:fresh)
+
+❌ NEVER DO THIS:
+    Drop database manually
+    Delete table manually
+    Truncate table
+
+WHAT THESE COMMANDS DO:
+- migrate:fresh         → DROP all tables + CREATE new ones (DATA LOST!)
+- migrate:refresh       → Rollback + Re-run (DATA LOST!)
+- db:wipe              → Delete entire database (DATA LOST!)
+
+================================================================================
+
+✅ SAFE COMMANDS TO USE
+================================================================================
+
+✅ Safe to run anytime:
+
+    php artisan migrate
+    This only runs NEW migrations that haven't been run yet
+    Does NOT delete existing data
+    Does NOT rollback anything
+
+✅ Safe for development setup:
+
+    RUN_WITH_LARAGON.bat
+    (Uses migrate, not migrate:fresh)
+
+✅ Safe for starting server:
+
+    RUN_DASHBOARD.bat
+    (Only starts server, doesn't touch database)
+
+================================================================================
+
+📋 WHEN YOU NEED TO RESET DATA
+================================================================================
+
+Scenario 1: Want to start fresh (development only)
+   ⚠️ WARNING: This deletes ALL data!
+   
+   If you really need to do this:
+   1. BACKUP your database first!
+   2. Run ONLY in development environment
+   3. Never in production!
+   
+   Command: php artisan migrate:fresh --seed
+   
+   Then watch out - all data is gone!
+
+Scenario 2: Add new migrations
+   ✅ SAFE: 
+   
+   1. Create new migration: php artisan make:migration name_here
+   2. Edit migration file
+   3. Run: php artisan migrate
+   
+   Existing data is preserved!
+
+Scenario 3: Seed more test data
+   ✅ SAFE:
+   
+   1. Create new seeder: php artisan make:seeder AlarmSeeder
+   2. Edit seeder with new data
+   3. Run: php artisan db:seed --class=AlarmSeeder
+   
+   Existing data is preserved!
+
+================================================================================
+
+🛡️ SYSTEM PROTECTION RULES - DATA SAFETY
+================================================================================
+
+RULE #2: JANGAN MENGHAPUS DATA YANG SUDAH ADA
+
+This means:
+   ✅ Never use migrate:fresh in production
+   ✅ Never delete tables manually
+   ✅ Never truncate tables
+   ✅ Always backup before major changes
+   ✅ Always test in development first
+
+Violation = Data Loss = Bad!
+
+================================================================================
+
+📊 CURRENT SCRIPTS STATUS
+================================================================================
+
+RUN_WITH_LARAGON.bat
+   ✅ UPDATED TO BE SAFE
+   ✅ Uses "migrate" not "migrate:fresh"
+   ✅ Preserves existing data
+   ✅ Only adds new migrations
+   ✅ Checks for test users before seeding
+
+RUN_DASHBOARD.bat
+   ✅ SAFE - Only starts server
+   ✅ No database operations
+   ✅ No data affected
+
+fix_users.php
+   ✅ SAFE - Only creates users if needed
+   ✅ No data deleted
+   ✅ Can be run multiple times
+
+================================================================================
+
+🚨 IF YOU ACCIDENTALLY DELETE DATA
+================================================================================
+
+Don't panic! Here's what to do:
+
+1. STOP the server (Press Ctrl+C)
+2. DON'T make any more changes
+3. CHECK if you have a backup
+4. If backup exists: restore it
+5. If no backup: data is gone (sorry!)
+
+Prevention:
+   ✅ Backup database regularly
+   ✅ Use version control (git)
+   ✅ Test in development, not production
+   ✅ Always review commands before running
+   ✅ Never run commands you don't understand
+
+================================================================================
+
+📝 MIGRATION SAFETY GUIDE
+================================================================================
+
+Safe workflow:
+
+Step 1: Create new migration
+   Command: php artisan make:migration add_column_to_table
+   Result: New file in database/migrations/
+
+Step 2: Edit the migration file
+   - Add UP method (what to do)
+   - Add DOWN method (how to undo)
+   
+Step 3: Run it
+   Command: php artisan migrate
+   Result: Only new migrations run
+   Data: PRESERVED ✅
+
+Step 4: If there's a problem
+   Command: php artisan migrate:rollback
+   Result: Undoes the last migration
+   Data: PRESERVED ✅
+
+================================================================================
+
+🔒 PRODUCTION SAFETY
+================================================================================
+
+In Production Environment:
+
+   NEVER EVER run:
+   ❌ migrate:fresh
+   ❌ migrate:refresh
+   ❌ db:wipe
+   ❌ manual DROP commands
+   ❌ truncate commands
+
+If you need to make changes in production:
+   1. Create new migration
+   2. Test thoroughly in development
+   3. Backup production database
+   4. Run ONLY: php artisan migrate
+   5. Have rollback plan ready
+   6. Monitor for issues
+
+================================================================================
+
+✅ CURRENT DATA SAFETY STATUS
+================================================================================
+
+Database: MySQL (Laragon)
+Connection: Local development
+
+Current Setup:
+   ✅ Using "migrate" instead of "migrate:fresh"
+   ✅ Data is preserved when running setup
+   ✅ Test users are checked before seeding
+   ✅ Scripts are safe to run multiple times
+
+Data Protection:
+   ✅ Rules in place to prevent deletion
+   ✅ Scripts updated to be safe
+   ✅ Warnings documented
+   ✅ Safe alternatives provided
+
+================================================================================
+
+📞 BEFORE YOU RUN ANY COMMAND
+================================================================================
+
+Ask yourself:
+
+[ ] Do I know what this command does?
+[ ] Am I in development or production?
+[ ] Have I tested this in development first?
+[ ] Do I have a backup?
+[ ] Can I undo this if something goes wrong?
+[ ] Is this following the safe commands list?
+
+If any answer is NO → STOP and ask first!
+
+================================================================================
+
+Remember: 🛡️
+
+   "Data is precious. Treat it with respect."
+   "Always backup before making changes."
+   "When in doubt, don't run it."
+   "Preserve > Destroy."
+
+================================================================================
+Last Updated: 2026-06-03
+Status: 🔒 DATA PROTECTION ACTIVE
+================================================================================
