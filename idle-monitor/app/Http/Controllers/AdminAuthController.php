@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+
+class AdminAuthController extends Controller
+{
+    /**
+     * Show admin login form
+     */
+    public function showLoginForm()
+    {
+        if (Auth::check() && Auth::user()->isAdmin()) {
+            return redirect('/admin/dashboard');
+        }
+        
+        return view('admin.auth.login');
+    }
+
+    /**
+     * Handle admin login
+     */
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|min:6',
+        ]);
+
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+
+            // Check if user is admin
+            if (!$user->isAdmin()) {
+                Auth::logout();
+                return back()->with('error', '403: Access Denied. Admin role required.');
+            }
+
+            // Check if user is active
+            if (!$user->isActive()) {
+                Auth::logout();
+                return back()->with('error', 'Your account is inactive.');
+            }
+
+            $request->session()->regenerate();
+            return redirect('/admin/dashboard')->with('success', 'Welcome back, ' . $user->name);
+        }
+
+        return back()->with('error', 'Invalid credentials.');
+    }
+
+    /**
+     * Handle admin logout
+     */
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/admin/login')->with('success', 'Logged out successfully.');
+    }
+}

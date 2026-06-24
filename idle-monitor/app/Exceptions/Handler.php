@@ -26,5 +26,12 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+        $this->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['error' => 'Sesi telah habis.', 'redirect' => route('login')], 419);
+            }
+            return redirect()->route('login')->with('error', 'Sesi Anda telah habis. Silakan login kembali.');
+        });
     }
 }

@@ -41,13 +41,12 @@ class HowenAuthService
 
             foreach ($passwordAttempts as $method => $password) {
                 Log::info("Howen Auth Attempt ({$method})", [
-                    'url' => "{$this->apiUrl}/user/login.action",
+                    'url' => "{$this->apiUrl}/user/apiLogin.action",
                     'username' => $this->username,
-                    'password' => $password,
                 ]);
                 
                 try {
-                    $response = $this->client->post("{$this->apiUrl}/user/login.action", [
+                    $response = $this->client->post("{$this->apiUrl}/user/apiLogin.action", [
                         'form_params' => [
                             'username' => $this->username,
                             'password' => $password,

@@ -29,4 +29,37 @@ class IdleAlarm extends Model
     {
         return $this->belongsTo(Device::class, 'device_id', 'device_id');
     }
+
+    /**
+     * Hitung durasi real-time dari starting_time → ending_time.
+     * Jika ending_time kosong (alarm masih aktif), hitung dari starting_time → sekarang.
+     */
+    public function getDurationFormattedAttribute(): string
+    {
+        if (!$this->starting_time) return '-';
+
+        $start = \Carbon\Carbon::parse($this->starting_time);
+        $end   = $this->ending_time
+                    ? \Carbon\Carbon::parse($this->ending_time)
+                    : now();
+
+        $totalSeconds = max(0, $end->diffInSeconds($start));
+
+        return "{$totalSeconds} detik";
+    }
+
+    /**
+     * Kalkulasi duration_seconds real-time dari starting_time → ending_time.
+     */
+    public function getDurationSecondsCalculatedAttribute(): int
+    {
+        if (!$this->starting_time) return 0;
+
+        $start = \Carbon\Carbon::parse($this->starting_time);
+        $end   = $this->ending_time
+                    ? \Carbon\Carbon::parse($this->ending_time)
+                    : now();
+
+        return max(0, $end->diffInSeconds($start));
+    }
 }

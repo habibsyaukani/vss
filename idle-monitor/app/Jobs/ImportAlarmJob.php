@@ -49,7 +49,7 @@ class ImportAlarmJob implements ShouldQueue
 
             // Loop through pages and dispatch jobs
             do {
-                $alarms = $alarmService->fetchAlarmsPageWithMock(
+                $alarms = $alarmService->fetchAlarmsPage(
                     $pageNum,
                     $pageCount,
                     $beginTime,

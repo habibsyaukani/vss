@@ -8,12 +8,15 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * Delete old TRUCK-001, TRUCK-002, TRUCK-003 mock data
-     * Keep only real Howen device names (GPE-*, FT-*, etc)
      */
     public function up(): void
     {
-        \DB::table('devices')->where('device_name', 'LIKE', '%TRUCK%')->delete();
+        Schema::create('export_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('status')->default('pending'); // pending, processing, completed, failed
+            $table->string('file_path')->nullable();
+            $table->timestamps();
+        });
     }
 
     /**
@@ -21,7 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Cannot reliably restore deleted data
-        // This is a data cleanup, not reversible
+        Schema::dropIfExists('export_jobs');
     }
 };

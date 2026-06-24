@@ -23,27 +23,27 @@ class HowenDeviceService
 
     /**
      * Fetch devices from Howen API
-     * Try multiple endpoints and ports
-     * Fall back to mock data if all fail
+     * Endpoint: POST /vss/vehicle/findAll.action (port 9966)
      */
     public function fetchDevices($useMock = false)
     {
         try {
-            if ($useMock) {
-                Log::info('Using mock device data for testing');
-                return $this->getMockDevices();
-            }
-
             $token = $this->authService->getToken();
 
             Log::info('Fetching devices from Howen API');
 
-            // List of endpoints to try
+            // Extract host and scheme properly
+            $parsedUrl = parse_url($this->apiUrl);
+            $host = $parsedUrl['host'] ?? '';
+            $scheme = $parsedUrl['scheme'] ?? 'http';
+            
+            // List of endpoints to try (CORRECT endpoint first)
             $endpoints = [
+                "http://{$host}:9966/vss/vehicle/findAll.action",  // Correct endpoint with port 9966
+                "https://{$host}:9966/vss/vehicle/findAll.action",
+                "{$this->apiUrl}/vehicle/findAll.action",             // Fallback without port
                 "{$this->apiUrl}/vehicle/getDeviceList.action",
                 "{$this->apiUrl}/vehicle/apiFindVehicle.action",
-                "https://vss.ptdigital.co.id:9966/vss/vehicle/getDeviceList.action",
-                "https://vss.ptdigital.co.id:9966/vss/vehicle/apiFindVehicle.action",
             ];
 
             $lastError = null;
@@ -55,16 +55,25 @@ class HowenDeviceService
                     $response = $this->client->post($endpoint, [
                         'form_params' => [
                             'token' => $token,
+                            'pageNum' => '1',
+                            'pageCount' => '20000',
+                            'isOnline' => '',  // All (online + offline)
+                            'keyword' => '',
                         ],
-                        'timeout' => 10,
+                        'timeout' => 60,
                         'verify' => false,
                     ]);
 
                     $data = json_decode($response->getBody()->getContents(), true);
 
-                    if ($data['status'] == 10000 && isset($data['data'])) {
+                    if (isset($data['status']) && $data['status'] == 10000 && isset($data['data'])) {
                         $devices = is_array($data['data']) ? $data['data'] : [$data['data']];
                         Log::info("✅ Success with endpoint: {$endpoint}", ['count' => count($devices)]);
+                        return $devices;
+                    } elseif (isset($data['data'])) {
+                        // Some responses might not have status field, check for data directly
+                        $devices = is_array($data['data']) ? $data['data'] : [$data['data']];
+                        Log::info("✅ Success with endpoint (no status check): {$endpoint}", ['count' => count($devices)]);
                         return $devices;
                     }
 
@@ -75,13 +84,55 @@ class HowenDeviceService
                 }
             }
 
-            // All endpoints failed, use mock for development
-            Log::warning('All device endpoints failed, falling back to mock data');
-            return $this->getMockDevices();
+            // All endpoints failed
+            Log::error('All device endpoints failed', ['last_error' => $lastError]);
+            
+            // Try to extract devices from alarms as fallback
+            Log::info('Attempting to extract devices from existing alarms');
+            try {
+                $alarmResponse = $this->client->post("{$this->apiUrl}/alarm/apiFindAllByTime.action", [
+                    'form_params' => [
+                        'token' => $token,
+                        'pageNum' => 1,
+                        'pageCount' => 500,
+                        'beginTime' => now()->subMonths(1)->toDateTimeString(),
+                        'endTime' => now()->toDateTimeString(),
+                    ],
+                    'timeout' => 60,
+                    'verify' => false,
+                ]);
 
+                $alarmData = json_decode($alarmResponse->getBody()->getContents(), true);
+
+                if (isset($alarmData['data'])) {
+                    $alarms = is_array($alarmData['data']) ? $alarmData['data'] : [$alarmData['data']];
+                    // Extract unique devices from alarms
+                    $devicesMap = [];
+                    foreach ($alarms as $alarm) {
+                        $deviceId = $alarm['deviceguid'] ?? $alarm['deviceID'] ?? null;
+                        $deviceName = $alarm['deviceName'] ?? null;
+                        if ($deviceId && !isset($devicesMap[$deviceId])) {
+                            $devicesMap[$deviceId] = [
+                                'deviceID' => $deviceId,
+                                'deviceName' => $deviceName,
+                                'groupName' => $alarm['groupName'] ?? null,
+                            ];
+                        }
+                    }
+                    $devices = array_values($devicesMap);
+                    Log::info("✅ Devices extracted from alarms", ['count' => count($devices)]);
+                    return $devices;
+                }
+            } catch (\Exception $e) {
+                Log::warning("Device extraction from alarms failed", ['error' => substr($e->getMessage(), 0, 100)]);
+            }
+
+            // All endpoints failed
+            Log::error('All device endpoints failed', ['last_error' => $lastError]);
+            return [];
         } catch (GuzzleException $e) {
             Log::error('Howen API request failed', ['error' => $e->getMessage()]);
-            return $this->getMockDevices();
+            return [];
         }
     }
 
@@ -146,7 +197,7 @@ class HowenDeviceService
                 $deviceName = $device['deviceName'] ?? $device['devicename'] ?? $device['device_name'] ?? null;
                 
                 if (!$deviceId) {
-                    Log::warning('Skipping device without ID', $device);
+                    Log::warning('Skipping device without ID', ['device' => json_encode($device)]);
                     continue;
                 }
 

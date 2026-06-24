@@ -8,12 +8,12 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * Delete old TRUCK mock alarms
      */
     public function up(): void
     {
-        \DB::table('idle_alarms')->where('device_name', 'LIKE', '%TRUCK%')->delete();
-        \DB::table('alarm_raw')->where('device_name', 'LIKE', '%TRUCK%')->delete();
+        Schema::table('gps_tracks', function (Blueprint $table) {
+            $table->index('speed');
+        });
     }
 
     /**
@@ -21,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Cannot reliably restore deleted data
+        Schema::table('gps_tracks', function (Blueprint $table) {
+            $table->dropIndex(['speed']);
+        });
     }
 };

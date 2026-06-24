@@ -20,12 +20,21 @@ class HowenAlarmService
     {
         $this->client = new Client();
         $this->apiUrl = rtrim(env('HOWEN_API_URL'), '/');
-        $this->authService = new HowenAuthService();
+        // Use VssAuthService because HowenAuthService is failing due to JSON vs Form differences
+        $this->authService = new VssAuthService();
     }
 
     /**
      * Fetch alarms from Howen API with pagination
      * Endpoint: POST /alarm/apiFindAllByTime.action
+     * 
+     * @param int $pageNum Page number for pagination
+     * @param int $pageCount Records per page
+     * @param string|null $beginTime Start time filter (YYYY-MM-DD HH:mm:ss)
+     * @param string|null $endTime End time filter (YYYY-MM-DD HH:mm:ss)
+     * @param string|null $deviceId Filter by device ID
+     * @param int|null $alarmType Filter by alarm type
+     * @return array Array of alarm records
      */
     public function fetchAlarmsPage($pageNum = 1, $pageCount = 200, $beginTime = null, $endTime = null, $deviceId = null, $alarmType = null)
     {
@@ -39,10 +48,13 @@ class HowenAlarmService
                 $endTime = now()->toDateTimeString();
             }
 
-            Log::info("Fetching alarms", [
+            Log::info("Fetching alarms from Howen API", [
                 'page' => $pageNum,
+                'page_count' => $pageCount,
                 'begin' => $beginTime,
                 'end' => $endTime,
+                'device_id' => $deviceId,
+                'alarm_type' => $alarmType,
             ]);
 
             $response = $this->client->post("{$this->apiUrl}/alarm/apiFindAllByTime.action", [
@@ -63,8 +75,26 @@ class HowenAlarmService
             $data = json_decode($response->getBody()->getContents(), true);
 
             if ($data['status'] == 10000 && isset($data['data'])) {
-                $alarms = is_array($data['data']) ? $data['data'] : [$data['data']];
-                Log::info("Fetched alarms page", ['count' => count($alarms)]);
+                // Handle two possible response structures:
+                // Structure 1: data is array of alarm objects directly
+                // Structure 2: data is object with 'dataList' key containing alarms
+                
+                $dataItem = $data['data'];
+                
+                if (isset($dataItem['dataList'])) {
+                    // New structure: data contains metadata + dataList
+                    $alarms = is_array($dataItem['dataList']) ? $dataItem['dataList'] : [$dataItem['dataList']];
+                    Log::info("Fetched alarms page (new structure)", [
+                        'count' => count($alarms),
+                        'totalCount' => $dataItem['totalCount'] ?? null,
+                        'pageNum' => $pageNum,
+                    ]);
+                } else {
+                    // Old structure: data is direct array of alarms
+                    $alarms = is_array($dataItem) ? $dataItem : [$dataItem];
+                    Log::info("Fetched alarms page (old structure)", ['count' => count($alarms)]);
+                }
+                
                 return $alarms;
             } else {
                 Log::error('Failed to fetch alarms', ['status' => $data['status'] ?? null, 'message' => $data['msg'] ?? null]);
@@ -78,18 +108,132 @@ class HowenAlarmService
     }
 
     /**
-     * Get alarms with mock fallback for development
+     * Get alarms with EXPLICIT source logging
+     * IMPORTANT: Log clearly if using mock or real API
      */
     public function fetchAlarmsPageWithMock($pageNum = 1, $pageCount = 200, $beginTime = null, $endTime = null)
     {
         $alarms = $this->fetchAlarmsPage($pageNum, $pageCount, $beginTime, $endTime);
         
         if (empty($alarms)) {
-            Log::warning('No alarms from API, using mock data');
+            // Log warning bahwa kita fallback ke mock
+            Log::warning('⚠️ USING MOCK DATA - API returned empty', [
+                'page' => $pageNum,
+                'reason' => 'Real Howen API not returning data - check endpoint configuration'
+            ]);
             return $this->getMockAlarms($pageNum);
         }
         
+        // Log kalau berasal dari API yang real
+        Log::info('✅ REAL DATA FROM API', ['page' => $pageNum, 'count' => count($alarms)]);
         return $alarms;
+    }
+
+    /**
+     * OPSI 1: Fetch multiple pages IN PARALLEL (faster)
+     * 
+     * Uses GuzzleHttp concurrent requests for 3-4x speed improvement
+     * 
+     * @param int $startPage Starting page number
+     * @param int $endPage Ending page number
+     * @param int $pageCount Records per page
+     * @param string|null $beginTime Start time
+     * @param string|null $endTime End time
+     * @param int $concurrency How many pages to fetch simultaneously (default: 3)
+     * @return array Combined array of all alarms from all pages
+     */
+    public function fetchAlarmsParallel($startPage = 1, $endPage = 7, $pageCount = 200, $beginTime = null, $endTime = null, $concurrency = 3)
+    {
+        try {
+            $token = $this->authService->getToken();
+
+            if (!$beginTime) {
+                $beginTime = SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString());
+            }
+            if (!$endTime) {
+                $endTime = now()->toDateTimeString();
+            }
+
+            Log::info("⚡ Starting PARALLEL alarm fetch (Option 1)", [
+                'pages' => "{$startPage}-{$endPage}",
+                'concurrency' => $concurrency,
+                'total_pages' => ($endPage - $startPage + 1),
+                'date_range' => "{$beginTime} to {$endTime}",
+            ]);
+
+            // Build requests for all pages as CALLABLES that return Promises
+            // Guzzle Pool requires an array of closures (or RequestInterface)
+            $requests = [];
+            $pageNumbers = [];
+            
+            for ($pageNum = $startPage; $pageNum <= $endPage; $pageNum++) {
+                $pageNumbers[] = $pageNum;
+                
+                $requests[] = function() use ($pageNum, $token, $pageCount, $beginTime, $endTime) {
+                    return $this->client->postAsync("{$this->apiUrl}/alarm/apiFindAllByTime.action", [
+                        'form_params' => [
+                            'token' => $token,
+                            'pageNum' => $pageNum,
+                            'pageCount' => $pageCount,
+                            'beginTime' => $beginTime,
+                            'endTime' => $endTime,
+                            'alarmType' => '',
+                            'deviceID' => '',
+                        ],
+                        'timeout' => 10,
+                        'verify' => false,
+                        'connect_timeout' => 10,
+                    ]);
+                };
+            }
+
+            // Inisialisasi array kosong SEBELUM pool
+            $allAlarms = [];
+
+            // Execute all requests concurrently
+            $pool = new \GuzzleHttp\Pool($this->client, $requests, [
+                'concurrency' => $concurrency,
+                'fulfilled' => function($response, $index) use ($pageNumbers, &$allAlarms) {
+                    $pageNum = $pageNumbers[$index];
+                    $data = json_decode($response->getBody()->getContents(), true);
+                    
+                    if ($data['status'] == 10000 && isset($data['data'])) {
+                        $dataItem = $data['data'];
+                        $alarms = isset($dataItem['dataList']) 
+                            ? (is_array($dataItem['dataList']) ? $dataItem['dataList'] : [$dataItem['dataList']])
+                            : (is_array($dataItem) ? $dataItem : [$dataItem]);
+                        
+                        Log::info("✅ Page {$pageNum} fetched", ['count' => count($alarms)]);
+                        
+                        // PUSH ke reference array
+                        if (is_array($alarms) && !empty($alarms)) {
+                            $allAlarms = array_merge($allAlarms, $alarms);
+                        }
+                    }
+                },
+                'rejected' => function($reason, $index) use ($pageNumbers) {
+                    $pageNum = $pageNumbers[$index];
+                    Log::error("❌ Page {$pageNum} failed", ['error' => $reason->getMessage()]);
+                }
+            ]);
+
+            // Wait for all requests to complete
+            $promise = $pool->promise();
+            $promise->wait();
+
+            $totalCount = count($allAlarms);
+            Log::info("⚡ PARALLEL fetch completed", [
+                'pages_fetched' => ($endPage - $startPage + 1),
+                'total_records' => $totalCount,
+                'concurrency' => $concurrency,
+            ]);
+
+            return $allAlarms;
+
+        } catch (\Exception $e) {
+            Log::error('⚠️ Parallel fetch error', ['error' => $e->getMessage()]);
+            return [];
+        }
     }
 
     /**
@@ -110,16 +254,20 @@ class HowenAlarmService
             return null;
         }
 
-        // IMPORTANT: Extract 'dur' value from endDetail
+        // IMPORTANT: Extract 'dur' value from endDetail or alarmValue
         // endDetail format: "dur:59 ; tt:300 ; cur:13.72 ; ..."
+        $startDetail = $alarmData['alarmvalue'] ?? $alarmData['alarmValue'] ?? $alarmData['start_detail'] ?? '';
         $endDetail = $alarmData['endDetail'] ?? $alarmData['end_detail'] ?? '';
         $durationSeconds = 0;
         
         if (preg_match('/dur:\s*(\d+)/', $endDetail, $matches)) {
             // Extract duration from endDetail
             $durationSeconds = (int)$matches[1];  // 59 seconds
+        } elseif (preg_match('/dur:\s*(\d+)/', $startDetail, $matches)) {
+            // Extract duration from startDetail (alarmvalue)
+            $durationSeconds = (int)$matches[1];
         } else {
-            // Fallback: use alarmTimeLength if dur not found in endDetail
+            // Fallback: use alarmTimeLength if dur not found in endDetail or startDetail
             $durationSeconds = (int)($alarmData['alarmTimeLength'] ?? $alarmData['duration_seconds'] ?? 0);
         }
         
@@ -152,7 +300,7 @@ class HowenAlarmService
             'starting_location' => $startGps,
             'ending_time' => $alarmData['endTime'] ?? $alarmData['end_time'] ?? null,
             'ending_location' => $endGps,
-            'start_detail' => $alarmData['alarmValue'] ?? $alarmData['start_detail'] ?? null,
+            'start_detail' => $alarmData['alarmvalue'] ?? $alarmData['alarmValue'] ?? $alarmData['start_detail'] ?? null,
             'end_detail' => $endDetail,  // Full endDetail string
             'start_speed' => (float)($alarmData['speed'] ?? $alarmData['start_speed'] ?? 0),
             'end_speed' => (float)($alarmData['endSpeed'] ?? $alarmData['end_speed'] ?? 0),

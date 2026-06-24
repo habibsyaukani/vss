@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'status',
     ];
 
     /**
@@ -42,4 +44,28 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is fleet manager
+     */
+    public function isFleetManager(): bool
+    {
+        return $this->role === 'fleet_manager';
+    }
+
+    /**
+     * Check if user is active
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
 }

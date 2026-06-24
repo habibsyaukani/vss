@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\IdleAlarmController;
+use App\Http\Controllers\Api\HistoricalDataController;
+use App\Http\Controllers\GpsTrackController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +33,18 @@ Route::prefix('idle-alarms')->group(function () {
     Route::get('/{id}', [IdleAlarmController::class, 'show']);
     Route::put('/{id}', [IdleAlarmController::class, 'update']);
     Route::delete('/{id}', [IdleAlarmController::class, 'destroy']);
+});
+
+// Historical Data API Routes (Admin)
+Route::prefix('admin')->group(function () {
+    Route::post('/pull-idle-alarms-range', [HistoricalDataController::class, 'pullIdleAlarmsDateRange']);
+    Route::get('/historical-data-status', [HistoricalDataController::class, 'status']);
+});
+
+// GPS Tracks API Routes
+Route::prefix('gps-tracks')->group(function () {
+    Route::get('preview', [GpsTrackController::class, 'preview']);
+    Route::post('sync',   [GpsTrackController::class, 'sync']);
 });
 
 // Authenticated routes (for future use)

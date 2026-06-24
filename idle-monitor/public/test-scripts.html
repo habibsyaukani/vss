@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="test-token-123">
+    <title>JavaScript Test</title>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+</head>
+<body>
+    <h1>JavaScript Loading Test</h1>
+    <p>Open browser console (F12) to see results</p>
+    
+    <div id="test-container">
+        <button id="testButton" class="btn">Click Me</button>
+    </div>
+
+    <script>
+        console.log('=== JAVASCRIPT TEST START ===');
+        console.log('1. jQuery loaded?', typeof $ !== 'undefined');
+        console.log('2. jQuery version:', $.fn ? $.fn.jquery : 'NOT LOADED');
+        console.log('3. Document ready test...');
+        
+        $(document).ready(function() {
+            console.log('4. ✅ Document ready fired!');
+            console.log('5. Button element:', $('#testButton').length);
+            
+            $('#testButton').on('click', function() {
+                console.log('6. ✅ Button click event works!');
+                alert('JavaScript is working!');
+            });
+            
+            console.log('7. ✅ Event listener attached!');
+        });
+        
+        console.log('=== JAVASCRIPT TEST END ===');
+    </script>
+</body>
+</html>
