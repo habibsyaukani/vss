@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "System Rules Reminder Before Task",
+  "description": "Reminds about system protection rules before starting any task to prevent breaking existing features",
+  "version": "1",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "🛡️ SYSTEM PROTECTION RULES REMINDER\\n\\n⚠️ Baca: g:\\project\\vss\\idle-monitor\\.kiro\\SYSTEM_RULES.md\\n\\n🔴 STRICT RULES (NON-NEGOTIABLE):\\n✅ JANGAN merusak fitur yang sudah berjalan\\n✅ JANGAN menghapus data\\n✅ JANGAN mengubah fitur yang tidak diminta\\n✅ FOKUS hanya pada task\\n✅ BACKWARD COMPATIBLE\\n\\n📋 WAJIB ANALISIS SEBELUM KODE:\\n[ ] File to modify? (list)\\n[ ] Files to NOT touch? (confirm)\\n[ ] Database impact?\\n[ ] API impact?\\n[ ] Risk: GREEN/YELLOW/RED?\\n[ ] Need approval?\\n\\nLanjutkan dengan full analysis"
+  }
+}
