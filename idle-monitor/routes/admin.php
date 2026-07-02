@@ -10,6 +10,7 @@ use App\Http\Controllers\IdleAlarmController;
 use App\Http\Controllers\ImportLogController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\DataPullController;
+use App\Http\Controllers\Admin\SystemHealthController;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     
@@ -87,4 +88,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/system-control/realtime/start', [App\Http\Controllers\SystemControlController::class, 'startRealtimePull'])->name('system-control.realtime.start');
     Route::post('/system-control/realtime/stop', [App\Http\Controllers\SystemControlController::class, 'stopRealtimePull'])->name('system-control.realtime.stop');
     Route::get('/system-control/status', [App\Http\Controllers\SystemControlController::class, 'getStatus'])->name('system-control.status');
+
+    // System Health Check
+    Route::get('/system-health', [SystemHealthController::class, 'index'])->name('system-health.index');
+    Route::get('/system-health/check', [SystemHealthController::class, 'checkHealth'])->name('system-health.check');
+    Route::post('/system-health/migrate', [SystemHealthController::class, 'runMigration'])->name('system-health.migrate');
+    Route::post('/system-health/heal', [SystemHealthController::class, 'manualHeal'])->name('system-health.heal');
+    Route::get('/system-health/logs', [SystemHealthController::class, 'getHealingLogs'])->name('system-health.logs');
 });

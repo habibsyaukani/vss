@@ -55,13 +55,26 @@ class AdminAuthController extends Controller
 
     /**
      * Handle admin logout
+     * 
+     * IMPROVEMENTS:
+     * - Flash new CSRF token before logout to prevent "Page Expired"
+     * - Clear all session data properly
+     * - Redirect to admin login
      */
     public function logout(Request $request)
     {
+        // Logout user
         Auth::logout();
+        
+        // Invalidate current session
         $request->session()->invalidate();
+        
+        // Generate fresh CSRF token for next request
         $request->session()->regenerateToken();
-
-        return redirect('/admin/login')->with('success', 'Logged out successfully.');
+        
+        // Flash success message with fresh session
+        return redirect('/admin/login')
+            ->with('success', 'Logged out successfully.')
+            ->with('_token', csrf_token()); // Fresh token for next page
     }
 }

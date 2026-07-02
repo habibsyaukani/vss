@@ -1,359 +1,495 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Idle Monitor System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <style>
-        body {
-            background-color: #f5f7fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 20px;
-            color: white !important;
-        }
-        .sidebar {
-            background: white;
-            height: 100vh;
-            box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-            position: fixed;
-            width: 250px;
-            overflow-y: auto;
-        }
-        .sidebar .nav-link {
-            color: #333;
-            border-left: 3px solid transparent;
-            transition: all 0.3s;
-            padding: 12px 20px;
-            font-size: 14px;
-        }
-        .sidebar .nav-link:hover {
-            background: #f0f0f0;
-            border-left-color: #667eea;
-        }
-        .sidebar .nav-link.active {
-            background: #f0f0f0;
-            border-left-color: #667eea;
-            color: #667eea;
-            font-weight: 600;
-        }
-        .main-content {
-            margin-left: 250px;
-            margin-top: 70px;
-            padding: 30px;
-        }
-        .card {
-            border: none;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px 10px 0 0;
-        }
-        .stat-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
-        }
-        .menu-icon {
-            width: 20px;
-            text-align: center;
-            margin-right: 10px;
-        }
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 0;
-                transition: all 0.3s;
-            }
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/admin/dashboard">
-                <i class="fas fa-map-marker-alt"></i> Idle Monitor Admin
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle"></i> {{ auth()->user()->name }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="#">Profile</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{{ route('admin.logout') }}" method="POST" style="display: inline;">
-                                    @csrf
-                                    <button class="dropdown-item" type="submit">Logout</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+@extends('admin.layouts.app')
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="p-3">
-            <h5 class="text-center text-muted mt-3 mb-4">MENU</h5>
-            <nav class="nav flex-column">
-                <a class="nav-link active" href="/admin/dashboard">
-                    <span class="menu-icon"><i class="fas fa-chart-line"></i></span>Dashboard
-                </a>
-                <a class="nav-link" href="{{ route('admin.user.index') }}">
-                    <span class="menu-icon"><i class="fas fa-users"></i></span>User Management
-                </a>
-                <a class="nav-link" href="{{ route('admin.device.index') }}">
-                    <span class="menu-icon"><i class="fas fa-car"></i></span>Device Management
-                </a>
-                <a class="nav-link" href="{{ route('admin.import-log.index') }}">
-                    <span class="menu-icon"><i class="fas fa-history"></i></span>Import Logs
-                </a>
-                <a class="nav-link" href="{{ route('admin.data-pull.index') }}">
-                    <span class="menu-icon"><i class="fas fa-download"></i></span>Data Pull
-                </a>
-                <a class="nav-link" href="{{ route('admin.system-setting.index') }}">
-                    <span class="menu-icon"><i class="fas fa-cogs"></i></span>System Settings
-                </a>
-            </nav>
+@section('title', 'Dashboard')
+
+@push('styles')
+<style>
+    /* Dashboard specific styles */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 25px;
+    }
+    .page-title {
+        display: flex;
+        align-items: center;
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 4px;
+    }
+    .page-title i {
+        color: #5a5ced;
+        margin-right: 12px;
+        font-size: 22px;
+    }
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 14px;
+        margin-left: 34px;
+    }
+    .date-picker-btn {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 14px;
+        color: #4b5563;
+        font-weight: 500;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+    /* Stat Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        border: 1px solid #eef2f7;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+    .icon-blue { background: #eff6ff; color: #3b82f6; }
+    .icon-purple { background: #f3e8ff; color: #8b5cf6; }
+    .icon-green { background: #ecfdf5; color: #10b981; }
+    .icon-orange { background: #fffbeb; color: #f59e0b; }
+    
+    .stat-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 2px;
+    }
+    .stat-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #6b7280;
+        margin-bottom: 10px;
+    }
+    .stat-trend {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    /* Widget Cards */
+    .widget-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #eef2f7;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        margin-bottom: 24px;
+        height: calc(100% - 24px);
+        display: flex;
+        flex-direction: column;
+    }
+    .widget-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #eef2f7;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .widget-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .title-purple { color: #8b5cf6; }
+    .title-blue { color: #3b82f6; }
+    .title-green { color: #10b981; }
+    .title-orange { color: #f59e0b; }
+    
+    .widget-select {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 12px;
+        padding: 4px 8px;
+        color: #6b7280;
+        background: white;
+        outline: none;
+    }
+    .widget-body {
+        padding: 20px;
+        flex-grow: 1;
+    }
+
+    /* Tables */
+    .custom-table {
+        width: 100%;
+        font-size: 13px;
+    }
+    .custom-table th {
+        color: #6b7280;
+        font-weight: 600;
+        padding: 12px 10px;
+        border-bottom: 1px solid #eef2f7;
+        text-align: left;
+    }
+    .custom-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #f9fafb;
+        color: #374151;
+        vertical-align: middle;
+    }
+    .custom-table tbody tr:last-child td { border-bottom: none; }
+    
+    .device-name { font-weight: 600; color: #111827; }
+    
+    .badge-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+        font-size: 11px;
+        border: 1px solid transparent;
+    }
+    .badge-running { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+    .badge-completed { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+    .badge-failed { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+    .widget-footer {
+        padding: 15px;
+        text-align: center;
+        border-top: 1px solid #eef2f7;
+    }
+    .btn-outline-custom {
+        background: transparent;
+        border-radius: 6px;
+        padding: 6px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .btn-outline-green { border: 1px solid #10b981; color: #10b981; }
+    .btn-outline-green:hover { background: #ecfdf5; color: #059669; }
+    .btn-outline-orange { border: 1px solid #f59e0b; color: #f59e0b; }
+    .btn-outline-orange:hover { background: #fffbeb; color: #d97706; }
+
+    @media (max-width: 1200px) {
+        .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+@endpush
+
+@section('content')
+<div class="page-header">
+    <div>
+        <div class="page-title">
+            <i class="fas fa-chart-bar"></i> Backend Dashboard
+        </div>
+        <div class="page-subtitle">Overview of system idle monitoring data</div>
+    </div>
+    <button class="date-picker-btn">
+        <i class="far fa-calendar-alt text-muted"></i> 
+        May 8 &ndash; May 14, 2025 
+        <i class="fas fa-chevron-down ms-2" style="font-size: 10px;"></i>
+    </button>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon icon-blue"><i class="fas fa-desktop"></i></div>
+        <div class="stat-value">{{ number_format($stats['total_devices']) }}</div>
+        <div class="stat-label">Total Devices</div>
+        <div class="stat-trend">
+            <span class="{{ $stats['trend_devices']['color'] }}">
+                <i class="fas {{ $stats['trend_devices']['icon'] }}"></i> {{ $stats['trend_devices']['value'] }}
+            </span>
+            <br>{{ $stats['trend_devices']['label'] }}
         </div>
     </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <h2 class="mb-4"><i class="fas fa-chart-line"></i> Admin Dashboard</h2>
-
-        <!-- Quick Stats -->
-        <div class="row mb-4">
-            <div class="col-md-2">
-                <div class="stat-card">
-                    <div class="stat-number">{{ $stats['total_devices'] }}</div>
-                    <div class="stat-label">Total Devices</div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="stat-card">
-                    <div class="stat-number">{{ $stats['total_idle_today'] }}</div>
-                    <div class="stat-label">Idle Today</div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="stat-card">
-                    <div class="stat-number">{{ $stats['active_idle'] }}</div>
-                    <div class="stat-label">Active Idle</div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="stat-card">
-                    <div class="stat-number">{{ round($stats['avg_duration']) }}</div>
-                    <div class="stat-label">Avg Duration (min)</div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="stat-card">
-                    <div class="stat-number">{{ $stats['total_users'] }}</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="stat-card">
-                    <div class="stat-number">{{ $stats['active_users'] }}</div>
-                    <div class="stat-label">Active Users</div>
-                </div>
-            </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-purple"><i class="far fa-clock"></i></div>
+        <div class="stat-value">{{ number_format($stats['total_idle_today']) }}</div>
+        <div class="stat-label">Idle Today</div>
+        <div class="stat-trend">
+            <span class="{{ $stats['trend_idle']['color'] }}">
+                <i class="fas {{ $stats['trend_idle']['icon'] }}"></i> {{ $stats['trend_idle']['value'] }}
+            </span>
+            <br>{{ $stats['trend_idle']['label'] }}
         </div>
-
-        <!-- Charts -->
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Idle Per Hour (Last 24h)</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="idlePerHourChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Idle Per Day (Last 7 days)</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="idlePerDayChart"></canvas>
-                    </div>
-                </div>
-            </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-green"><i class="fas fa-arrow-trend-up"></i></div>
+        <div class="stat-value">{{ number_format($stats['total_idle_min']) }}</div>
+        <div class="stat-label">Total Idle (min)</div>
+        <div class="stat-trend">
+            <span class="{{ $stats['trend_total_idle']['color'] }}">
+                <i class="fas {{ $stats['trend_total_idle']['icon'] }}"></i> {{ $stats['trend_total_idle']['value'] }}
+            </span>
+            <br>{{ $stats['trend_total_idle']['label'] }}
         </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-orange"><i class="fas fa-stopwatch"></i></div>
+        <div class="stat-value">{{ number_format(round($stats['avg_duration'])) }}</div>
+        <div class="stat-label">Avg Duration (min)</div>
+        <div class="stat-trend">
+            <span class="{{ $stats['trend_avg']['color'] }}">
+                <i class="fas {{ $stats['trend_avg']['icon'] }}"></i> {{ $stats['trend_avg']['value'] }}
+            </span>
+            <br>{{ $stats['trend_avg']['label'] }}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-purple"><i class="fas fa-users"></i></div>
+        <div class="stat-value">{{ number_format($stats['total_users']) }}</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-trend">
+            <span class="{{ $stats['trend_users']['color'] }}">{{ $stats['trend_users']['value'] }}</span>
+            <br>{{ $stats['trend_users']['label'] }}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon icon-green"><i class="fas fa-user-check"></i></div>
+        <div class="stat-value">{{ number_format($stats['active_users']) }}</div>
+        <div class="stat-label">Active Users</div>
+        <div class="stat-trend">
+            <span class="{{ $stats['trend_active_users']['color'] }}">
+                <i class="fas {{ $stats['trend_active_users']['icon'] }}"></i> {{ $stats['trend_active_users']['value'] }}
+            </span>
+            <br>{{ $stats['trend_active_users']['label'] }}
+        </div>
+    </div>
+</div>
 
-        <!-- Top Devices & Recent Alarms -->
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Top 10 Devices with Idle</h5>
-                    </div>
-                    <div class="card-body">
-                        <div style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Device Name</th>
-                                        <th>Idle Count</th>
-                                        <th>Total Duration</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($topDevices as $device)
-                                        <tr>
-                                            <td><strong>{{ $device->device_name }}</strong></td>
-                                            <td>{{ $device->total_idle }}</td>
-                                            <td>{{ round($device->total_duration, 0) }} min</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="3" class="text-center text-muted">No data available</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="widget-card">
+            <div class="widget-header">
+                <h5 class="widget-title title-purple">
+                    <i class="fas fa-chart-line"></i> Idle Per Hour (Last 24 Hours)
+                </h5>
+                <select class="widget-select">
+                    <option>Last 24 Hours</option>
+                </select>
             </div>
-
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-table"></i> Recent Import Logs</h5>
-                    </div>
-                    <div class="card-body">
-                        <div style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Job Name</th>
-                                        <th>Status</th>
-                                        <th>Records</th>
-                                        <th>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($importLogs as $log)
-                                        <tr>
-                                            <td>{{ $log->job_name }}</td>
-                                            <td>
-                                                @if($log->status === 'completed')
-                                                    <span class="badge bg-success">Completed</span>
-                                                @elseif($log->status === 'failed')
-                                                    <span class="badge bg-danger">Failed</span>
-                                                @else
-                                                    <span class="badge bg-warning">{{ ucfirst($log->status) }}</span>
-                                                @endif
-                                            </td>
-                                            <td>{{ $log->total_record }}</td>
-                                            <td>{{ $log->finished_at ? $log->finished_at->format('H:i') : '-' }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted">No logs available</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            <div class="widget-body">
+                <canvas id="idlePerHourChart" height="250"></canvas>
             </div>
         </div>
     </div>
+    <div class="col-lg-6">
+        <div class="widget-card">
+            <div class="widget-header">
+                <h5 class="widget-title title-blue">
+                    <i class="fas fa-chart-bar"></i> Idle Per Day (Last 7 Days)
+                </h5>
+                <select class="widget-select">
+                    <option>Last 7 Days</option>
+                </select>
+            </div>
+            <div class="widget-body">
+                <canvas id="idlePerDayChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Idle Per Hour Chart
-        const ctx1 = document.getElementById('idlePerHourChart').getContext('2d');
-        new Chart(ctx1, {
-            type: 'line',
-            data: {
-                labels: {!! json_encode($idlePerHour['hours']) !!},
-                datasets: [{
-                    label: 'Idle Count',
-                    data: {!! json_encode($idlePerHour['counts']) !!},
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    tension: 0.4,
-                    fill: true,
-                }]
+<!-- Tables Row -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="widget-card">
+            <div class="widget-header">
+                <h5 class="widget-title title-green">
+                    <i class="fas fa-chart-pie"></i> Top 10 Devices with Idle
+                </h5>
+            </div>
+            <div class="widget-body p-0">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th style="padding-left: 20px;">#</th>
+                            <th>Device Name</th>
+                            <th>Idle Count</th>
+                            <th>Total Duration (min)</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($topDevices as $index => $device)
+                        <tr>
+                            <td style="padding-left: 20px; color: #6b7280;">{{ $index + 1 }}</td>
+                            <td class="device-name">{{ $device->device_name }}</td>
+                            <td>{{ number_format($device->total_idle) }}</td>
+                            <td>{{ number_format(round($device->total_duration)) }}</td>
+                            <td style="color: #6b7280;">{{ $device->last_seen ? \Carbon\Carbon::parse($device->last_seen)->format('M d, Y H:i') : '-' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="widget-footer">
+                <a href="{{ route('admin.device.index') }}" class="btn-outline-custom btn-outline-green">
+                    View All Devices <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="widget-card">
+            <div class="widget-header">
+                <h5 class="widget-title title-orange">
+                    <i class="fas fa-table"></i> Recent Import Logs
+                </h5>
+            </div>
+            <div class="widget-body p-0">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th style="padding-left: 20px;">#</th>
+                            <th>Job Name</th>
+                            <th>Status</th>
+                            <th>Records</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($importLogs as $index => $log)
+                        <tr>
+                            <td style="padding-left: 20px; color: #6b7280;">{{ $index + 1 }}</td>
+                            <td class="device-name">{{ $log->job_name }}</td>
+                            <td>
+                                @if($log->status === 'completed')
+                                    <span class="badge-status badge-completed">Completed</span>
+                                @elseif($log->status === 'failed')
+                                    <span class="badge-status badge-failed">Failed</span>
+                                @else
+                                    <span class="badge-status badge-running">{{ ucfirst($log->status) }}</span>
+                                @endif
+                            </td>
+                            <td>{{ number_format($log->total_record) }}</td>
+                            <td style="color: #6b7280;">{{ $log->finished_at ? $log->finished_at->format('M d, Y H:i') : ($log->created_at ? $log->created_at->format('M d, Y H:i') : '-') }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="widget-footer">
+                <a href="{{ route('admin.import-log.index') }}" class="btn-outline-custom btn-outline-orange">
+                    View All Logs <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+    // Idle Per Hour Line Chart
+    const ctxHour = document.getElementById('idlePerHourChart').getContext('2d');
+    
+    // Gradient for line chart
+    const gradientPurple = ctxHour.createLinearGradient(0, 0, 0, 300);
+    gradientPurple.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+    gradientPurple.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+
+    new Chart(ctxHour, {
+        type: 'line',
+        data: {
+            labels: {!! json_encode($idlePerHour['hours']) !!},
+            datasets: [{
+                label: 'Idle Count',
+                data: {!! json_encode($idlePerHour['counts']) !!},
+                borderColor: '#8b5cf6',
+                backgroundColor: gradientPurple,
+                borderWidth: 2,
+                pointBackgroundColor: '#8b5cf6',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false,
-                    }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { borderDash: [4, 4], color: '#f3f4f6' },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false }
                 }
             }
-        });
+        }
+    });
 
-        // Idle Per Day Chart
-        const ctx2 = document.getElementById('idlePerDayChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: {!! json_encode($idlePerDay['days']) !!},
-                datasets: [{
-                    label: 'Idle Count',
-                    data: {!! json_encode($idlePerDay['counts']) !!},
-                    backgroundColor: '#667eea',
-                }]
+    // Idle Per Day Bar Chart
+    const ctxDay = document.getElementById('idlePerDayChart').getContext('2d');
+    new Chart(ctxDay, {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($idlePerDay['days']) !!},
+            datasets: [{
+                label: 'Idle Count',
+                data: {!! json_encode($idlePerDay['counts']) !!},
+                backgroundColor: '#3b82f6',
+                borderRadius: 4,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false,
-                    }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { display: false },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false }
                 }
             }
-        });
-    </script>
-</body>
-</html>
+        }
+    });
+</script>
+@endpush

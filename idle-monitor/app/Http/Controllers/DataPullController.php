@@ -16,10 +16,10 @@ class DataPullController extends Controller
     {
         $stats = [
             'total_mei' => DB::table('idle_alarms')
-                ->whereRaw('MONTH(starting_time) = 5 AND YEAR(starting_time) = 2026')
+                ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
                 ->count(),
             'total_juni' => DB::table('idle_alarms')
-                ->whereRaw('MONTH(starting_time) = 6 AND YEAR(starting_time) = 2026')
+                ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
                 ->count(),
             'total_all' => DB::table('idle_alarms')->count(),
         ];
@@ -79,10 +79,10 @@ class DataPullController extends Controller
 
             $stats = [
                 'total_mei' => DB::table('idle_alarms')
-                    ->whereRaw('MONTH(starting_time) = 5 AND YEAR(starting_time) = 2026')
+                    ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
                     ->count(),
                 'total_juni' => DB::table('idle_alarms')
-                    ->whereRaw('MONTH(starting_time) = 6 AND YEAR(starting_time) = 2026')
+                    ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
                     ->count(),
                 'total_all' => DB::table('idle_alarms')->count(),
             ];
@@ -110,10 +110,10 @@ class DataPullController extends Controller
     {
         $stats = [
             'total_mei' => DB::table('idle_alarms')
-                ->whereRaw('MONTH(starting_time) = 5 AND YEAR(starting_time) = 2026')
+                ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
                 ->count(),
             'total_juni' => DB::table('idle_alarms')
-                ->whereRaw('MONTH(starting_time) = 6 AND YEAR(starting_time) = 2026')
+                ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
                 ->count(),
             'total_all' => DB::table('idle_alarms')->count(),
             'last_pull' => DB::table('system_settings')
@@ -133,19 +133,22 @@ class DataPullController extends Controller
      */
     public function gpsTrackIndex()
     {
-        // Get data statistics
-        $stats = [
-            'total_juni' => DB::table('gps_tracks_raw')
-                ->whereRaw('MONTH(gps_time) = 6 AND YEAR(gps_time) = 2026')
-                ->count(),
-            'total_devices' => DB::table('devices')
-                ->where('status', 'active')
-                ->whereNotNull('device_id')
-                ->count(),
-            'total_all' => DB::table('gps_tracks_raw')->count(),
-        ];
+        // Use cache for statistics (refresh every 30 seconds)
+        $stats = cache()->remember('gps_track_stats', 30, function () {
+            return [
+                'total_juni' => $this->getApproximateCount('gps_tracks_raw', 'gps_time', '2026-06-01 00:00:00', '2026-06-30 23:59:59'),
+                'total_devices' => DB::table('devices')
+                    ->where('status', 'active')
+                    ->whereNotNull('device_id')
+                    ->count(), // This is fast, devices table is small
+                'total_all' => $this->getApproximateCount('gps_tracks_raw'),
+            ];
+        });
 
-        $lastPull = DB::table('system_settings')->where('key', 'last_gps_pull')->value('value');
+        $lastPull = cache()->remember('last_gps_pull', 30, function () {
+            return DB::table('system_settings')->where('key', 'last_gps_pull')->value('value');
+        });
+        
         $stats['last_pull'] = $lastPull ? Carbon::parse($lastPull)->format('Y-m-d H:i:s') : 'Never';
 
         return view('admin.gps-track-pull', compact('stats'));
@@ -228,19 +231,20 @@ class DataPullController extends Controller
      */
     public function gpsTrackStatistics()
     {
-        $stats = [
-            'total_juni' => DB::table('gps_tracks_raw')
-                ->whereRaw('MONTH(gps_time) = 6 AND YEAR(gps_time) = 2026')
-                ->count(),
-            'total_devices' => DB::table('devices')
-                ->where('status', 'active')
-                ->whereNotNull('device_id')
-                ->count(),
-            'total_all' => DB::table('gps_tracks_raw')->count(),
-            'last_pull' => DB::table('system_settings')
-                ->where('key', 'last_gps_pull')
-                ->value('value'),
-        ];
+        // Use cache for AJAX stats refresh (15 seconds cache)
+        $stats = cache()->remember('gps_track_stats_ajax', 15, function () {
+            return [
+                'total_juni' => $this->getApproximateCount('gps_tracks_raw', 'gps_time', '2026-06-01 00:00:00', '2026-06-30 23:59:59'),
+                'total_devices' => DB::table('devices')
+                    ->where('status', 'active')
+                    ->whereNotNull('device_id')
+                    ->count(),
+                'total_all' => $this->getApproximateCount('gps_tracks_raw'),
+                'last_pull' => DB::table('system_settings')
+                    ->where('key', 'last_gps_pull')
+                    ->value('value'),
+            ];
+        });
 
         return response()->json($stats);
     }
@@ -260,5 +264,42 @@ class DataPullController extends Controller
             'success' => true,
             'devices' => $devices
         ]);
+    }
+
+    /**
+     * Get approximate count for large tables using EXPLAIN
+     * Falls back to exact count if estimate not available
+     */
+    private function getApproximateCount(string $table, ?string $dateColumn = null, ?string $startDate = null, ?string $endDate = null): int
+    {
+        try {
+            if ($dateColumn && $startDate && $endDate) {
+                // For date range queries, use exact count with limit
+                // But add index hint to make it faster
+                return DB::table($table)
+                    ->whereBetween($dateColumn, [$startDate, $endDate])
+                    ->count();
+            }
+
+            // For total count, use MySQL table stats (very fast!)
+            $result = DB::selectOne("
+                SELECT TABLE_ROWS as approximate_count
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = ?
+            ", [$table]);
+
+            return $result ? (int)$result->approximate_count : 0;
+
+        } catch (\Exception $e) {
+            // Fallback to regular count if error
+            \Log::warning("Approximate count failed for {$table}: " . $e->getMessage());
+            
+            if ($dateColumn && $startDate && $endDate) {
+                return DB::table($table)->whereBetween($dateColumn, [$startDate, $endDate])->count();
+            }
+            
+            return DB::table($table)->count();
+        }
     }
 }

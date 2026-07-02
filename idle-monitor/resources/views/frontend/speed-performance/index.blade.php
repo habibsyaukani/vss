@@ -12,7 +12,7 @@
 
     /* ===== SIDEBAR STYLES ===== */
     .filter-section {
-        border-bottom: 1px solid #eaedf2;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .filter-section:first-child {
         padding-top: 35px !important;
@@ -26,30 +26,16 @@
         margin-bottom: 8px;
         display: block;
     }
-    .search-box {
-        position: relative;
-    }
-    .search-box i {
-        position: absolute;
-        left: 12px;
-        top: 10px;
-        color: #adb5bd;
-        font-size: 14px;
-    }
-    .search-box input {
-        padding-left: 35px;
-        border-radius: 6px;
-        font-size: 13px;
-        border: 1px solid #eaedf2;
-    }
-    .search-box input:focus {
-        border-color: #1963f2;
-        box-shadow: 0 0 0 0.2rem rgba(25, 99, 242, 0.15);
-    }
     .form-select-sm {
         font-size: 13px;
-        border-color: #eaedf2;
+        border-color: rgba(255,255,255,0.1);
         border-radius: 6px;
+        background-color: rgba(255,255,255,0.05);
+        color: white;
+    }
+    .form-select-sm option {
+        background-color: #0b1a30;
+        color: white;
     }
     .btn-select-all {
         color: #1963f2;
@@ -84,10 +70,10 @@
         border-radius: 6px;
         font-size: 13px;
         font-weight: 600;
-        color: #334155;
+        color: #cbd5e1;
         transition: background 0.2s;
     }
-    .tree-parent:hover { background-color: #f8f9fa; }
+    .tree-parent:hover { background-color: rgba(255,255,255,0.05); }
     .tree-parent i.toggle-icon {
         width: 15px;
         color: #94a3b8;
@@ -102,7 +88,7 @@
         cursor: pointer;
     }
     .group-icon {
-        color: #1963f2;
+        color: #3b82f6;
         margin-right: 8px;
         font-size: 14px;
     }
@@ -122,22 +108,22 @@
         align-items: center;
         padding: 6px 10px;
         font-size: 13px;
-        color: #475569;
+        color: #94a3b8;
         border-radius: 6px;
     }
-    .tree-child:hover { background-color: #f8f9fa; }
+    .tree-child:hover { background-color: rgba(255,255,255,0.05); color: white; }
     .tree-child input[type="checkbox"] { margin-right: 10px; }
 
     /* System Active Box */
     .system-active-box {
         margin: 20px;
         padding: 15px;
-        background-color: #f0fdf4;
-        border: 1px solid #bbf7d0;
+        background-color: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.2);
         border-radius: 8px;
     }
     .system-active-title {
-        color: #16a34a;
+        color: #4ade80;
         font-weight: 600;
         font-size: 13px;
         display: flex;
@@ -149,11 +135,11 @@
         display: inline-block;
         width: 8px;
         height: 8px;
-        background-color: #16a34a;
+        background-color: #4ade80;
         border-radius: 50%;
     }
     .system-active-desc {
-        color: #475569;
+        color: #94a3b8;
         font-size: 12px;
         margin-top: 5px;
         margin-bottom: 0;
@@ -328,14 +314,6 @@
 
 @section('sidebar')
 <!-- Device Filter Search -->
-<div class="filter-section px-4 py-3">
-    <div class="filter-label">DEVICE FILTER</div>
-    <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="search" class="form-control" id="deviceSearch" placeholder="Search device...">
-    </div>
-</div>
-
 <!-- Location Filter -->
 <div class="filter-section px-4 py-3">
     <div class="filter-label">LOCATION</div>
@@ -359,7 +337,7 @@
 </div>
 
 <!-- Actions -->
-<div class="px-4 py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+<div class="px-4 py-3 d-flex justify-content-between align-items-center border-bottom" style="border-color: rgba(255,255,255,0.05) !important;">
     <button class="btn-select-all" id="selectAllBtn"><i class="far fa-check-square me-1"></i> Select All</button>
     <button class="btn-clear" id="clearBtn"><i class="fas fa-times"></i> Clear</button>
 </div>
@@ -371,9 +349,9 @@
             <div class="tree-parent open">
                 <i class="fas fa-chevron-right toggle-icon me-2"></i>
                 <input type="checkbox" class="tree-checkbox group-checkbox" data-group="all" checked>
-                <i class="fas fa-car-side group-icon" style="color: #0f766e;"></i>
-                <span style="font-weight: 700; color: #1e293b;">ALL GPE</span>
-                <span class="group-count" id="totalDeviceCount">({{ $totalDevices }}|<span style="color: #16a34a; font-weight: 700;">{{ $totalActive }}</span>)</span>
+                <i class="fas fa-car-side group-icon" style="color: #0d9488;"></i>
+                <span style="font-weight: 700; color: #f8fafc;">ALL GPE</span>
+                <span class="group-count" id="totalDeviceCount">({{ $totalDevices }}|<span style="color: #4ade80; font-weight: 700;">{{ $totalActive }}</span>)</span>
             </div>
             <ul class="tree-children">
                 @foreach($deviceGroups as $groupName => $groupData)
@@ -388,9 +366,9 @@
                                 elseif(str_contains($groupName, 'FT') || str_contains($groupName, 'WT')) $icon = 'fa-truck';
                                 elseif(str_contains($groupName, 'HD')) $icon = 'fa-truck-front';
                             @endphp
-                            <i class="fas {{ $icon }} group-icon" style="color: #0f766e;"></i>
-                            <span style="font-weight: 700; color: #334155;">{{ $groupName }}</span>
-                            <span class="group-count">({{ $groupData['total'] }}|<span style="color: #16a34a; font-weight: 700;">{{ $groupData['active'] }}</span>)</span>
+                            <i class="fas {{ $icon }} group-icon" style="color: #0d9488;"></i>
+                            <span style="font-weight: 700; color: #cbd5e1;">{{ $groupName }}</span>
+                            <span class="group-count">({{ $groupData['total'] }}|<span style="color: #4ade80; font-weight: 700;">{{ $groupData['active'] }}</span>)</span>
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
@@ -564,7 +542,10 @@ $(document).ready(function() {
             serverSide: true,
             ajax: {
                 url: "{{ route('frontend.speed-performance.data') }}",
-                type: 'GET',
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
                 data: function(d) {
                     d.device_ids = getSelectedDevices();
                     d.location = $('#locationFilter').val();
@@ -704,14 +685,13 @@ $(document).ready(function() {
         updateSelectedCounter();
     });
 
-    // ---- Sidebar Search/Filter Logic ----
+    // ---- Sidebar Filter Logic (Location & Series only) ----
     function filterTree() {
-        let searchQuery = $('#deviceSearch').val().toLowerCase().trim();
         let location = $('#locationFilter').val();
         let series = $('#seriesFilter').val();
 
-        if (!searchQuery && !location && !series) {
-            $('.tree-child').css('background-color', '').show();
+        if (!location && !series) {
+            $('.tree-child').show();
             $('.tree-parent').removeClass('open');
             $('.tree-parent').first().addClass('open');
             $('.tree-item').show();
@@ -720,14 +700,12 @@ $(document).ready(function() {
 
         $('.tree-item').hide();
         $('.tree-parent').removeClass('open');
-        $('.tree-child').hide().css('background-color', '');
+        $('.tree-child').hide();
 
         $('.tree-child').each(function() {
-            let name = $(this).data('device-name') || '';
             let loc = $(this).data('location') || '';
             let ser = $(this).data('series') || '';
             
-            let matchSearch = searchQuery === '' || name.includes(searchQuery);
             let matchLoc = location === '' || loc === location;
             let matchSeries = true;
             if (series !== '') {
@@ -738,11 +716,8 @@ $(document).ready(function() {
                 }
             }
 
-            if (matchSearch && matchLoc && matchSeries) {
+            if (matchLoc && matchSeries) {
                 $(this).show();
-                if (searchQuery) {
-                    $(this).css('background-color', '#e0f2fe'); // highlight
-                }
                 
                 // Show parents and open them
                 let $parents = $(this).parents('.tree-item');
@@ -752,7 +727,6 @@ $(document).ready(function() {
         });
     }
 
-    $('#deviceSearch').on('input', filterTree);
     $('#locationFilter, #seriesFilter').on('change', function() {
         filterTree();
         triggerReload(); // trigger table reload for server-side

@@ -52,6 +52,24 @@ $(document).ready(function() {
     console.log('✅ Form event listener attached!');
 });
 
+let currentXhr = null;
+let isCancelled = false;
+
+$(document).ready(function() {
+    const cancelBtn = document.getElementById('cancelPullBtn');
+    if (cancelBtn) {
+        cancelBtn.style.display = 'none';
+        cancelBtn.addEventListener('click', function() {
+            if (currentXhr) {
+                isCancelled = true;
+                currentXhr.abort();
+                cancelBtn.disabled = true;
+                cancelBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membatalkan...';
+            }
+        });
+    }
+});
+
 function executePull() {
     console.log('🔵 executePull() function called!');
     
@@ -64,6 +82,8 @@ function executePull() {
     const progressStatusText = $('#progressStatusText');
     const progressDetails = $('#progressDetails');
     const realtimeStats = $('#realtimeStats');
+    const cancelBtn = document.getElementById('cancelPullBtn');
+    isCancelled = false;
     
     console.log('🔵 Elements found:', {
         form: form.length,
@@ -90,6 +110,13 @@ function executePull() {
     // Show progress
     progressContainer.show();
     realtimeStats.hide();
+
+    // Show cancel button
+    if (cancelBtn) {
+        cancelBtn.style.display = 'inline-block';
+        cancelBtn.disabled = false;
+        cancelBtn.innerHTML = '<i class="fas fa-times-circle"></i> Batal Tarik Data';
+    }
     
     // Reset progress
     progressBar.css('width', '0%').removeClass('bg-danger').addClass('bg-success');
@@ -141,7 +168,7 @@ function executePull() {
     console.log('🔵 Sending AJAX request to:', executeUrl);
     console.log('🔵 Form data:', formData);
     
-    $.ajax({
+    currentXhr = $.ajax({
         url: executeUrl,
         method: 'POST',
         data: formData,
@@ -151,7 +178,7 @@ function executePull() {
             // Progress simulation during request
             let progress = 40;
             const progressInterval = setInterval(() => {
-                if (progress < 90) {
+                if (progress < 90 && !isCancelled) {
                     progress += 5;
                     progressBar.css('width', progress + '%');
                     progressPercentage.text(progress + '%');
@@ -173,6 +200,10 @@ function executePull() {
         success: function(response) {
             console.log('✅ AJAX Success!', response);
             
+            // Hide cancel button
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            currentXhr = null;
+
             // Complete progress to 100%
             progressBar.css('width', '100%');
             progressPercentage.text('100%');
@@ -180,52 +211,57 @@ function executePull() {
             progressDetails.text('Data berhasil ditarik dan diproses.');
 
             if (response.success) {
-                // Show realtime stats
-                realtimeStats.show();
-                
-                // Update statistics
-                $('#stat-mei').text(parseInt(response.stats.total_mei).toLocaleString('id-ID'));
-                $('#stat-juni').text(parseInt(response.stats.total_juni).toLocaleString('id-ID'));
-                $('#stat-total').text(parseInt(response.stats.total_all).toLocaleString('id-ID'));
-
                 // Extract numbers from output
-                const outputText = response.output + response.process_output;
+                const outputText = (response.output || '') + (response.process_output || '');
                 const recordsMatch = outputText.match(/Fetched (\d+) records/);
                 const idleMatch = outputText.match(/(\d+) idle alarms/);
-                
-                if (recordsMatch) {
-                    $('#recordsFetched').text(parseInt(recordsMatch[1]).toLocaleString('id-ID'));
-                }
-                if (idleMatch) {
-                    $('#idleAlarmsProcessed').text(parseInt(idleMatch[1]).toLocaleString('id-ID'));
-                }
 
-                // Show success log with beautiful formatting
+                const recordsFetched = recordsMatch ? parseInt(recordsMatch[1]) : (response.stats ? parseInt(response.stats.total_all) : 0);
+                const idleAlarms = idleMatch ? parseInt(idleMatch[1]) : 0;
+
+                // Show result summary card
                 let logHtml = `
                     <div class="alert alert-success mb-3" style="background: #d4edda; border-left: 4px solid #28a745;">
-                        <h6><i class="fas fa-check-circle"></i> <strong>Pull Data Berhasil!</strong></h6>
+                        <h6><i class="fas fa-check-circle"></i> <strong>✅ Tarik Data Selesai!</strong></h6>
                         <hr>
-                        <div class="row">
-                            <div class="col-4 text-center">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Records Ditarik</small>
+                                <h4 class="mb-0 text-success fw-bold">${recordsFetched.toLocaleString('id-ID')}</h4>
+                            </div>
+                            <div class="col-6 border-start">
+                                <small class="text-muted d-block">Idle Alarms</small>
+                                <h4 class="mb-0 text-success fw-bold">${idleAlarms.toLocaleString('id-ID')}</h4>
+                            </div>
+                        </div>`;
+
+                if (response.stats) {
+                    logHtml += `
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-4">
                                 <small class="text-muted d-block">Mei 2026</small>
-                                <h5 class="mb-0 text-success">${parseInt(response.stats.total_mei).toLocaleString('id-ID')}</h5>
+                                <h5 class="mb-0">${parseInt(response.stats.total_mei || 0).toLocaleString('id-ID')}</h5>
                             </div>
-                            <div class="col-4 text-center border-start border-end">
+                            <div class="col-4 border-start border-end">
                                 <small class="text-muted d-block">Juni 2026</small>
-                                <h5 class="mb-0 text-success">${parseInt(response.stats.total_juni).toLocaleString('id-ID')}</h5>
+                                <h5 class="mb-0">${parseInt(response.stats.total_juni || 0).toLocaleString('id-ID')}</h5>
                             </div>
-                            <div class="col-4 text-center">
-                                <small class="text-muted d-block">Total</small>
-                                <h5 class="mb-0 text-success">${parseInt(response.stats.total_all).toLocaleString('id-ID')}</h5>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Total DB</small>
+                                <h5 class="mb-0">${parseInt(response.stats.total_all || 0).toLocaleString('id-ID')}</h5>
                             </div>
-                        </div>
+                        </div>`;
+                }
+
+                logHtml += `
                         <hr>
                         <small><i class="fas fa-clock"></i> Selesai: ${new Date().toLocaleString('id-ID')}</small>
-                    </div>
-                `;
+                    </div>`;
 
-                // Add detailed output (collapsed by default)
-                logHtml += `
+                // Add detailed output (collapsed)
+                if (response.output) {
+                    logHtml += `
                     <div class="card mb-2">
                         <div class="card-header p-2 bg-light">
                             <a class="text-decoration-none text-dark d-block" data-bs-toggle="collapse" href="#outputDetail">
@@ -237,7 +273,10 @@ function executePull() {
                                 <pre style="max-height: 200px; overflow-y: auto; font-size: 10px; background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 0;">${response.output}</pre>
                             </div>
                         </div>
-                    </div>
+                    </div>`;
+                }
+                if (response.process_output) {
+                    logHtml += `
                     <div class="card mb-2">
                         <div class="card-header p-2 bg-light">
                             <a class="text-decoration-none text-dark d-block" data-bs-toggle="collapse" href="#processDetail">
@@ -249,8 +288,8 @@ function executePull() {
                                 <pre style="max-height: 200px; overflow-y: auto; font-size: 10px; background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 0;">${response.process_output}</pre>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
+                }
                 
                 logContainer.html(logHtml);
 
@@ -267,6 +306,27 @@ function executePull() {
             }
         },
         error: function(xhr, status, error) {
+            // Hide cancel button
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            currentXhr = null;
+
+            // If cancelled by user
+            if (isCancelled || status === 'abort') {
+                progressBar.css('width', progressBar.css('width')).removeClass('bg-success').addClass('bg-warning');
+                progressStatusText.html('<i class="fas fa-ban"></i> Penarikan Dibatalkan');
+                progressDetails.text('Proses dibatalkan oleh pengguna.');
+                logContainer.html(`
+                    <div class="alert alert-warning" style="border-left: 4px solid #ffc107;">
+                        <h6><i class="fas fa-ban"></i> <strong>Dibatalkan</strong></h6>
+                        <p class="mb-0">Penarikan data dibatalkan oleh pengguna.</p>
+                        <hr><small><i class="fas fa-clock"></i> ${new Date().toLocaleString('id-ID')}</small>
+                    </div>
+                `);
+                button.prop('disabled', false).html('<i class="fas fa-download"></i> Tarik Data Sekarang');
+                isCancelled = false;
+                return;
+            }
+
             console.error('❌ AJAX Error!', {xhr, status, error});
 
             // Handle CSRF Token mismatch (419) - refresh token dan coba lagi

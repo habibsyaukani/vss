@@ -13,6 +13,9 @@
     const progressDetails = document.getElementById('progressDetails');
     const realtimeStats = document.getElementById('realtimeStats');
     const logContainer = document.getElementById('logContainer');
+    const cancelPullBtn = document.getElementById('cancelPullBtn');
+    let abortController = null;
+    let isCancelled = false;
 
     // Stats elements
     const devicesProcessed = document.getElementById('devicesProcessed');
@@ -47,6 +50,13 @@
         progressContainer.style.display = 'block';
         realtimeStats.style.display = 'flex';
         logContainer.innerHTML = '';
+        if (cancelPullBtn) {
+            cancelPullBtn.style.display = 'inline-block';
+            cancelPullBtn.disabled = false;
+        }
+
+        abortController = new AbortController();
+        isCancelled = false;
 
         const filterDate = formData.get('date');
         const deviceFilter = formData.get('device_filter') || 'all';
@@ -75,7 +85,7 @@
                 }
             } else {
                 // Fetch active devices from server
-                const devicesResponse = await fetch(devicesUrl);
+                const devicesResponse = await fetch(devicesUrl, { signal: abortController.signal });
                 const devicesResult = await devicesResponse.json();
                 
                 if (!devicesResult.success || !devicesResult.devices) {
@@ -130,6 +140,7 @@
                             'Accept': 'application/json',
                         },
                         body: deviceFormData,
+                        signal: abortController.signal
                     });
                     
                     const result = await response.json();
@@ -154,13 +165,17 @@
                         addLog('error', `❌ [${device.device_name}] Error: ${result.message}`);
                     }
                 } catch (devError) {
+                    if (devError.name === 'AbortError') {
+                        // Request aborted, just return
+                        return;
+                    }
                     totalProcessed++;
                     addLog('error', `❌ [${device.device_name}] Network Error: ${devError.message}`);
                 }
             };
 
             const worker = async () => {
-                while (currentIndex < targetDevices.length) {
+                while (currentIndex < targetDevices.length && !isCancelled) {
                     const idx = currentIndex++;
                     const device = targetDevices[idx];
                     await processDevice(device, idx);
@@ -175,13 +190,18 @@
             await Promise.all(workers);
 
             // Step 3: Finish
-            updateProgress(100, 'Pull selesai!', 'Completed successfully');
+            if (isCancelled) {
+                updateProgress(currentPercent => currentPercent, 'Penarikan dibatalkan!', 'Dibatalkan oleh pengguna');
+                addLog('error', '❌ Penarikan data dibatalkan oleh pengguna.');
+            } else {
+                updateProgress(100, 'Pull selesai!', 'Completed successfully');
+                addLog('success', '✅ SEMUA GPS Track Pull selesai!');
+            }
 
             // Log success summary
-            addLog('success', '✅ SEMUA GPS Track Pull selesai!');
-            addLog('success', `📊 Total devices diproses: ${totalProcessed}`);
-            addLog('success', `✅ Total devices ada data: ${totalWithData}`);
-            addLog('success', `💾 Total records tersimpan: ${formatNumber(totalRecords)}`);
+            addLog('info', `📊 Total devices diproses: ${totalProcessed}`);
+            addLog('info', `✅ Total devices ada data: ${totalWithData}`);
+            addLog('info', `💾 Total records tersimpan: ${formatNumber(totalRecords)}`);
 
             // Update statistics cards
             refreshStatistics();
@@ -195,15 +215,34 @@
             }, 500);
 
         } catch (error) {
-            updateProgress(0, 'Error!', 'Error occurred');
-            addLog('error', '❌ Error: ' + error.message);
-            alert('❌ GPS Track Pull failed!\n\n' + error.message);
+            if (error.name === 'AbortError') {
+                updateProgress(currentPercent => currentPercent, 'Dibatalkan!', 'Proses dibatalkan');
+                addLog('error', '❌ Proses dibatalkan oleh pengguna.');
+            } else {
+                updateProgress(0, 'Error!', 'Error occurred');
+                addLog('error', '❌ Error: ' + error.message);
+                alert('❌ GPS Track Pull failed!\n\n' + error.message);
+            }
         } finally {
             // Re-enable button
             pullButton.disabled = false;
             pullButton.innerHTML = '<i class="fas fa-download"></i> Tarik Data GPS Sekarang';
+            if (cancelPullBtn) {
+                cancelPullBtn.style.display = 'none';
+            }
         }
     });
+
+    if (cancelPullBtn) {
+        cancelPullBtn.addEventListener('click', function() {
+            if (abortController) {
+                isCancelled = true;
+                abortController.abort();
+                cancelPullBtn.disabled = true;
+                cancelPullBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membatalkan...';
+            }
+        });
+    }
 
     // Helper: Update progress bar
     function updateProgress(percent, statusText, detailsText) {

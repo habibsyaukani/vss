@@ -1,0 +1,500 @@
+═══════════════════════════════════════════════════════════════
+  PANDUAN DEPLOYMENT DENGAN PUTTY - IDLE MONITOR
+═══════════════════════════════════════════════════════════════
+
+Target Server: 10.2.2.18
+GitHub Repo: https://github.com/habibsyaukani/vss
+
+CATATAN: Karena Anda pakai Windows dengan PuTTY, kita akan deploy
+secara MANUAL step-by-step melalui SSH PuTTY.
+
+═══════════════════════════════════════════════════════════════
+PERSIAPAN SEBELUM PUSH KE GITHUB
+═══════════════════════════════════════════════════════════════
+
+STEP 1: PUSH CODE KE GITHUB (WINDOWS)
+--------------------------------------
+
+1. Buka Git Bash (atau Command Prompt jika sudah install Git)
+   - Klik kanan di folder project → "Git Bash Here"
+   - Atau: Start Menu → Git Bash
+
+2. Navigate ke project folder:
+   cd /g/project/vss/idle-monitor
+
+3. Check status Git:
+   git status
+
+4. Add semua file:
+   git add .
+
+5. Commit changes:
+   git commit -m "Deploy to production server 10.2.2.18"
+
+6. Push ke GitHub:
+   git push origin main
+
+7. Verifikasi di browser:
+   Buka: https://github.com/habibsyaukani/vss
+   Pastikan file terbaru sudah ada
+
+ALTERNATIF: Pakai GitHub Desktop
+---------------------------------
+Jika tidak mau pakai command line:
+1. Download GitHub Desktop: https://desktop.github.com/
+2. Login dengan akun GitHub
+3. Add repository: g:\project\vss
+4. Commit all changes
+5. Push to origin
+
+═══════════════════════════════════════════════════════════════
+DEPLOYMENT KE SERVER DENGAN PUTTY
+═══════════════════════════════════════════════════════════════
+
+STEP 2: KONEKSI KE SERVER DENGAN PUTTY
+---------------------------------------
+
+1. Buka PuTTY
+2. Di "Host Name (or IP address)", masukkan: 10.2.2.18
+3. Port: 22
+4. Connection type: SSH
+5. Klik "Open"
+6. Jika muncul "Security Alert", klik "Yes"
+7. Login dengan:
+   login as: root
+   password: [masukkan password server]
+
+✅ Anda sekarang sudah masuk ke server via SSH!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 3: INSTALL DEPENDENCIES (COPY-PASTE SATU-SATU)
+----------------------------------------------------
+
+Di PuTTY, copy-paste command berikut satu per satu.
+Tekan ENTER setelah setiap command.
+Tunggu sampai selesai sebelum command berikutnya.
+
+⚠️ TIPS COPY-PASTE DI PUTTY:
+   - Copy: Select text di PuTTY (auto copy)
+   - Paste: Klik kanan mouse di PuTTY
+
+--- Command 1: Update System ---
+apt-get update
+apt-get upgrade -y
+
+--- Command 2: Install Docker ---
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+systemctl enable docker
+systemctl start docker
+rm get-docker.sh
+
+--- Command 3: Install Docker Compose ---
+curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
+--- Command 4: Verify Docker ---
+docker --version
+docker-compose --version
+
+--- Command 5: Install PHP 8.1 ---
+add-apt-repository ppa:ondrej/php -y
+apt-get update
+apt-get install -y php8.1-fpm php8.1-cli php8.1-mysql php8.1-redis php8.1-xml php8.1-curl php8.1-mbstring php8.1-zip php8.1-bcmath php8.1-gd php8.1-intl
+
+--- Command 6: Verify PHP ---
+php -v
+
+--- Command 7: Install Composer ---
+curl -sS https://getcomposer.org/installer | php
+mv composer.phar /usr/local/bin/composer
+chmod +x /usr/local/bin/composer
+
+--- Command 8: Verify Composer ---
+composer --version
+
+--- Command 9: Install Nginx & Git ---
+apt-get install -y nginx git
+systemctl enable nginx
+systemctl start nginx
+
+--- Command 10: Verify Nginx ---
+systemctl status nginx
+(Tekan Q untuk keluar dari status view)
+
+✅ Semua dependencies sudah terinstall!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 4: SETUP DOCKER MYSQL & REDIS
+-----------------------------------
+
+--- Command 1: Create Docker directory ---
+mkdir -p /opt/idle-monitor-docker
+cd /opt/idle-monitor-docker
+
+--- Command 2: Create docker-compose.yml ---
+Paste command ini (SATU BLOK):
+
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: idle-monitor-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: IdleMonitor@2026!
+      MYSQL_DATABASE: vss
+      MYSQL_USER: idle_user
+      MYSQL_PASSWORD: IdleUser@2026!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis:
+    image: redis:7-alpine
+    container_name: idle-monitor-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
+EOF
+
+--- Command 3: Start Docker containers ---
+docker-compose up -d
+
+--- Command 4: Wait for MySQL to start (30 detik) ---
+sleep 30
+
+--- Command 5: Verify containers running ---
+docker ps
+
+✅ Harusnya ada 2 containers: idle-monitor-mysql dan idle-monitor-redis
+
+═══════════════════════════════════════════════════════════════
+
+STEP 5: CLONE REPOSITORY DARI GITHUB
+-------------------------------------
+
+--- Command 1: Navigate to web root ---
+cd /var/www
+
+--- Command 2: Remove old installation (jika ada) ---
+rm -rf idle-monitor
+
+--- Command 3: Clone dari GitHub ---
+git clone https://github.com/habibsyaukani/vss.git idle-monitor
+
+--- Command 4: Navigate to application ---
+cd idle-monitor
+
+--- Command 5: Verify files ---
+ls -la
+
+✅ Anda sekarang di /var/www/idle-monitor
+
+═══════════════════════════════════════════════════════════════
+
+STEP 6: CONFIGURE APPLICATION
+------------------------------
+
+--- Command 1: Copy .env.production.example ---
+cp .env.production.example .env
+
+--- Command 2: Generate APP_KEY ---
+php artisan key:generate
+
+--- Command 3: View .env (optional, untuk cek) ---
+cat .env
+
+⚠️ Jika perlu edit .env, gunakan:
+nano .env
+(Ctrl+X untuk keluar, Y untuk save, Enter untuk confirm)
+
+✅ .env file sudah configured!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 7: INSTALL COMPOSER DEPENDENCIES
+--------------------------------------
+
+--- Command 1: Install dependencies (tunggu 2-5 menit) ---
+composer install --no-dev --optimize-autoloader --no-interaction
+
+✅ Composer dependencies installed!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 8: RUN DATABASE MIGRATIONS
+--------------------------------
+
+--- Command 1: Run migrations ---
+php artisan migrate --force
+
+--- Command 2: Seed database ---
+php artisan db:seed --force
+
+✅ Database setup complete!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 9: SET FILE PERMISSIONS
+-----------------------------
+
+--- Command 1: Set ownership ---
+chown -R www-data:www-data storage bootstrap/cache
+
+--- Command 2: Set permissions ---
+chmod -R 775 storage bootstrap/cache
+
+✅ Permissions configured!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 10: CONFIGURE NGINX
+-------------------------
+
+--- Command 1: Create Nginx config (SATU BLOK) ---
+
+cat > /etc/nginx/sites-available/idle-monitor << 'EOF'
+server {
+    listen 80;
+    server_name 10.2.2.18;
+    root /var/www/idle-monitor/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
+
+--- Command 2: Enable site ---
+ln -sf /etc/nginx/sites-available/idle-monitor /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+--- Command 3: Test Nginx config ---
+nginx -t
+
+--- Command 4: Reload Nginx ---
+systemctl reload nginx
+
+✅ Nginx configured!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 11: SETUP SCHEDULER (CRON)
+--------------------------------
+
+--- Command 1: Edit crontab ---
+crontab -e
+
+Jika ditanya pilih editor, pilih: 1 (nano)
+
+--- Command 2: Add this line di PALING BAWAH file ---
+* * * * * cd /var/www/idle-monitor && php artisan schedule:run >> /dev/null 2>&1
+
+--- Command 3: Save and exit ---
+Ctrl+X
+Y
+Enter
+
+✅ Scheduler configured!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 12: SETUP QUEUE WORKER (SYSTEMD SERVICE)
+----------------------------------------------
+
+--- Command 1: Create service file (SATU BLOK) ---
+
+cat > /etc/systemd/system/idle-monitor-queue.service << 'EOF'
+[Unit]
+Description=Idle Monitor Queue Worker
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+ExecStart=/usr/bin/php /var/www/idle-monitor/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+--- Command 2: Reload systemd ---
+systemctl daemon-reload
+
+--- Command 3: Enable service ---
+systemctl enable idle-monitor-queue
+
+--- Command 4: Start service ---
+systemctl start idle-monitor-queue
+
+--- Command 5: Check status ---
+systemctl status idle-monitor-queue
+(Tekan Q untuk keluar)
+
+✅ Queue worker running!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 13: VERIFY DEPLOYMENT
+---------------------------
+
+--- Command 1: Check all services ---
+systemctl status nginx
+systemctl status php8.1-fpm
+systemctl status idle-monitor-queue
+docker ps
+
+--- Command 2: Check application logs ---
+tail -30 /var/www/idle-monitor/storage/logs/laravel.log
+
+--- Command 3: Test website ---
+Buka browser di komputer Windows Anda:
+http://10.2.2.18
+
+✅ Website seharusnya sudah bisa diakses!
+
+═══════════════════════════════════════════════════════════════
+
+STEP 14: LOGIN ADMIN
+---------------------
+
+1. Buka browser: http://10.2.2.18/admin/login
+
+2. Login dengan:
+   Email: admin@example.com
+   Password: password
+
+3. ⚠️ SEGERA GANTI PASSWORD setelah login pertama!
+
+═══════════════════════════════════════════════════════════════
+
+VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+[ ] Git pushed to GitHub: https://github.com/habibsyaukani/vss
+[ ] PuTTY connected to 10.2.2.18
+[ ] Docker containers running (docker ps)
+[ ] Nginx running (systemctl status nginx)
+[ ] PHP-FPM running (systemctl status php8.1-fpm)
+[ ] Queue worker running (systemctl status idle-monitor-queue)
+[ ] Website accessible: http://10.2.2.18
+[ ] Admin login works: http://10.2.2.18/admin/login
+[ ] Dashboard shows data
+[ ] Can pull data manually
+
+═══════════════════════════════════════════════════════════════
+
+USEFUL COMMANDS FOR FUTURE
+═══════════════════════════════════════════════════════════════
+
+Connect via PuTTY:
+  Host: 10.2.2.18, Port: 22, User: root
+
+Navigate to app:
+  cd /var/www/idle-monitor
+
+Update from GitHub:
+  cd /var/www/idle-monitor
+  git pull origin main
+  composer install --no-dev
+  php artisan migrate --force
+  php artisan cache:clear
+  systemctl restart idle-monitor-queue
+
+Restart services:
+  systemctl restart nginx
+  systemctl restart php8.1-fpm
+  systemctl restart idle-monitor-queue
+
+View logs:
+  tail -f /var/www/idle-monitor/storage/logs/laravel.log
+  docker logs -f idle-monitor-mysql
+  journalctl -u idle-monitor-queue -f
+
+Check services:
+  systemctl status nginx
+  systemctl status php8.1-fpm
+  systemctl status idle-monitor-queue
+  docker ps
+
+Clear cache:
+  cd /var/www/idle-monitor
+  php artisan cache:clear
+  php artisan config:clear
+  php artisan route:clear
+  php artisan view:clear
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+Problem: Website shows 502 Bad Gateway
+Solution:
+  systemctl restart php8.1-fpm
+  systemctl restart nginx
+
+Problem: Database connection error
+Solution:
+  docker ps  # Check MySQL is running
+  cat /var/www/idle-monitor/.env  # Check DB credentials
+  docker logs idle-monitor-mysql  # Check MySQL logs
+
+Problem: Queue not processing
+Solution:
+  systemctl restart idle-monitor-queue
+  journalctl -u idle-monitor-queue -n 50
+
+Problem: Permission denied errors
+Solution:
+  cd /var/www/idle-monitor
+  chown -R www-data:www-data storage bootstrap/cache
+  chmod -R 775 storage bootstrap/cache
+
+═══════════════════════════════════════════════════════════════
+
+SELESAI! 🎉
+═══════════════════════════════════════════════════════════════
+
+Website Anda sekarang sudah live di: http://10.2.2.18
+
+Untuk maintenance, selalu pakai PuTTY untuk SSH ke server
+dan jalankan command yang diperlukan.
+
+═══════════════════════════════════════════════════════════════

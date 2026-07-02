@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class FrontendAuthController extends Controller
 {
@@ -27,41 +28,91 @@ class FrontendAuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required|min:6',
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+        // Cari user terlebih dahulu sebelum Auth::attempt
+        $user = User::where('email', $credentials['email'])->first();
 
-            // Allow both admin and fleet_manager
-            if (!in_array($user->role, ['admin', 'fleet_manager'])) {
-                Auth::logout();
-                return back()->with('error', '403: Access Denied.');
-            }
-
-            // Check if user is active
-            if (!$user->isActive()) {
-                Auth::logout();
-                return back()->with('error', 'Your account is inactive.');
-            }
-
-            $request->session()->regenerate();
-            return redirect('/dashboard')->with('success', 'Welcome back, ' . $user->name);
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            return back()->with('error', 'Email atau password salah.');
         }
 
-        return back()->with('error', 'Invalid credentials.');
+        // Cek role
+        if (!in_array($user->role, ['admin', 'fleet_manager'])) {
+            return back()->with('error', '403: Access Denied.');
+        }
+
+        // Cek status aktif
+        if (!$user->isActive()) {
+            return back()->with('error', 'Akun Anda tidak aktif. Hubungi administrator.');
+        }
+
+        // ── Cek Single Device: apakah sudah ada sesi aktif? ───────────────
+        // Admin bisa login dari mana saja (bypass single session)
+        if ($user->role !== 'admin' && $user->session_token !== null) {
+            // Cek apakah sesi yang ada sudah expired (> 1 jam)
+            $sessionExpired = $user->login_at
+                ? now()->diffInMinutes($user->login_at) >= 60
+                : true;
+
+            if (!$sessionExpired) {
+                return back()->with(
+                    'error',
+                    'Akun ini sedang aktif digunakan di perangkat lain. ' .
+                    'Tidak bisa login lebih dari 1 perangkat secara bersamaan.'
+                );
+            }
+        }
+
+        // Login berhasil — buat token sesi baru
+        Auth::login($user);
+
+        $sessionToken = Str::random(60);
+
+        // Simpan token ke DB
+        $user->update([
+            'session_token' => $sessionToken,
+            'login_at'      => now(),
+        ]);
+
+        // Simpan token ke session browser
+        $request->session()->regenerate();
+        session(['session_token' => $sessionToken]);
+
+        return redirect('/dashboard')->with('success', 'Selamat datang, ' . $user->name . '!');
     }
 
     /**
      * Handle frontend logout
+     * 
+     * IMPROVEMENTS:
+     * - Clear session token from database
+     * - Flash new CSRF token to prevent "Page Expired"
+     * - Redirect to frontend login
      */
     public function logout(Request $request)
     {
+        $user = Auth::user();
+
+        // Bersihkan token di DB saat logout
+        if ($user) {
+            $user->update(['session_token' => null, 'login_at' => null]);
+        }
+
+        // Logout user
         Auth::logout();
+        
+        // Invalidate current session
         $request->session()->invalidate();
+        
+        // Generate fresh CSRF token for next request
         $request->session()->regenerateToken();
 
-        return redirect('/login')->with('success', 'Logged out successfully.');
+        // Redirect to frontend login with fresh token
+        return redirect('/login')
+            ->with('success', 'Anda telah logout.')
+            ->with('_token', csrf_token()); // Fresh token for next page
     }
 }

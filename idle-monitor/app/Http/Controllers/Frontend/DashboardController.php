@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use App\Models\Device;
 use App\Models\IdleAlarm;
 use App\Models\GpsTrack;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -16,205 +16,114 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        $today = Carbon::today();
-        
-        // Real speed stats from gps_tracks
-        $maxSpeed = GpsTrack::where('gps_time', '>=', $today->format('Y-m-d') . ' 00:00:00')
-            ->where('gps_time', '<=', $today->format('Y-m-d') . ' 23:59:59')
-            ->max('speed') ?? 0;
-        $avgSpeed = GpsTrack::where('gps_time', '>=', $today->format('Y-m-d') . ' 00:00:00')
-            ->where('gps_time', '<=', $today->format('Y-m-d') . ' 23:59:59')
-            ->where('speed', '>', 0)
-            ->avg('speed') ?? 0;
+        $today    = Carbon::today()->toDateString();
+        $cacheKey = "dashboard_data_{$today}";
 
-        $stats = [
-            'today_idle_count' => IdleAlarm::whereDate('starting_time', $today)->count(),
-            'max_speed'        => number_format($maxSpeed, 1),
-            'avg_speed'        => number_format($avgSpeed, 1),
-        ];
+        // Cache seluruh data dashboard selama 5 menit
+        // Kunjungan pertama: query ke DB. Kunjungan berikutnya: dari cache (instan)
+        $data = Cache::remember($cacheKey, 300, function () use ($today) {
 
-        // Get idle per day (last 7 days) - for trend chart
-        $idlePerDay = $this->getIdlePerDay();
+            $start        = $today . ' 00:00:00';
+            $end          = $today . ' 23:59:59';
+            $sevenDaysAgo = Carbon::today()->subDays(6)->toDateString();
 
-        // Get top 5 idle units (today)
-        $topIdleUnits = $this->getTopIdleUnits(5);
+            // ── 1. Stats hari ini (MAX & AVG speed dalam 1 query) ──────────
+            $speedStats = GpsTrack::whereBetween('gps_time', [$start, $end])
+                ->where('speed', '>', 0)
+                ->selectRaw('MAX(speed) as max_speed, AVG(speed) as avg_speed')
+                ->first();
 
-        // Get idle per fleet (today) - for donut chart
-        $idlePerFleet = $this->getIdlePerFleet();
+            $stats = [
+                'today_idle_count' => IdleAlarm::whereDate('starting_time', $today)->count(),
+                'max_speed'        => number_format($speedStats->max_speed ?? 0, 1),
+                'avg_speed'        => number_format($speedStats->avg_speed ?? 0, 1),
+            ];
 
-        // Get top 5 speed units (today)
-        $topSpeedUnits = $this->getTopSpeedUnits(5);
+            // ── 2. Idle per day — 1 query (bukan 7 query terpisah) ─────────
+            $idleByDay = IdleAlarm::selectRaw('DATE(starting_time) as day, COUNT(*) as total')
+                ->whereDate('starting_time', '>=', $sevenDaysAgo)
+                ->groupBy('day')
+                ->orderBy('day')
+                ->pluck('total', 'day');
 
-        // Get speed per fleet (today) - for donut chart
-        $speedPerFleet = $this->getSpeedPerFleet();
-
-        // Get max speed per day (last 7 days)
-        $speedPerDay = $this->getSpeedPerDay();
-
-        return view('frontend.dashboard', compact(
-            'stats',
-            'idlePerDay',
-            'topIdleUnits',
-            'idlePerFleet',
-            'topSpeedUnits',
-            'speedPerFleet',
-            'speedPerDay'
-        ));
-    }
-
-    /**
-     * Get idle count per day (last 7 days)
-     */
-    private function getIdlePerDay()
-    {
-        $days = [];
-        $counts = [];
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $dayLabel = $date->format('d/m'); // Format: 05/05, 06/05, etc
-            $days[] = $dayLabel;
-
-            $count = IdleAlarm::whereDate('starting_time', $date->toDateString())->count();
-            $counts[] = $count;
-        }
-
-        return [
-            'days' => $days,
-            'counts' => $counts,
-        ];
-    }
-
-    /**
-     * Get top N idle units (today)
-     */
-    private function getTopIdleUnits($limit = 5)
-    {
-        $today = Carbon::today();
-        
-        return IdleAlarm::select('device_name', 'device_id', DB::raw('COUNT(*) as event_count'))
-            ->whereDate('starting_time', $today)
-            ->groupBy('device_name', 'device_id')
-            ->orderBy('event_count', 'desc')
-            ->limit($limit)
-            ->get();
-    }
-
-    /**
-     * Get idle per fleet (today) - for donut chart
-     * Fleet = first part of device name (e.g., GPE-DT, GPE-FT, GPE-HD, etc.)
-     */
-    private function getIdlePerFleet()
-    {
-        $today = Carbon::today();
-        
-        // Extract fleet from device_name (e.g., GPE-DT-1232 -> DT)
-        $alarms = IdleAlarm::select('device_name')
-            ->whereDate('starting_time', $today)
-            ->get();
-        
-        $fleetCounts = [];
-        
-        foreach ($alarms as $alarm) {
-            // Extract series from device name (e.g., GPE-DT-1232 -> DT)
-            $parts = explode('-', $alarm->device_name);
-            if (count($parts) >= 2) {
-                $fleet = $parts[1]; // DT, FT, HD, BUS, WT, etc.
-                $fleetKey = $fleet . ' - GPE';
-                
-                if (!isset($fleetCounts[$fleetKey])) {
-                    $fleetCounts[$fleetKey] = 0;
-                }
-                $fleetCounts[$fleetKey]++;
+            $idlePerDay = ['days' => [], 'counts' => []];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = Carbon::today()->subDays($i)->toDateString();
+                $idlePerDay['days'][]   = Carbon::parse($date)->format('d/m');
+                $idlePerDay['counts'][] = (int) ($idleByDay[$date] ?? 0);
             }
-        }
-        
-        // Sort by count descending
-        arsort($fleetCounts);
-        
-        return [
-            'labels' => array_keys($fleetCounts),
-            'counts' => array_values($fleetCounts),
-        ];
-    }
 
-    /**
-     * Get top N speed units (today) - by max speed
-     */
-    private function getTopSpeedUnits($limit = 5)
-    {
-        $today = Carbon::today();
+            // ── 3. Top 5 idle units hari ini ──────────────────────────────
+            $topIdleUnits = IdleAlarm::select('device_name', 'device_id', DB::raw('COUNT(*) as event_count'))
+                ->whereDate('starting_time', $today)
+                ->groupBy('device_name', 'device_id')
+                ->orderByDesc('event_count')
+                ->limit(5)
+                ->get();
 
-        return GpsTrack::select('device_name', 'device_id', DB::raw('MAX(speed) as max_speed'))
-            ->where('gps_time', '>=', $today->format('Y-m-d') . ' 00:00:00')
-            ->where('gps_time', '<=', $today->format('Y-m-d') . ' 23:59:59')
-            ->where('speed', '>', 0)
-            ->whereNotNull('device_name')
-            ->groupBy('device_name', 'device_id')
-            ->orderBy('max_speed', 'desc')
-            ->limit($limit)
-            ->get();
-    }
+            // ── 4. Idle per fleet — GROUP di DB, bukan di PHP ─────────────
+            $idleFleetRaw = IdleAlarm::selectRaw(
+                    "SUBSTRING_INDEX(SUBSTRING_INDEX(device_name, '-', 2), '-', -1) as fleet,
+                     COUNT(*) as total"
+                )
+                ->whereDate('starting_time', $today)
+                ->groupBy('fleet')
+                ->orderByDesc('total')
+                ->get();
 
-    /**
-     * Get speed per fleet (today) - avg speed per fleet type
-     */
-    private function getSpeedPerFleet()
-    {
-        $today = Carbon::today();
+            $idlePerFleet = [
+                'labels' => $idleFleetRaw->map(fn($r) => $r->fleet . ' - GPE')->toArray(),
+                'counts' => $idleFleetRaw->pluck('total')->map(fn($v) => (int) $v)->toArray(),
+            ];
 
-        $tracks = GpsTrack::select('device_name', DB::raw('MAX(speed) as max_speed'))
-            ->where('gps_time', '>=', $today->format('Y-m-d') . ' 00:00:00')
-            ->where('gps_time', '<=', $today->format('Y-m-d') . ' 23:59:59')
-            ->where('speed', '>', 0)
-            ->whereNotNull('device_name')
-            ->groupBy('device_name')
-            ->get();
+            // ── 5. Top 5 speed units hari ini ─────────────────────────────
+            $topSpeedUnits = GpsTrack::select('device_name', 'device_id', DB::raw('MAX(speed) as max_speed'))
+                ->whereBetween('gps_time', [$start, $end])
+                ->where('speed', '>', 0)
+                ->whereNotNull('device_name')
+                ->groupBy('device_name', 'device_id')
+                ->orderByDesc('max_speed')
+                ->limit(5)
+                ->get();
 
-        $fleetSpeeds = [];
-        foreach ($tracks as $track) {
-            $parts = explode('-', $track->device_name);
-            if (count($parts) >= 2) {
-                $fleet = $parts[1] . ' - GPE';
-                if (!isset($fleetSpeeds[$fleet])) {
-                    $fleetSpeeds[$fleet] = [];
-                }
-                $fleetSpeeds[$fleet][] = $track->max_speed;
+            // ── 6. Speed per fleet — GROUP di DB ──────────────────────────
+            $speedFleetRaw = GpsTrack::selectRaw(
+                    "SUBSTRING_INDEX(SUBSTRING_INDEX(device_name, '-', 2), '-', -1) as fleet,
+                     MAX(speed) as max_speed"
+                )
+                ->whereBetween('gps_time', [$start, $end])
+                ->where('speed', '>', 0)
+                ->whereNotNull('device_name')
+                ->groupBy('fleet')
+                ->orderByDesc('max_speed')
+                ->get();
+
+            $speedPerFleet = [
+                'labels' => $speedFleetRaw->map(fn($r) => $r->fleet . ' - GPE')->toArray(),
+                'counts' => $speedFleetRaw->map(fn($r) => round($r->max_speed, 1))->toArray(),
+            ];
+
+            // ── 7. Max speed per day — 1 query (bukan 7 query terpisah) ───
+            $speedByDay = GpsTrack::selectRaw('DATE(gps_time) as day, MAX(speed) as max_speed')
+                ->whereDate('gps_time', '>=', $sevenDaysAgo)
+                ->where('speed', '>', 0)
+                ->groupBy('day')
+                ->orderBy('day')
+                ->pluck('max_speed', 'day');
+
+            $speedPerDay = ['days' => [], 'counts' => []];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = Carbon::today()->subDays($i)->toDateString();
+                $speedPerDay['days'][]   = Carbon::parse($date)->format('d M');
+                $speedPerDay['counts'][] = round($speedByDay[$date] ?? 0, 1);
             }
-        }
 
-        $labels = [];
-        $counts = [];
-        foreach ($fleetSpeeds as $fleet => $speeds) {
-            $labels[] = $fleet;
-            $counts[] = round(max($speeds), 1); // max speed per fleet
-        }
+            return compact(
+                'stats', 'idlePerDay', 'topIdleUnits',
+                'idlePerFleet', 'topSpeedUnits', 'speedPerFleet', 'speedPerDay'
+            );
+        });
 
-        // Sort by max speed desc
-        array_multisort($counts, SORT_DESC, $labels);
-
-        return ['labels' => $labels, 'counts' => $counts];
-    }
-
-    /**
-     * Get max speed per day (last 7 days)
-     */
-    private function getSpeedPerDay()
-    {
-        $days = [];
-        $counts = [];
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
-            $days[] = $date->format('d M');
-            
-            $maxSpeed = GpsTrack::where('gps_time', '>=', $date->format('Y-m-d') . ' 00:00:00')
-                ->where('gps_time', '<=', $date->format('Y-m-d') . ' 23:59:59')
-                ->max('speed') ?? 0;
-                
-            $counts[] = round($maxSpeed, 1);
-        }
-
-        return ['days' => $days, 'counts' => $counts];
+        return view('frontend.dashboard', $data);
     }
 }

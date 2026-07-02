@@ -39,6 +39,11 @@ Route::prefix('/admin')->name('admin.')->group(function () {
     // Protected routes (admin only) - logout only here
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+        
+        // CSRF Refresh — auto-called every 50 minutes from admin layout
+        Route::get('/refresh-csrf', function () {
+            return response()->json(['token' => csrf_token()]);
+        })->name('csrf.refresh');
     });
 });
 

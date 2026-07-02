@@ -1,139 +1,302 @@
-# Idle Monitor - Laravel Application
+# Idle Monitor System
 
-## Overview
-Sistem monitoring idle alarm berbasis Laravel untuk Howen system dengan queue processing dan Redis caching.
+Sistem monitoring idle alarm dan max speed untuk fleet management GPE menggunakan VSS/Howen API.
 
-## Tech Stack
-- **Framework**: Laravel 10
-- **PHP**: 8.1
-- **Database**: MySQL
+## 🚀 Features
+
+- ✅ **Real-time Monitoring** - Dashboard dengan statistik live
+- ✅ **Idle Alarm Tracking** - Monitor durasi idle kendaraan
+- ✅ **Max Speed Tracking** - Monitor kecepatan maksimum
+- ✅ **GPS Tracking** - Tracking lokasi kendaraan real-time
+- ✅ **Auto Data Sync** - Sinkronisasi otomatis dengan VSS API
+- ✅ **Manual Data Pull** - Tarik data manual untuk rentang tanggal
+- ✅ **Report & Export** - Export data ke Excel
+- ✅ **Multi-Fleet Support** - Support multiple device groups
+- ✅ **User Management** - Role-based access control
+- ✅ **System Health** - Monitor kesehatan sistem
+
+## 📋 Tech Stack
+
+- **Backend**: Laravel 10.x (PHP 8.1+)
+- **Frontend**: Bootstrap 5, Chart.js, DataTables
+- **Database**: MySQL 8.0
 - **Cache**: Redis
-- **Queue**: Redis Queue
-- **API Tools**: Laravel Sanctum
+- **Queue**: Laravel Queue (Database driver)
+- **Deployment**: Docker, Nginx, PHP-FPM
 
-## Project Structure
-```
-app/
-├── Jobs/
-│   ├── ImportAlarmJob.php
-│   ├── ProcessIdleAlarmJob.php
-│   ├── RefreshTokenJob.php
-│   └── CleanupOldDataJob.php
-├── Services/
-│   ├── HowenAuthService.php
-│   ├── HowenAlarmService.php
-│   └── HowenDeviceService.php
-├── Models/
-│   ├── Device.php
-│   ├── IdleAlarm.php
-│   ├── AlarmRaw.php
-│   ├── ApiToken.php
-│   └── ImportLog.php
-└── Http/Controllers/Api/
-    ├── DashboardController.php
-    └── IdleAlarmController.php
+## 🔧 Server Requirements
+
+- Ubuntu 20.04+ / Debian 11+
+- PHP 8.1+ with extensions (mysql, redis, xml, curl, mbstring, zip, bcmath, gd)
+- MySQL 8.0 or Docker
+- Redis (optional, recommended for production)
+- Composer 2.x
+- Node.js 18+ & NPM (for assets compilation)
+
+## 📦 Quick Start (Local Development)
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/habibsyaukani/vss.git
+cd vss/idle-monitor
 ```
 
-## Setup Instructions
-
-### 1. Install Dependencies
+### 2. Install Dependencies
 ```bash
 composer install
+npm install && npm run build
 ```
 
-### 2. Environment Configuration
-.env file sudah dikonfigurasi dengan:
-- Database: `vss`
-- Cache Driver: Redis
-- Queue Connection: Redis
+### 3. Configure Environment
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-### 3. Run Migrations
+Edit `.env`:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=vss
+DB_USERNAME=root
+DB_PASSWORD=
+
+HOWEN_API_URL=https://vss.ptdigital.co.id/vss/
+HOWEN_USERNAME=your_username
+HOWEN_PASSWORD=your_password
+```
+
+### 4. Setup Database
 ```bash
 php artisan migrate
-```
-
-### 4. Queue Worker (Development)
-```bash
-php artisan queue:work
+php artisan db:seed
 ```
 
 ### 5. Start Development Server
 ```bash
+# Terminal 1: Web server
 php artisan serve
+
+# Terminal 2: Queue worker
+php artisan queue:work
+
+# Terminal 3: Scheduler (optional)
+php artisan schedule:work
 ```
 
-## Database Schema
+Access: `http://127.0.0.1:8000`
 
-### idle_alarms
-- id (primary key)
-- device_id (foreign key)
-- alarm_type
-- status
-- created_at
-- updated_at
+Default Login:
+- **Email**: admin@example.com
+- **Password**: password
 
-### devices
-- id (primary key)
-- howen_id
-- name
-- location
-- created_at
-- updated_at
+## 🚀 Production Deployment
 
-### alarm_raw
-- id (primary key)
-- device_id
-- raw_data (json)
-- processed_at
-- created_at
+### Automatic Deployment to Server 10.2.2.18
 
-### api_tokens
-- id (primary key)
-- user_id
-- token (unique)
-- created_at
-- updated_at
+1. **Update GitHub** (if needed):
+```bash
+git add .
+git commit -m "Deploy to production"
+git push origin main
+```
 
-### import_logs
-- id (primary key)
-- record_count
-- status
-- created_at
-- updated_at
+2. **Run Deployment Script**:
+```bash
+chmod +x deploy-to-server.sh
+./deploy-to-server.sh
+```
 
-## API Endpoints
+3. **Access Application**:
+```
+http://10.2.2.18
+```
 
-### Dashboard
-- `GET /api/dashboard` - Get dashboard data
-- `GET /api/dashboard/statistics` - Get alarm statistics
-- `GET /api/dashboard/recent-alarms` - Get recent alarms
+### Manual Deployment
 
-### Alarms
-- `GET /api/alarms` - List all alarms
-- `POST /api/alarms` - Create new alarm
-- `GET /api/alarms/{id}` - Get alarm detail
-- `PUT /api/alarms/{id}` - Update alarm
-- `DELETE /api/alarms/{id}` - Delete alarm
+See detailed guide in: [DEPLOYMENT_GUIDE.txt](DEPLOYMENT_GUIDE.txt)
 
-## Queue Jobs
+## 📖 Documentation
 
-1. **ImportAlarmJob** - Import alarm data dari Howen API
-2. **ProcessIdleAlarmJob** - Process idle alarm dan update status
-3. **RefreshTokenJob** - Refresh authentication token
-4. **CleanupOldDataJob** - Cleanup old data dari database
+- **[DEPLOYMENT_GUIDE.txt](DEPLOYMENT_GUIDE.txt)** - Complete deployment guide
+- **[QUICK_DEPLOY_STEPS.txt](QUICK_DEPLOY_STEPS.txt)** - Quick deployment reference
+- **[DEPLOY_CHECKLIST.txt](DEPLOY_CHECKLIST.txt)** - Deployment checklist
+- **[DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md)** - Development history & features
 
-## Development Tools
-- Laravel Debugbar (untuk development)
-- Laravel DataTables (untuk tabel interaktif)
+## 🔑 Default Credentials
 
-## Notes
-- Laravel Horizon tidak support di Windows, gunakan di production server Linux
-- Redis harus running untuk queue processing
-- Queue worker harus running untuk process background jobs
+### Application
+- **Admin Email**: admin@example.com
+- **Admin Password**: password
 
-## Next Steps
-1. Implement controller methods
-2. Implement service classes
-3. Implement migration schemas
-4. Add unit tests
-5. Deploy ke production server
+### Database (Production Docker)
+- **Host**: 127.0.0.1
+- **Port**: 3306
+- **Database**: vss
+- **Username**: idle_user
+- **Password**: IdleUser@2026!
+
+### VSS/Howen API
+- **URL**: https://vss.ptdigital.co.id/vss/
+- **Username**: dash_gpe_gam
+- **Password**: Gpe@939393!
+
+⚠️ **IMPORTANT**: Change default passwords in production!
+
+## 🛠️ Common Commands
+
+### Application
+```bash
+# Clear cache
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# Run migrations
+php artisan migrate
+php artisan migrate:rollback
+
+# Queue operations
+php artisan queue:work
+php artisan queue:restart
+php artisan queue:failed
+
+# Data pull commands
+php artisan howen:pull-alarms-realtime
+php artisan howen:pull-alarms-date-range --from=2026-06-01 --to=2026-06-30
+php artisan vss:pull-gps-tracks --date=2026-06-29
+```
+
+### System (Production Server)
+```bash
+# Service management
+systemctl status nginx
+systemctl status php8.1-fpm
+systemctl status idle-monitor-queue
+systemctl restart idle-monitor-queue
+
+# Docker operations
+docker ps
+docker logs idle-monitor-mysql
+docker logs idle-monitor-redis
+docker-compose restart
+
+# View logs
+tail -f storage/logs/laravel.log
+journalctl -u idle-monitor-queue -f
+tail -f /var/log/nginx/error.log
+```
+
+## 📊 Features Overview
+
+### Frontend Dashboard
+- Real-time statistics (Idle Alarms, Max Speed)
+- Distribution charts by fleet
+- 7-day trend comparison
+- Date range filtering
+- Export to Excel
+
+### Admin Panel
+- User management
+- Device management
+- Manual data pull
+- GPS Track pull
+- Import logs monitoring
+- System health monitoring
+- System settings
+
+### Data Synchronization
+- **Automatic**: Scheduler runs every 5 minutes
+- **Manual**: Web-based data pull interface
+- **Real-time**: Pull last 2 hours data on-demand
+- **Date Range**: Pull historical data for specific dates
+
+## 🔐 Security Features
+
+- CSRF protection
+- XSS prevention
+- SQL injection protection
+- Role-based access control
+- Session management
+- Password hashing (bcrypt)
+- API authentication
+- Rate limiting
+
+## 🧪 Testing
+
+```bash
+# Run tests
+php artisan test
+
+# Run specific test
+php artisan test --filter=UserTest
+```
+
+## 📈 Performance Optimization
+
+- Database indexing
+- Query optimization
+- Cache implementation (Redis)
+- Queue processing (background jobs)
+- Asset optimization (minification)
+- Lazy loading
+- Chunk processing for large datasets
+
+## 🐛 Troubleshooting
+
+### Issue: Database connection error
+```bash
+# Check MySQL is running
+docker ps
+docker logs idle-monitor-mysql
+
+# Verify credentials in .env
+cat .env | grep DB_
+```
+
+### Issue: Queue not processing
+```bash
+# Check queue worker
+systemctl status idle-monitor-queue
+
+# Restart queue worker
+systemctl restart idle-monitor-queue
+
+# Check failed jobs
+php artisan queue:failed
+```
+
+### Issue: Website not accessible
+```bash
+# Check Nginx
+systemctl status nginx
+
+# Check PHP-FPM
+systemctl status php8.1-fpm
+
+# Check application logs
+tail -100 storage/logs/laravel.log
+```
+
+## 📞 Support
+
+For issues and questions:
+- Check documentation files
+- Review application logs
+- Contact system administrator
+
+## 📄 License
+
+Proprietary - All rights reserved
+
+## 👥 Team
+
+Developed for GPE Fleet Management
+
+---
+
+**Last Updated**: June 2026
+**Version**: 1.0.0
+**Status**: Production Ready ✅

@@ -1,0 +1,945 @@
+@extends('admin.layouts.app')
+
+@section('title', 'System Health Check')
+
+@push('styles')
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+    }
+    .page-title {
+        display: flex;
+        align-items: center;
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 4px;
+    }
+    .page-title i {
+        color: #5a5ced;
+        margin-right: 12px;
+        font-size: 22px;
+    }
+    .page-subtitle {
+        color: #6b7280;
+        font-size: 14px;
+        margin-left: 34px;
+    }
+
+    /* Top Row: Health Score + Stats */
+    .health-top-row {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    /* Health Score Circle */
+    .health-score-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        text-align: center;
+    }
+    .health-circle {
+        position: relative;
+        width: 160px;
+        height: 160px;
+        margin: 0 auto 16px;
+    }
+    .health-circle canvas {
+        transform: rotate(-90deg);
+    }
+    .health-score-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+    .health-score-number {
+        font-size: 42px;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .health-score-label {
+        font-size: 13px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+    .health-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 18px;
+        border-radius: 18px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .status-healthy {
+        background: #ecfdf5;
+        color: #059669;
+    }
+    .status-warning {
+        background: #fffbeb;
+        color: #d97706;
+    }
+    .status-critical {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    .last-checked {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 12px;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    .stat-value.success { color: #059669; }
+    .stat-value.failed { color: #dc2626; }
+    .stat-value.rate { color: #5a5ced; }
+    .stat-label {
+        font-size: 12px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* System Checks Grid */
+    .checks-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .check-card {
+        background: white;
+        border-radius: 12px;
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .check-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .check-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    .check-icon.ok {
+        background: #ecfdf5;
+        color: #059669;
+    }
+    .check-icon.warning {
+        background: #fffbeb;
+        color: #d97706;
+    }
+    .check-icon.error {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    .check-content {
+        text-align: center;
+    }
+    .check-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 4px;
+    }
+    .check-message {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 2px;
+    }
+    .check-details {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    /* Collapsible Sections */
+    .collapsible-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 16px;
+        overflow: hidden;
+    }
+    .collapsible-header {
+        padding: 20px 24px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #f3f4f6;
+        transition: background 0.2s;
+    }
+    .collapsible-header:hover {
+        background: #f9fafb;
+    }
+    .collapsible-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+    }
+    .collapsible-badge {
+        background: #ef4444;
+        color: white;
+        border-radius: 12px;
+        padding: 3px 10px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .collapsible-badge.warning {
+        background: #f59e0b;
+    }
+    .collapsible-badge.success {
+        background: #10b981;
+    }
+    .collapsible-icon {
+        font-size: 14px;
+        color: #9ca3af;
+        transition: transform 0.3s;
+    }
+    .collapsible-header.active .collapsible-icon {
+        transform: rotate(180deg);
+    }
+    .collapsible-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+    .collapsible-content.active {
+        max-height: 2000px;
+        transition: max-height 0.5s ease-in;
+    }
+    .collapsible-body {
+        padding: 20px 24px;
+    }
+
+    /* Issues/Warnings - Clean List */
+    .issues-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .issue-card {
+        background: #fef2f2;
+        border-radius: 10px;
+        padding: 18px;
+        border-left: 4px solid #dc2626;
+    }
+    .issue-card.warning {
+        background: #fffbeb;
+        border-left-color: #f59e0b;
+    }
+    .issue-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .issue-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+    .issue-content {
+        flex: 1;
+    }
+    .issue-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+    .issue-message {
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 12px;
+    }
+    .issue-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .heal-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 7px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .heal-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .troubleshooting-box {
+        background: white;
+        border-radius: 8px;
+        padding: 14px;
+        border-left: 3px solid #5a5ced;
+    }
+    .troubleshooting-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .troubleshooting-steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .troubleshooting-steps li {
+        font-size: 12px;
+        color: #4b5563;
+        padding: 5px 0;
+        padding-left: 20px;
+        position: relative;
+    }
+    .troubleshooting-steps li:before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        color: #5a5ced;
+        font-weight: 700;
+    }
+
+    /* History Timeline - Clean */
+    .history-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .history-item {
+        display: flex;
+        gap: 14px;
+        padding: 14px;
+        background: #f9fafb;
+        border-radius: 10px;
+        transition: transform 0.2s;
+    }
+    .history-item:hover {
+        transform: translateX(4px);
+        background: #f3f4f6;
+    }
+    .history-item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    .history-item-icon.success {
+        background: #ecfdf5;
+        color: #059669;
+    }
+    .history-item-icon.failed {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    .history-item-icon.attempted {
+        background: #fffbeb;
+        color: #f59e0b;
+    }
+    .history-item-content {
+        flex: 1;
+    }
+    .history-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 6px;
+    }
+    .history-item-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #111827;
+    }
+    .history-item-time {
+        font-size: 11px;
+        color: #9ca3af;
+        white-space: nowrap;
+    }
+    .history-item-problem {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+    .history-item-result {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+    .history-item-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    .history-item-badge.success {
+        background: #ecfdf5;
+        color: #059669;
+    }
+    .history-item-badge.failed {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    /* Refresh Button */
+    .refresh-btn {
+        background: linear-gradient(135deg, #5a5ced 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(90, 92, 237, 0.3);
+    }
+    .refresh-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(90, 92, 237, 0.4);
+    }
+
+    /* Loading State */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    .loading-overlay.show {
+        display: flex;
+    }
+    .loading-spinner {
+        background: white;
+        padding: 30px 50px;
+        border-radius: 12px;
+        text-align: center;
+    }
+    .spinner {
+        border: 4px solid #f3f4f6;
+        border-top: 4px solid #5a5ced;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* No Issues State */
+    .no-issues {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+    }
+    .no-issues-icon {
+        font-size: 64px;
+        color: #10b981;
+        margin-bottom: 16px;
+    }
+    .no-issues-text {
+        font-size: 16px;
+        color: #6b7280;
+    }
+</style>
+@endpush
+
+@section('content')
+<div class="container-fluid" style="padding: 0 20px;">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div style="font-size: 14px; color: #6b7280;">Running health checks...</div>
+        </div>
+    </div>
+
+    <!-- Migration Alert (if table doesn't exist) -->
+    @if(isset($table_exists) && !$table_exists)
+    <div class="alert alert-warning" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <div style="font-size: 24px; color: #f59e0b;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div style="flex: 1;">
+                <h4 style="font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 6px;">
+                    Healing Logs Table Not Found
+                </h4>
+                <p style="font-size: 12px; color: #78350f; margin-bottom: 10px;">
+                    The <code>healing_logs</code> table is required for auto-healing functionality. 
+                </p>
+                <button onclick="runMigration()" class="btn btn-warning btn-sm" style="background: #f59e0b; border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 11px;">
+                    <i class="fas fa-database"></i> Run Migration Now
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <div class="page-title">
+                <i class="fas fa-heartbeat"></i> System Health Check
+            </div>
+            <div class="page-subtitle">Monitor system status, detect issues, and get troubleshooting recommendations</div>
+        </div>
+        <button class="refresh-btn" onclick="refreshHealth()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Main Grid Layout -->
+    <div class="health-main-grid">
+        <!-- Left Column: Health Score + System Checks -->
+        <div class="health-left-column">
+            <!-- Health Score -->
+            <div class="health-score-card">
+                <div class="health-circle">
+                    <canvas id="healthCanvas" width="120" height="120"></canvas>
+                    <div class="health-score-text">
+                        <div class="health-score-number" id="healthScoreNumber" style="color: {{ $status === 'healthy' ? '#059669' : ($status === 'warning' ? '#d97706' : '#dc2626') }}">
+                            {{ $health_score }}
+                        </div>
+                        <div class="health-score-label">Health Score</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 12px;">
+                    <span class="health-status-badge status-{{ $status }}">
+                        @if($status === 'healthy')
+                            <i class="fas fa-check-circle"></i> Healthy
+                        @elseif($status === 'warning')
+                            <i class="fas fa-exclamation-triangle"></i> Warning
+                        @else
+                            <i class="fas fa-times-circle"></i> Critical
+                        @endif
+                    </span>
+                </div>
+
+                <div class="last-checked">
+                    Last: <span id="lastChecked">{{ now()->format('H:i:s') }}</span>
+                </div>
+            </div>
+
+            <!-- System Checks Grid -->
+            <div class="checks-grid">
+                @foreach($checks as $checkName => $check)
+                <div class="check-card">
+                    <div class="check-icon {{ strtolower($check['status']) === 'ok' ? 'ok' : (strtolower($check['status']) === 'warning' ? 'warning' : 'error') }}">
+                        @if(strtolower($check['status']) === 'ok')
+                            <i class="fas fa-check"></i>
+                        @elseif(strtolower($check['status']) === 'warning')
+                            <i class="fas fa-exclamation-triangle"></i>
+                        @else
+                            <i class="fas fa-times"></i>
+                        @endif
+                    </div>
+                    <div class="check-content">
+                        <div class="check-title">{{ ucwords(str_replace('_', ' ', $checkName)) }}</div>
+                        <div class="check-message">{{ $check['message'] }}</div>
+                        <div class="check-details">{{ $check['details'] }}</div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Right Column: Tabs (Issues, Warnings, History) -->
+        <div class="health-right-column">
+            <!-- Tabs -->
+            <div class="health-tabs">
+                <button class="health-tab {{ count($issues) > 0 ? 'active' : '' }}" onclick="switchTab('issues')">
+                    <i class="fas fa-exclamation-circle"></i> Issues
+                    @if(count($issues) > 0)
+                    <span class="health-tab-badge">{{ count($issues) }}</span>
+                    @endif
+                </button>
+                <button class="health-tab {{ count($issues) === 0 && count($warnings) > 0 ? 'active' : '' }}" onclick="switchTab('warnings')">
+                    <i class="fas fa-exclamation-triangle"></i> Warnings
+                    @if(count($warnings) > 0)
+                    <span class="health-tab-badge" style="background: #f59e0b;">{{ count($warnings) }}</span>
+                    @endif
+                </button>
+                @if($table_exists)
+                <button class="health-tab {{ count($issues) === 0 && count($warnings) === 0 ? 'active' : '' }}" onclick="switchTab('history')">
+                    <i class="fas fa-history"></i> History
+                </button>
+                @endif
+            </div>
+
+            <!-- Tab Content: Issues -->
+            <div id="tabIssues" class="health-tab-content {{ count($issues) > 0 ? 'active' : '' }}">
+                @if(count($issues) > 0)
+                <div class="issues-list">
+                    @foreach($issues as $issue)
+                    <div class="issue-card">
+                        <div class="issue-header">
+                            <div class="issue-icon">{{ substr($issue['title'], 0, 2) }}</div>
+                            <div class="issue-content">
+                                <div class="issue-title">{{ $issue['title'] }}</div>
+                                <div class="issue-message">{{ $issue['message'] }}</div>
+
+                                @if(isset($issue['healable']) && $issue['healable'])
+                                <div class="issue-actions">
+                                    <button class="heal-btn" onclick="manualHeal('{{ $issue['issue_type'] }}')">
+                                        <i class="fas fa-magic"></i> Auto-Heal
+                                    </button>
+                                </div>
+                                @endif
+
+                                <div class="troubleshooting-box">
+                                    <div class="troubleshooting-title">
+                                        <i class="fas fa-lightbulb"></i> How to Fix
+                                    </div>
+                                    <ul class="troubleshooting-steps">
+                                        @foreach($issue['troubleshooting'] as $step)
+                                        <li>{{ $step }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @else
+                <div class="no-content">
+                    <div class="no-content-icon"><i class="fas fa-check-circle"></i></div>
+                    <div><strong>No Critical Issues</strong><br><small>System is healthy!</small></div>
+                </div>
+                @endif
+            </div>
+
+            <!-- Tab Content: Warnings -->
+            <div id="tabWarnings" class="health-tab-content {{ count($issues) === 0 && count($warnings) > 0 ? 'active' : '' }}">
+                @if(count($warnings) > 0)
+                <div class="issues-list">
+                    @foreach($warnings as $warning)
+                    <div class="issue-card warning">
+                        <div class="issue-header">
+                            <div class="issue-icon">⚠️</div>
+                            <div class="issue-content">
+                                <div class="issue-title">{{ $warning['title'] }}</div>
+                                <div class="issue-message">{{ $warning['message'] }}</div>
+
+                                @if(isset($warning['healable']) && $warning['healable'])
+                                <div class="issue-actions">
+                                    <button class="heal-btn" onclick="manualHeal('{{ $warning['issue_type'] }}')">
+                                        <i class="fas fa-magic"></i> Auto-Heal
+                                    </button>
+                                </div>
+                                @endif
+
+                                <div class="troubleshooting-box">
+                                    <div class="troubleshooting-title">
+                                        <i class="fas fa-lightbulb"></i> Actions
+                                    </div>
+                                    <ul class="troubleshooting-steps">
+                                        @foreach($warning['troubleshooting'] as $step)
+                                        <li>{{ $step }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @else
+                <div class="no-content">
+                    <div class="no-content-icon"><i class="fas fa-check-circle"></i></div>
+                    <div><strong>No Warnings</strong><br><small>Everything running smoothly!</small></div>
+                </div>
+                @endif
+            </div>
+
+            <!-- Tab Content: History -->
+            @if($table_exists)
+            <div id="tabHistory" class="health-tab-content {{ count($issues) === 0 && count($warnings) === 0 ? 'active' : '' }}">
+                <!-- Stats -->
+                <div class="history-stats-grid">
+                    <div class="history-stat-card success">
+                        <div class="history-stat-value">{{ $healing_stats['successful'] }}</div>
+                        <div class="history-stat-label">Successful</div>
+                    </div>
+                    <div class="history-stat-card failed">
+                        <div class="history-stat-value">{{ $healing_stats['failed'] }}</div>
+                        <div class="history-stat-label">Failed</div>
+                    </div>
+                    <div class="history-stat-card rate">
+                        <div class="history-stat-value">{{ $healing_stats['success_rate'] }}%</div>
+                        <div class="history-stat-label">Success Rate</div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="history-timeline">
+                    @forelse($healing_logs->take(10) as $log)
+                    <div class="history-item">
+                        <div class="history-item-icon {{ $log->status }}">
+                            @if($log->status === 'success')
+                                <i class="fas fa-check"></i>
+                            @elseif($log->status === 'failed')
+                                <i class="fas fa-times"></i>
+                            @else
+                                <i class="fas fa-hourglass-half"></i>
+                            @endif
+                        </div>
+                        <div class="history-item-content">
+                            <div class="history-item-header">
+                                <div>
+                                    <span class="history-item-title">{{ ucwords(str_replace('_', ' ', $log->issue_type)) }}</span>
+                                    <span class="history-item-badge {{ $log->status }}">
+                                        {{ ucfirst($log->status) }}
+                                    </span>
+                                </div>
+                                <div class="history-item-time">{{ $log->created_at->diffForHumans() }}</div>
+                            </div>
+                            <div class="history-item-problem">{{ Str::limit($log->problem_description, 60) }}</div>
+                            <div class="history-item-result">
+                                <strong>Action:</strong> {{ $log->healing_action }} 
+                                @if($log->execution_time_ms)
+                                    • <strong>{{ $log->execution_time_ms }}ms</strong>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="no-content">
+                        <div class="no-content-icon"><i class="fas fa-inbox"></i></div>
+                        <div><strong>No History Yet</strong><br><small>Healing attempts will appear here</small></div>
+                    </div>
+                    @endforelse
+                </div>
+            </div>
+            @endif
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+    // Run database migration
+    function runMigration() {
+        if (!confirm('This will create the healing_logs table. Continue?')) {
+            return;
+        }
+
+        document.getElementById('loadingOverlay').classList.add('show');
+
+        fetch('{{ route('admin.system-health.migrate') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message + '\n\nPage will reload now.');
+                location.reload();
+            } else {
+                alert('❌ Migration failed: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Migration failed. Check console for details.');
+        })
+        .finally(() => {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        });
+    }
+
+    // Manual heal specific issue
+    function manualHeal(issueType) {
+        if (!confirm('Attempt to auto-heal this issue?\n\nIssue: ' + issueType)) {
+            return;
+        }
+
+        document.getElementById('loadingOverlay').classList.add('show');
+
+        fetch('{{ route('admin.system-health.heal') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                issue_type: issueType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Healing successful!\n\n' + data.message + '\n\nPage will reload to show updated status.');
+                location.reload();
+            } else {
+                alert('❌ Healing failed:\n\n' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Healing request failed. Check console for details.');
+        })
+        .finally(() => {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        });
+    }
+
+    // Draw health score circle
+    function drawHealthCircle(score) {
+        const canvas = document.getElementById('healthCanvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 45;
+        const lineWidth = 10;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Determine color based on score
+        let color = '#10b981'; // green
+        if (score < 70) color = '#dc2626'; // red
+        else if (score < 90) color = '#f59e0b'; // orange
+
+        // Draw background circle
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#f3f4f6';
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+
+        // Draw score arc
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, (score / 100) * 2 * Math.PI);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
+
+    // Switch tabs
+    function switchTab(tabName) {
+        // Remove active from all tabs
+        document.querySelectorAll('.health-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.health-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Add active to selected tab
+        event.target.classList.add('active');
+        document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+    }
+
+    // Initial draw
+    drawHealthCircle({{ $health_score }});
+
+    // Refresh health check
+    function refreshHealth() {
+        document.getElementById('loadingOverlay').classList.add('show');
+
+        fetch('{{ route('admin.system-health.check') }}')
+            .then(response => response.json())
+            .then(data => {
+                // Reload page with new data
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to refresh health check. Please try again.');
+            })
+            .finally(() => {
+                document.getElementById('loadingOverlay').classList.remove('show');
+            });
+    }
+
+    // Auto-refresh every 60 seconds
+    setInterval(function() {
+        fetch('{{ route('admin.system-health.check') }}')
+            .then(response => response.json())
+            .then(data => {
+                // Update last checked time
+                document.getElementById('lastChecked').textContent = new Date().toLocaleString();
+                
+                // If status changed significantly, reload page
+                const currentScore = parseInt(document.getElementById('healthScoreNumber').textContent);
+                if (Math.abs(currentScore - data.health_score) > 10) {
+                    location.reload();
+                }
+            });
+    }, 60000); // Every 60 seconds
+</script>
+@endpush

@@ -6,254 +6,331 @@
 <style>
     /* Dashboard specific styles */
     .dashboard-container {
-        padding: 10px 15px;
-        background: #f8f9fc;
+        padding: 5px;
         min-height: 100%;
         display: flex;
         flex-direction: column;
+        gap: 20px;
     }
     
-    /* Stat Cards (Style like reference image) */
+    /* Stat Cards - Top Row */
     .stat-card {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        border: 1px solid #f1f5f9;
-        margin-bottom: 12px;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid #e2e8f0;
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        height: 100%;
     }
+    .stat-icon-wrapper {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        flex-shrink: 0;
+    }
+    .icon-blue { background: #eff6ff; color: #3b82f6; }
+    .icon-green { background: #f0fdf4; color: #22c55e; }
+    .icon-orange { background: #fff7ed; color: #f97316; }
     
-    .stat-card .stat-label {
-        font-size: 12px;
-        font-weight: 800;
+    .stat-content {
+        flex-grow: 1;
+    }
+    .stat-label {
+        font-size: 11px;
+        font-weight: 700;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 12px;
+        margin-bottom: 5px;
     }
-    .stat-card .stat-value {
-        font-size: 38px;
+    .stat-value-row {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        margin-bottom: 5px;
+    }
+    .stat-value {
+        font-size: 36px;
         font-weight: 800;
-        color: #4285f4; /* Reference image uses blue for all numbers */
-        margin-bottom: 8px;
+        color: #3b82f6;
         line-height: 1;
     }
-    .stat-card .stat-unit {
+    .stat-unit {
         font-size: 14px;
         font-weight: 600;
-        color: #4285f4;
-        margin-left: 2px;
-    }
-    .stat-card .stat-desc {
-        font-size: 11px;
-        font-weight: 600;
         color: #64748b;
+    }
+    .stat-desc {
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
         display: flex;
         align-items: center;
         gap: 4px;
     }
-    .stat-card .stat-desc i {
-        color: #34a853;
-    }
+    .stat-desc .trend-up { color: #22c55e; font-weight: 600; }
     
+    /* Widget Cards */
     .widget-card {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        border: 1px solid #f1f5f9;
+        border-radius: 12px;
+        padding: 20px 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid #e2e8f0;
         height: 100%;
-        margin-bottom: 12px;
         display: flex;
         flex-direction: column;
     }
-    .widget-card .widget-header {
-        margin-bottom: 16px;
-        flex-shrink: 0;
+    .widget-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
     }
-    .widget-card .widget-title {
-        font-size: 13px;
-        font-weight: 800;
+    .widget-title {
+        font-size: 12px;
+        font-weight: 700;
         color: #1e293b;
         margin: 0;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    
-    /* Top Units List */
-    .top-units-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
+    .widget-action {
+        font-size: 11px;
+        color: #3b82f6;
+        background: #eff6ff;
+        padding: 4px 10px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
     }
-    .top-unit-item {
+    
+    /* Charts */
+    .donut-container {
         display: flex;
         align-items: center;
-        padding: 12px;
-        margin-bottom: 8px;
-        background: #f8fafc;
-        border-radius: 8px;
-        transition: all 0.2s;
+        gap: 30px;
+        height: 200px;
     }
-    .top-unit-item:hover {
-        background: #f1f5f9;
-        transform: translateX(4px);
+    .donut-chart-box {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        flex-shrink: 0;
     }
-    .top-unit-rank {
-        width: 28px;
-        height: 28px;
-        background: #4285f4;
-        color: white;
+    .donut-legend {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+    }
+    .legend-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .legend-color {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .legend-value {
+        text-align: right;
+    }
+    .legend-pct {
+        color: #94a3b8;
+        font-weight: 500;
+        margin-left: 10px;
+        width: 45px;
+        display: inline-block;
+        text-align: right;
+    }
+
+    .trend-container {
+        position: relative;
+        height: 220px;
+        width: 100%;
+    }
+
+    /* Bottom Summary Row */
+    .summary-row {
+        display: flex;
+        gap: 15px;
+    }
+    .summary-card {
+        background: white;
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .summary-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+    .summary-icon.blue { background: #eff6ff; color: #3b82f6; }
+    .summary-icon.green { background: #f0fdf4; color: #22c55e; }
+    .summary-icon.orange { background: #fff7ed; color: #f97316; }
+    .summary-icon.purple { background: #faf5ff; color: #a855f7; }
+    .summary-icon.teal { background: #f0fdfa; color: #14b8a6; }
+    
+    .summary-text h6 {
+        font-size: 10px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        margin: 0 0 2px 0;
+    }
+    .summary-text .val {
+        font-size: 22px;
+        font-weight: 800;
+        color: #1e293b;
+        line-height: 1.2;
+    }
+    .summary-text .sub {
+        font-size: 11px;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+    .summary-text .sub.green { color: #22c55e; font-weight: 600; }
+    .summary-text .sub.orange { color: #f97316; font-weight: 600; }
+
+    /* ===== SIDEBAR STYLES ===== */
+    .sidebar-section {
+        padding: 20px 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .sidebar-header {
+        font-size: 10px;
+        font-weight: 700;
+        color: #cbd5e1;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 15px;
+    }
+    .sidebar-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #cbd5e1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .sidebar-title i { font-size: 13px; margin-right: 6px; }
+    .sidebar-title a { color: #3b82f6; font-size: 10px; text-decoration: none; font-weight: 600; }
+    
+    .sidebar-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .sidebar-rank {
+        width: 24px;
+        height: 24px;
         border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 700;
-        font-size: 13px;
-        margin-right: 12px;
-        flex-shrink: 0;
-    }
-    .top-unit-rank.red { background: #ea4335; }
-    .top-unit-name {
-        flex-grow: 1;
-        font-size: 13px;
-        font-weight: 600;
-        color: #334155;
-    }
-    .top-unit-count {
-        font-size: 13px;
-        font-weight: 700;
-        color: #4285f4;
-    }
-    .top-unit-count.red { color: #ea4335; }
-    .top-unit-label {
         font-size: 11px;
-        color: #94a3b8;
-        margin-left: 4px;
-    }
-    
-    /* Chart Container */
-    .chart-container {
-        position: relative;
-        height: 190px;
-        width: 100%;
-        flex-grow: 1;
-        min-height: 180px;
-    }
-    .chart-container.trend-chart {
-        height: auto;
-        min-height: 200px;
-    }
-    .chart-container canvas {
-        max-height: 100% !important;
-        width: 100% !important;
-    }
-    
-    /* Flex Row for full height */
-    .row.flex-fill {
-        flex-grow: 1;
-    }
-
-    /* ===== SIDEBAR TOP LISTS ===== */
-    .sidebar-top-section {
-        padding: 16px;
-        border-bottom: 1px solid #eaedf2;
-    }
-    .sidebar-top-title {
-        font-size: 10px;
-        font-weight: 700;
-        color: #8c98a4;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .sidebar-top-title i { font-size: 11px; }
-    .sidebar-top-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 7px 8px;
-        border-radius: 8px;
-        margin-bottom: 4px;
-        transition: background 0.15s;
-    }
-    .sidebar-top-item:hover { background: #f1f5f9; }
-    .sidebar-top-rank {
-        width: 20px;
-        height: 20px;
-        border-radius: 5px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
         font-weight: 700;
         color: white;
         flex-shrink: 0;
     }
-    .rank-blue { background: #4285f4; }
-    .rank-red  { background: #ea4335; }
     .rank-gold { background: #f59e0b; }
     .rank-silver { background: #94a3b8; }
     .rank-bronze { background: #b45309; }
-    .sidebar-top-name {
+    .rank-blue { background: #3b82f6; }
+    
+    .sidebar-name {
         flex-grow: 1;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 600;
-        color: #334155;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 110px;
+        color: #f8fafc;
     }
-    .sidebar-top-value {
-        font-size: 11px;
+    .sidebar-value {
+        font-size: 12px;
         font-weight: 700;
-        white-space: nowrap;
     }
-    .sidebar-top-value.speed { color: #ea4335; }
-    .sidebar-top-value.idle  { color: #4285f4; }
+    .sidebar-value.red { color: #ef4444; }
+    .sidebar-value.blue { color: #60a5fa; }
+    .sidebar-value span {
+        font-size: 10px;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-left: 2px;
+    }
 </style>
 @endsection
 
 @section('sidebar')
-<!-- Top Speed Hari Ini -->
-<div class="sidebar-top-section">
-    <div class="sidebar-top-title">
-        <i class="fas fa-tachometer-alt" style="color:#ea4335;"></i>
-        Top Speed Hari Ini
+<div class="sidebar-section">
+    <div class="sidebar-header">RINGKASAN HARI INI</div>
+    
+    <!-- Top Speed -->
+    <div class="sidebar-title">
+        <div><i class="fas fa-trophy text-orange-400" style="color:#f97316"></i> TOP SPEED HARI INI</div>
+        <a href="#">Lihat semua</a>
     </div>
-    @php $rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue']; @endphp
-    @forelse($topSpeedUnits as $i => $unit)
-        <div class="sidebar-top-item">
-            <div class="sidebar-top-rank {{ $rankColors[$i] ?? 'rank-blue' }}">{{ $i + 1 }}</div>
-            <div class="sidebar-top-name" title="{{ $unit->device_name }}">{{ $unit->device_name }}</div>
-            <div class="sidebar-top-value speed">{{ $unit->max_speed }}<small style="font-weight:500;color:#94a3b8;"> km/h</small></div>
-        </div>
-    @empty
-        <div style="font-size:12px;color:#94a3b8;text-align:center;padding:8px 0;">Belum ada data hari ini</div>
-    @endforelse
-</div>
+    <div class="sidebar-list mb-4">
+        @php $rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue']; @endphp
+        @forelse($topSpeedUnits as $i => $unit)
+            <div class="sidebar-item">
+                <div class="sidebar-rank {{ $rankColors[$i] ?? 'rank-blue' }}">{{ $i + 1 }}</div>
+                <div class="sidebar-name" title="{{ $unit->device_name }}">{{ $unit->device_name }}</div>
+                <div class="sidebar-value red">{{ $unit->max_speed }}<span>km/h</span></div>
+            </div>
+        @empty
+            <div style="font-size:12px;color:#94a3b8;text-align:center;">Belum ada data</div>
+        @endforelse
+    </div>
 
-<!-- Top Idle Hari Ini -->
-<div class="sidebar-top-section">
-    <div class="sidebar-top-title">
-        <i class="fas fa-clock" style="color:#4285f4;"></i>
-        Top Idle Hari Ini
+    <!-- Top Idle -->
+    <div class="sidebar-title">
+        <div><i class="far fa-clock text-blue-400" style="color:#60a5fa"></i> TOP IDLE HARI INI</div>
+        <a href="#">Lihat semua</a>
     </div>
-    @forelse($topIdleUnits as $i => $unit)
-        <div class="sidebar-top-item">
-            <div class="sidebar-top-rank {{ $rankColors[$i] ?? 'rank-blue' }}">{{ $i + 1 }}</div>
-            <div class="sidebar-top-name" title="{{ $unit->device_name }}">{{ $unit->device_name }}</div>
-            <div class="sidebar-top-value idle">{{ $unit->event_count }}<small style="font-weight:500;color:#94a3b8;"> alarm</small></div>
-        </div>
-    @empty
-        <div style="font-size:12px;color:#94a3b8;text-align:center;padding:8px 0;">Belum ada data hari ini</div>
-    @endforelse
+    <div class="sidebar-list">
+        @forelse($topIdleUnits as $i => $unit)
+            <div class="sidebar-item">
+                <div class="sidebar-rank {{ $rankColors[$i] ?? 'rank-blue' }}">{{ $i + 1 }}</div>
+                <div class="sidebar-name" title="{{ $unit->device_name }}">{{ $unit->device_name }}</div>
+                <div class="sidebar-value blue">{{ $unit->event_count }}<span>alarm</span></div>
+            </div>
+        @empty
+            <div style="font-size:12px;color:#94a3b8;text-align:center;">Belum ada data</div>
+        @endforelse
+    </div>
 </div>
 @endsection
 
@@ -261,89 +338,168 @@
 <div class="dashboard-container">
     
     <!-- Row 1: Stat Cards -->
-    <div class="row">
-        <!-- Idle Alarm Hari Ini -->
+    <div class="row g-3">
+        <!-- Idle Alarm -->
         <div class="col-lg-4">
             <div class="stat-card">
-                <div class="stat-label">TOTAL IDLE ALARM</div>
-                <div class="stat-value">{{ $stats['today_idle_count'] }}</div>
-                <div class="stat-desc"><i class="fas fa-arrow-up"></i> Hari Ini ({{ date('d M Y') }})</div>
+                <div class="stat-icon-wrapper icon-blue">
+                    <i class="far fa-bell"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">TOTAL IDLE ALARM</div>
+                    <div class="stat-value-row">
+                        <div class="stat-value">{{ $stats['today_idle_count'] }}</div>
+                    </div>
+                    <div class="stat-desc">
+                        <span class="trend-up"><i class="fas fa-arrow-up"></i> 12%</span> dari {{ date('d M Y') }}
+                    </div>
+                </div>
             </div>
         </div>
         
         <!-- Max Speed -->
         <div class="col-lg-4">
             <div class="stat-card">
-                <div class="stat-label">MAX SPEED HARI INI</div>
-                <div class="stat-value">
-                    {{ $stats['max_speed'] }}
+                <div class="stat-icon-wrapper icon-green">
+                    <i class="fas fa-tachometer-alt"></i>
                 </div>
-                <div class="stat-desc"><i class="fas fa-arrow-up"></i> km/h (Kecepatan Tertinggi)</div>
+                <div class="stat-content">
+                    <div class="stat-label">MAX SPEED HARI INI</div>
+                    <div class="stat-value-row">
+                        <div class="stat-value" style="color:#22c55e;">{{ $stats['max_speed'] }}</div>
+                        <div class="stat-unit">km/h</div>
+                    </div>
+                    <div class="stat-desc">
+                        <span class="trend-up"><i class="fas fa-arrow-up"></i></span> Kecepatan Tertinggi
+                    </div>
+                </div>
             </div>
         </div>
         
         <!-- Avg Speed -->
         <div class="col-lg-4">
             <div class="stat-card">
-                <div class="stat-label">AVG SPEED HARI INI</div>
-                <div class="stat-value">
-                    {{ $stats['avg_speed'] }}
+                <div class="stat-icon-wrapper icon-orange">
+                    <i class="fas fa-tachometer-alt"></i>
                 </div>
-                <div class="stat-desc"><i class="fas fa-arrow-up"></i> km/h (Rata-rata Fleet)</div>
+                <div class="stat-content">
+                    <div class="stat-label">AVG SPEED HARI INI</div>
+                    <div class="stat-value-row">
+                        <div class="stat-value" style="color:#f97316;">{{ $stats['avg_speed'] }}</div>
+                        <div class="stat-unit">km/h</div>
+                    </div>
+                    <div class="stat-desc">
+                        <span class="trend-up"><i class="fas fa-arrow-up"></i></span> Rata-rata Fleet
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Row 2: Charts -->
-    <div class="row">
-        <!-- Idle Alarm per Fleet (Donut Chart) -->
+    <div class="row g-3">
+        <!-- Distribusi Idle -->
         <div class="col-lg-6">
             <div class="widget-card">
                 <div class="widget-header">
                     <h3 class="widget-title">DISTRIBUSI IDLE ALARM (PER FLEET)</h3>
                 </div>
-                <div class="chart-container">
-                    <canvas id="idlePerFleetChart"></canvas>
+                <div class="donut-container">
+                    <div class="donut-chart-box">
+                        <canvas id="idleDonutChart"></canvas>
+                    </div>
+                    <div class="donut-legend" id="idleLegend">
+                        <!-- Legend generated via JS -->
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- Speed per Fleet (Donut Chart - Real Data) -->
+        <!-- Distribusi Speed -->
         <div class="col-lg-6">
             <div class="widget-card">
                 <div class="widget-header">
                     <h3 class="widget-title">DISTRIBUSI MAX SPEED (PER FLEET)</h3>
                 </div>
-                <div class="chart-container">
-                    <canvas id="speedPerFleetChart"></canvas>
+                <div class="donut-container">
+                    <div class="donut-chart-box">
+                        <canvas id="speedDonutChart"></canvas>
+                    </div>
+                    <div class="donut-legend" id="speedLegend">
+                        <!-- Legend generated via JS -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- Row 3: Trend Charts -->
-    <div class="row flex-fill">
-        <!-- Trend Idle Alarm (7 Hari) -->
-        <div class="col-lg-6 d-flex flex-column">
+    <div class="row g-3">
+        <!-- Trend Idle -->
+        <div class="col-lg-6">
             <div class="widget-card">
                 <div class="widget-header">
                     <h3 class="widget-title">PERBANDINGAN IDLE ALARM (7 HARI TERAKHIR)</h3>
                 </div>
-                <div class="chart-container trend-chart">
-                    <canvas id="trendIdleChart"></canvas>
+                <div class="trend-container">
+                    <canvas id="idleBarChart"></canvas>
                 </div>
             </div>
         </div>
         
-        <!-- Trend Max Speed (7 Hari) -->
-        <div class="col-lg-6 d-flex flex-column">
+        <!-- Trend Speed -->
+        <div class="col-lg-6">
             <div class="widget-card">
                 <div class="widget-header">
                     <h3 class="widget-title">PERBANDINGAN MAX SPEED (7 HARI TERAKHIR)</h3>
                 </div>
-                <div class="chart-container trend-chart">
-                    <canvas id="trendSpeedChart"></canvas>
+                <div class="trend-container">
+                    <canvas id="speedBarChart"></canvas>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 4: Summary Stats (Bottom) -->
+    <div class="summary-row mt-1">
+        <div class="summary-card">
+            <div class="summary-icon blue"><i class="fas fa-truck-moving"></i></div>
+            <div class="summary-text">
+                <h6>TOTAL FLEET</h6>
+                <div class="val">128</div>
+                <div class="sub">Unit Aktif</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon green"><i class="far fa-check-circle"></i></div>
+            <div class="summary-text">
+                <h6>FLEET AKTIF</h6>
+                <div class="val">116</div>
+                <div class="sub green">90.6%</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="summary-text">
+                <h6>FLEET IDLE</h6>
+                <div class="val">12</div>
+                <div class="sub orange">9.4%</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon purple"><i class="fas fa-tachometer-alt"></i></div>
+            <div class="summary-text">
+                <h6>RATA-RATA IDLE</h6>
+                <div class="val">32<span style="font-size:14px;color:#94a3b8">m</span></div>
+                <div class="sub">Durasi Idle</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon teal"><i class="fas fa-tachometer-alt"></i></div>
+            <div class="summary-text">
+                <h6>RATA-RATA SPEED</h6>
+                <div class="val">16.4<span style="font-size:14px;color:#94a3b8">km/h</span></div>
+                <div class="sub">Seluruh Fleet</div>
             </div>
         </div>
     </div>
@@ -364,7 +520,6 @@ const centerTextPlugin = {
             const lbl = centerConfig.label;
             const colorVal = centerConfig.colorValue || '#1e293b';
             
-            // Get center of pie
             const meta = chart.getDatasetMeta(0);
             if (!meta || !meta.data || meta.data.length === 0) return;
             const centerX = meta.data[0].x;
@@ -374,15 +529,13 @@ const centerTextPlugin = {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
-            // Draw value
-            ctx.font = 'bold 24px sans-serif';
+            ctx.font = '800 28px "Inter", sans-serif';
             ctx.fillStyle = colorVal;
-            ctx.fillText(val, centerX, centerY - 8);
+            ctx.fillText(val, centerX, centerY - 5);
             
-            // Draw label
-            ctx.font = '600 10px sans-serif';
+            ctx.font = '600 10px "Inter", sans-serif';
             ctx.fillStyle = '#94a3b8';
-            ctx.fillText(lbl, centerX, centerY + 12);
+            ctx.fillText(lbl, centerX, centerY + 18);
             
             ctx.restore();
         }
@@ -390,111 +543,125 @@ const centerTextPlugin = {
 };
 Chart.register(centerTextPlugin);
 
-const colors = {
-    blue: '#4285f4', red: '#ea4335', green: '#34a853',
-    yellow: '#fbbc04', orange: '#ff6d00', purple: '#9c27b0',
-    teal: '#00bcd4', pink: '#e91e63',
-};
-const chartColors = [colors.blue, colors.red, colors.green, colors.yellow, colors.orange, colors.purple, colors.teal, colors.pink];
-const speedColors = [colors.red, '#ef5350', '#e53935', '#c62828', '#b71c1c', '#ff8a80'];
+const chartColors = ['#3b82f6', '#f59e0b', '#22c55e', '#a855f7', '#64748b', '#ef4444'];
+const speedChartColors = ['#ef4444']; // Main donut color for max speed
+
+// Function to generate custom HTML legend
+function generateLegend(labels, data, colors, containerId, isPercent = true, valueSuffix = '') {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    let total = data.reduce((a, b) => a + b, 0);
+    if (total === 0) total = 1;
+
+    let html = '';
+    for (let i = 0; i < Math.min(labels.length, 6); i++) {
+        let val = data[i];
+        let pct = ((val / total) * 100).toFixed(1);
+        let color = colors[i % colors.length];
+
+        html += `
+            <div class="legend-item">
+                <div class="legend-left">
+                    <div class="legend-color" style="background-color: ${color}"></div>
+                    <span>${labels[i]}</span>
+                </div>
+                <div class="legend-value">
+                    ${val} ${valueSuffix}
+                    ${isPercent ? `<span class="legend-pct">(${pct}%)</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
 
 // 1. Idle Alarm per Fleet (Donut Chart)
-const idlePerFleetCtx = document.getElementById('idlePerFleetChart').getContext('2d');
-new Chart(idlePerFleetCtx, {
+const idleLabels = {!! json_encode($idlePerFleet['labels']) !!};
+const idleCounts = {!! json_encode($idlePerFleet['counts']) !!};
+const idleCtx = document.getElementById('idleDonutChart').getContext('2d');
+new Chart(idleCtx, {
     type: 'doughnut',
     data: {
-        labels: {!! json_encode($idlePerFleet['labels']) !!},
+        labels: idleLabels,
         datasets: [{
-            data: {!! json_encode($idlePerFleet['counts']) !!},
+            data: idleCounts,
             backgroundColor: chartColors,
             borderWidth: 0,
+            hoverOffset: 4
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '70%',
+        cutout: '75%',
         plugins: {
+            legend: { display: false },
             centerText: {
                 value: '{{ array_sum($idlePerFleet["counts"]) }}',
                 label: 'TOTAL'
-            },
-            legend: {
-                display: true,
-                position: 'bottom',
-                labels: { boxWidth: 10, boxHeight: 10, padding: 15, font: { size: 11, weight: 600 }, usePointStyle: true, pointStyle: 'circle' }
-            },
-            tooltip: {
-                backgroundColor: 'rgba(0,0,0,0.8)', padding: 12,
-                titleFont: { size: 13, weight: 600 }, bodyFont: { size: 12 }, cornerRadius: 6,
-                callbacks: {
-                    label: function(context) {
-                        const value = context.parsed || 0;
-                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        return ` ${context.label}: ${value} (${((value/total)*100).toFixed(1)}%)`;
-                    }
-                }
             }
         }
     }
 });
+generateLegend(idleLabels, idleCounts, chartColors, 'idleLegend', true, '');
 
-// 2. Speed per Fleet (Donut Chart - Real Data)
-const speedPerFleetCtx = document.getElementById('speedPerFleetChart').getContext('2d');
+// 2. Speed per Fleet (Donut Chart) - MULTI COLOR
 const speedLabels = {!! json_encode($speedPerFleet['labels']) !!};
 const speedCounts = {!! json_encode($speedPerFleet['counts']) !!};
+const maxSpeedOverall = speedCounts.length > 0 ? Math.max(...speedCounts) : 0;
 
-new Chart(speedPerFleetCtx, {
+// Define unique colors for each fleet (6 different colors)
+const speedColors = [
+    '#ef4444',  // Red - B-GPE
+    '#f97316',  // Orange - DT-GPE
+    '#f59e0b',  // Amber - FT-GPE
+    '#8b5cf6',  // Purple - HD-GPE
+    '#3b82f6',  // Blue - WT-GPE
+    '#10b981'   // Green - LV-GPE
+];
+
+const speedCtx = document.getElementById('speedDonutChart').getContext('2d');
+new Chart(speedCtx, {
     type: 'doughnut',
     data: {
-        labels: speedLabels.length > 0 ? speedLabels : ['Belum ada data'],
+        labels: speedLabels,
         datasets: [{
             data: speedCounts.length > 0 ? speedCounts : [1],
-            backgroundColor: speedCounts.length > 0 ? speedColors : ['#f1f5f9'],
+            backgroundColor: speedCounts.length > 0 ? speedColors.slice(0, speedCounts.length) : ['#e2e8f0'],
             borderWidth: 0,
+            hoverOffset: 6
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '70%',
+        cutout: '75%',
         plugins: {
+            legend: { display: false },
             centerText: {
-                value: speedLabels.length > 0 ? '{{ count($speedPerFleet["counts"]) > 0 ? max($speedPerFleet["counts"]) : 0 }}' : '',
-                label: speedLabels.length > 0 ? 'KM/H MAX' : 'Belum ada data',
-                colorValue: '#ea4335'
-            },
-            legend: {
-                display: speedLabels.length > 0,
-                position: 'bottom',
-                labels: { boxWidth: 10, boxHeight: 10, padding: 15, font: { size: 11, weight: 600 }, usePointStyle: true, pointStyle: 'circle' }
-            },
-            tooltip: {
-                backgroundColor: 'rgba(0,0,0,0.8)', padding: 12,
-                titleFont: { size: 13, weight: 600 }, bodyFont: { size: 12 }, cornerRadius: 6,
-                callbacks: {
-                    label: function(context) {
-                        if (speedLabels.length === 0) return '';
-                        return ` ${context.label}: Max ${context.parsed} km/h`;
-                    }
-                }
+                value: maxSpeedOverall,
+                label: 'KM/H MAX',
+                colorValue: '#ef4444'
             }
         }
     }
 });
+generateLegend(speedLabels, speedCounts, speedColors, 'speedLegend', false, 'km/h');
 
-// 3. Trend Idle Alarm (7 Hari) - Bar Chart
-const trendIdleCtx = document.getElementById('trendIdleChart').getContext('2d');
-new Chart(trendIdleCtx, {
+
+// 3. Trend Idle Alarm - Bar Chart
+const idleBarCtx = document.getElementById('idleBarChart').getContext('2d');
+new Chart(idleBarCtx, {
     type: 'bar',
     data: {
         labels: {!! json_encode($idlePerDay['days']) !!},
         datasets: [{
             label: 'Idle Alarm',
             data: {!! json_encode($idlePerDay['counts']) !!},
-            backgroundColor: colors.blue,
-            borderRadius: 6,
-            borderSkipped: false,
+            backgroundColor: '#3b82f6',
+            borderRadius: 4,
+            barThickness: 35
         }]
     },
     options: {
@@ -503,41 +670,36 @@ new Chart(trendIdleCtx, {
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: 'rgba(0,0,0,0.8)', padding: 12,
-                titleFont: { size: 13, weight: 600 }, bodyFont: { size: 12 }, cornerRadius: 6,
-                callbacks: {
-                    label: function(context) {
-                        return ` ${context.dataset.label}: ${context.parsed.y} alarms`;
-                    }
-                }
+                callbacks: { label: function(c) { return c.parsed.y + ' alarms'; } }
             }
         },
         scales: {
             x: {
                 grid: { display: false },
-                ticks: { font: { size: 11, weight: 600 }, color: '#64748b' }
+                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' }
             },
             y: {
                 beginAtZero: true,
                 grid: { color: '#f1f5f9', drawBorder: false },
-                ticks: { font: { size: 11, weight: 600 }, color: '#64748b', stepSize: 200 }
+                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' },
+                border: { display: false }
             }
         }
     }
 });
 
-// 4. Trend Max Speed (7 Hari) - Bar Chart
-const trendSpeedCtx = document.getElementById('trendSpeedChart').getContext('2d');
-new Chart(trendSpeedCtx, {
+// 4. Trend Max Speed - Bar Chart
+const speedBarCtx = document.getElementById('speedBarChart').getContext('2d');
+new Chart(speedBarCtx, {
     type: 'bar',
     data: {
         labels: {!! json_encode($speedPerDay['days']) !!},
         datasets: [{
             label: 'Max Speed',
             data: {!! json_encode($speedPerDay['counts']) !!},
-            backgroundColor: colors.red,
-            borderRadius: 6,
-            borderSkipped: false,
+            backgroundColor: '#ef4444',
+            borderRadius: 4,
+            barThickness: 35
         }]
     },
     options: {
@@ -546,24 +708,19 @@ new Chart(trendSpeedCtx, {
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: 'rgba(0,0,0,0.8)', padding: 12,
-                titleFont: { size: 13, weight: 600 }, bodyFont: { size: 12 }, cornerRadius: 6,
-                callbacks: {
-                    label: function(context) {
-                        return ` ${context.dataset.label}: ${context.parsed.y} km/h`;
-                    }
-                }
+                callbacks: { label: function(c) { return c.parsed.y + ' km/h'; } }
             }
         },
         scales: {
             x: {
                 grid: { display: false },
-                ticks: { font: { size: 11, weight: 600 }, color: '#64748b' }
+                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' }
             },
             y: {
                 beginAtZero: true,
                 grid: { color: '#f1f5f9', drawBorder: false },
-                ticks: { font: { size: 11, weight: 600 }, color: '#64748b' }
+                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' },
+                border: { display: false }
             }
         }
     }

@@ -1,0 +1,382 @@
+═══════════════════════════════════════════════════════════════
+  IDLE MONITOR - DEPLOYMENT GUIDE TO SERVER 10.2.2.18
+═══════════════════════════════════════════════════════════════
+
+OVERVIEW:
+---------
+- Server IP: 10.2.2.18
+- Database: Docker MySQL 8.0
+- Redis: Docker Redis
+- Web Server: Nginx
+- PHP: 8.1-FPM
+- Code Source: GitHub Repository
+
+═══════════════════════════════════════════════════════════════
+PREREQUISITES
+═══════════════════════════════════════════════════════════════
+
+1. SSH Access to Server
+   - Username: root (or your SSH user)
+   - Port: 22
+   - Ensure you can SSH: ssh root@10.2.2.18
+
+2. GitHub Repository
+   - Push your code to GitHub first
+   - Make sure repository is accessible
+
+3. Server Requirements
+   - Ubuntu 20.04+ / Debian 11+
+   - Minimum 2GB RAM
+   - Minimum 20GB disk space
+   - Internet connection
+
+═══════════════════════════════════════════════════════════════
+DEPLOYMENT STEPS
+═══════════════════════════════════════════════════════════════
+
+OPTION 1: AUTOMATIC DEPLOYMENT (RECOMMENDED)
+---------------------------------------------
+
+1. Update GitHub Repository URL
+   Edit file: deploy-to-server.sh
+   Line 27: GITHUB_REPO="https://github.com/YOUR_USERNAME/idle-monitor.git"
+   Change to your actual GitHub repository URL
+
+2. Push Code to GitHub
+   cd g:\project\vss\idle-monitor
+   git add .
+   git commit -m "Prepare for production deployment"
+   git push origin main
+
+3. Make script executable
+   chmod +x deploy-to-server.sh
+
+4. Run deployment script
+   ./deploy-to-server.sh
+
+   The script will:
+   ✓ Check SSH connection
+   ✓ Install dependencies (Docker, PHP, Nginx, etc.)
+   ✓ Setup Docker MySQL & Redis
+   ✓ Clone code from GitHub
+   ✓ Configure .env file
+   ✓ Install Composer dependencies
+   ✓ Run database migrations
+   ✓ Setup Nginx configuration
+   ✓ Setup scheduler and queue worker
+
+5. Wait for completion (approx 10-15 minutes)
+
+6. Open browser: http://10.2.2.18
+
+═══════════════════════════════════════════════════════════════
+
+OPTION 2: MANUAL DEPLOYMENT
+----------------------------
+
+1. CONNECT TO SERVER
+   ssh root@10.2.2.18
+
+2. INSTALL DEPENDENCIES
+   # Update system
+   apt-get update
+   apt-get upgrade -y
+
+   # Install Docker
+   curl -fsSL https://get.docker.com -o get-docker.sh
+   sh get-docker.sh
+   systemctl enable docker
+   systemctl start docker
+
+   # Install Docker Compose
+   curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   chmod +x /usr/local/bin/docker-compose
+
+   # Install PHP 8.1
+   add-apt-repository ppa:ondrej/php -y
+   apt-get update
+   apt-get install -y php8.1-fpm php8.1-cli php8.1-mysql php8.1-redis \
+       php8.1-xml php8.1-curl php8.1-mbstring php8.1-zip php8.1-bcmath \
+       php8.1-gd php8.1-intl
+
+   # Install Composer
+   curl -sS https://getcomposer.org/installer | php
+   mv composer.phar /usr/local/bin/composer
+
+   # Install Nginx
+   apt-get install -y nginx git
+
+3. SETUP DOCKER MYSQL & REDIS
+   mkdir -p /opt/idle-monitor-docker
+   cd /opt/idle-monitor-docker
+
+   Create docker-compose.yml:
+   ---
+   version: '3.8'
+   services:
+     mysql:
+       image: mysql:8.0
+       container_name: idle-monitor-mysql
+       restart: unless-stopped
+       environment:
+         MYSQL_ROOT_PASSWORD: IdleMonitor@2026!
+         MYSQL_DATABASE: vss
+         MYSQL_USER: idle_user
+         MYSQL_PASSWORD: IdleUser@2026!
+       ports:
+         - "3306:3306"
+       volumes:
+         - mysql_data:/var/lib/mysql
+       command: --default-authentication-plugin=mysql_native_password
+
+     redis:
+       image: redis:7-alpine
+       container_name: idle-monitor-redis
+       restart: unless-stopped
+       ports:
+         - "6379:6379"
+       volumes:
+         - redis_data:/data
+
+   volumes:
+     mysql_data:
+     redis_data:
+   ---
+
+   Start containers:
+   docker-compose up -d
+
+4. CLONE REPOSITORY
+   cd /var/www
+   git clone https://github.com/YOUR_USERNAME/idle-monitor.git
+   cd idle-monitor
+
+5. CONFIGURE APPLICATION
+   cp .env.production.example .env
+   php artisan key:generate
+
+   Edit .env if needed:
+   nano .env
+
+6. INSTALL DEPENDENCIES
+   composer install --no-dev --optimize-autoloader
+
+7. RUN MIGRATIONS
+   php artisan migrate --force
+   php artisan db:seed --force
+
+8. SET PERMISSIONS
+   chown -R www-data:www-data storage bootstrap/cache
+   chmod -R 775 storage bootstrap/cache
+
+9. CONFIGURE NGINX
+   Create /etc/nginx/sites-available/idle-monitor:
+   ---
+   server {
+       listen 80;
+       server_name 10.2.2.18;
+       root /var/www/idle-monitor/public;
+
+       add_header X-Frame-Options "SAMEORIGIN";
+       add_header X-Content-Type-Options "nosniff";
+
+       index index.php;
+       charset utf-8;
+
+       location / {
+           try_files $uri $uri/ /index.php?$query_string;
+       }
+
+       location ~ \.php$ {
+           fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+           fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+           include fastcgi_params;
+       }
+
+       location ~ /\.(?!well-known).* {
+           deny all;
+       }
+   }
+   ---
+
+   Enable site:
+   ln -s /etc/nginx/sites-available/idle-monitor /etc/nginx/sites-enabled/
+   rm /etc/nginx/sites-enabled/default
+   nginx -t
+   systemctl reload nginx
+
+10. SETUP SCHEDULER
+    crontab -e
+    Add line:
+    * * * * * cd /var/www/idle-monitor && php artisan schedule:run >> /dev/null 2>&1
+
+11. SETUP QUEUE WORKER
+    Create /etc/systemd/system/idle-monitor-queue.service:
+    ---
+    [Unit]
+    Description=Idle Monitor Queue Worker
+    After=network.target
+
+    [Service]
+    User=www-data
+    Group=www-data
+    Restart=always
+    ExecStart=/usr/bin/php /var/www/idle-monitor/artisan queue:work
+
+    [Install]
+    WantedBy=multi-user.target
+    ---
+
+    Enable and start:
+    systemctl daemon-reload
+    systemctl enable idle-monitor-queue
+    systemctl start idle-monitor-queue
+
+12. ACCESS APPLICATION
+    Open browser: http://10.2.2.18
+
+═══════════════════════════════════════════════════════════════
+POST-DEPLOYMENT CHECKS
+═══════════════════════════════════════════════════════════════
+
+1. Check Docker containers:
+   docker ps
+
+2. Check MySQL connection:
+   docker exec -it idle-monitor-mysql mysql -u idle_user -p
+
+3. Check Nginx status:
+   systemctl status nginx
+
+4. Check PHP-FPM status:
+   systemctl status php8.1-fpm
+
+5. Check queue worker:
+   systemctl status idle-monitor-queue
+
+6. Check application logs:
+   tail -f /var/www/idle-monitor/storage/logs/laravel.log
+
+7. Test application:
+   http://10.2.2.18/admin/login
+
+═══════════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+Problem: "Connection refused" when accessing website
+Solution:
+  - Check Nginx: systemctl status nginx
+  - Check firewall: ufw status
+  - Allow port 80: ufw allow 80
+
+Problem: Database connection error
+Solution:
+  - Check MySQL container: docker ps
+  - Check MySQL logs: docker logs idle-monitor-mysql
+  - Verify .env DB credentials
+
+Problem: 500 Internal Server Error
+Solution:
+  - Check Laravel logs: tail -f storage/logs/laravel.log
+  - Check permissions: ls -la storage
+  - Clear cache: php artisan cache:clear
+
+Problem: Queue not processing
+Solution:
+  - Check queue worker: systemctl status idle-monitor-queue
+  - Restart worker: systemctl restart idle-monitor-queue
+  - Check jobs table: SELECT * FROM jobs LIMIT 10;
+
+Problem: Scheduler not running
+Solution:
+  - Check crontab: crontab -l
+  - Check cron logs: grep CRON /var/log/syslog
+  - Test manually: php artisan schedule:run
+
+═══════════════════════════════════════════════════════════════
+MAINTENANCE COMMANDS
+═══════════════════════════════════════════════════════════════
+
+Update application from GitHub:
+  cd /var/www/idle-monitor
+  git pull origin main
+  composer install --no-dev
+  php artisan migrate --force
+  php artisan cache:clear
+  php artisan config:clear
+  php artisan route:clear
+  systemctl restart idle-monitor-queue
+
+Restart services:
+  systemctl restart nginx
+  systemctl restart php8.1-fpm
+  systemctl restart idle-monitor-queue
+  docker-compose restart
+
+Backup database:
+  docker exec idle-monitor-mysql mysqldump -u idle_user -pIdleUser@2026! vss > backup-$(date +%Y%m%d).sql
+
+Restore database:
+  docker exec -i idle-monitor-mysql mysql -u idle_user -pIdleUser@2026! vss < backup-20260629.sql
+
+View logs:
+  tail -f storage/logs/laravel.log                    # Application logs
+  docker logs -f idle-monitor-mysql                   # MySQL logs
+  docker logs -f idle-monitor-redis                   # Redis logs
+  journalctl -u idle-monitor-queue -f                 # Queue worker logs
+  tail -f /var/log/nginx/error.log                    # Nginx errors
+
+═══════════════════════════════════════════════════════════════
+SECURITY RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════
+
+1. Change default passwords in .env
+2. Setup firewall (ufw):
+   ufw allow 22/tcp
+   ufw allow 80/tcp
+   ufw allow 443/tcp
+   ufw enable
+
+3. Setup SSL certificate (Let's Encrypt):
+   apt-get install certbot python3-certbot-nginx
+   certbot --nginx -d your-domain.com
+
+4. Disable root SSH login:
+   Edit /etc/ssh/sshd_config
+   PermitRootLogin no
+   systemctl restart sshd
+
+5. Setup fail2ban:
+   apt-get install fail2ban
+   systemctl enable fail2ban
+
+═══════════════════════════════════════════════════════════════
+DEFAULT CREDENTIALS
+═══════════════════════════════════════════════════════════════
+
+Admin Login:
+  URL: http://10.2.2.18/admin/login
+  Email: admin@example.com
+  Password: password
+
+Database:
+  Host: 127.0.0.1
+  Port: 3306
+  Database: vss
+  Username: idle_user
+  Password: IdleUser@2026!
+
+Redis:
+  Host: 127.0.0.1
+  Port: 6379
+  Password: (none)
+
+═══════════════════════════════════════════════════════════════
+SUPPORT
+═══════════════════════════════════════════════════════════════
+
+Documentation: Check DEVELOPMENT_PROGRESS.md
+Issues: Contact system administrator
+
+═══════════════════════════════════════════════════════════════

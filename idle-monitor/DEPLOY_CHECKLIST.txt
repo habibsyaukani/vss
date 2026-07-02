@@ -1,0 +1,316 @@
+═══════════════════════════════════════════════════════════════
+  DEPLOYMENT CHECKLIST - IDLE MONITOR TO 10.2.2.18
+═══════════════════════════════════════════════════════════════
+
+GitHub Repository: https://github.com/habibsyaukani/vss
+Target Server: 10.2.2.18
+Database: Docker MySQL
+Code Path: /var/www/idle-monitor
+
+═══════════════════════════════════════════════════════════════
+PRE-DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+[ ] 1. Verify GitHub Repository
+    - Repository URL: https://github.com/habibsyaukani/vss
+    - Branch: main
+    - Repository is public or you have access
+    
+[ ] 2. Test SSH Connection to Server
+    Command: ssh root@10.2.2.18
+    - Can you login?
+    - Do you have root/sudo access?
+
+[ ] 3. Check Server Requirements
+    - Ubuntu 20.04+ or Debian 11+
+    - Minimum 2GB RAM
+    - Minimum 20GB disk space
+    - Internet connection available
+
+[ ] 4. Prepare Local Files
+    - All changes committed to Git
+    - .env.production.example exists
+    - deploy-to-server.sh exists
+    - docker-compose.production.yml exists
+
+═══════════════════════════════════════════════════════════════
+DEPLOYMENT STEPS
+═══════════════════════════════════════════════════════════════
+
+STEP 1: PUSH CODE TO GITHUB
+----------------------------
+[ ] Open Git Bash or terminal
+[ ] Navigate to project:
+    cd g:/project/vss/idle-monitor
+
+[ ] Add all files:
+    git add .
+
+[ ] Commit changes:
+    git commit -m "Deploy to production server 10.2.2.18"
+
+[ ] Push to GitHub:
+    git push origin main
+
+[ ] Verify on GitHub:
+    Open: https://github.com/habibsyaukani/vss
+    Confirm latest commit is visible
+
+STEP 2: RUN DEPLOYMENT SCRIPT
+------------------------------
+[ ] Make script executable:
+    chmod +x deploy-to-server.sh
+
+[ ] Run deployment:
+    ./deploy-to-server.sh
+
+[ ] Monitor output for errors
+
+[ ] Wait for completion (10-15 minutes)
+
+STEP 3: VERIFY DEPLOYMENT
+--------------------------
+[ ] Check website is accessible:
+    http://10.2.2.18
+
+[ ] Test admin login:
+    URL: http://10.2.2.18/admin/login
+    Email: admin@example.com
+    Password: password
+
+[ ] Check System Health:
+    http://10.2.2.18/admin/system-health
+
+[ ] Verify Docker containers:
+    ssh root@10.2.2.18
+    docker ps
+    
+    Expected output:
+    - idle-monitor-mysql (running)
+    - idle-monitor-redis (running)
+
+[ ] Check services status:
+    systemctl status nginx
+    systemctl status php8.1-fpm
+    systemctl status idle-monitor-queue
+
+[ ] Test data pull manually:
+    http://10.2.2.18/admin/data-pull
+
+═══════════════════════════════════════════════════════════════
+POST-DEPLOYMENT CONFIGURATION
+═══════════════════════════════════════════════════════════════
+
+[ ] Change Default Admin Password
+    1. Login as admin
+    2. Go to User Management
+    3. Change password
+
+[ ] Update Production .env (if needed)
+    ssh root@10.2.2.18
+    nano /var/www/idle-monitor/.env
+    - Update APP_URL if using domain
+    - Update mail settings
+    - Update any API credentials
+
+[ ] Setup Backup Schedule
+    - Database backup cron
+    - File backup script
+    - Offsite backup location
+
+[ ] Configure Firewall
+    ufw allow 22/tcp    # SSH
+    ufw allow 80/tcp    # HTTP
+    ufw allow 443/tcp   # HTTPS (if using SSL)
+    ufw enable
+
+[ ] Setup SSL Certificate (Optional but Recommended)
+    apt-get install certbot python3-certbot-nginx
+    certbot --nginx -d yourdomain.com
+
+[ ] Configure Monitoring
+    - Setup uptime monitoring
+    - Configure log rotation
+    - Setup disk space alerts
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION TESTS
+═══════════════════════════════════════════════════════════════
+
+[ ] Test 1: Homepage loads
+    http://10.2.2.18
+    Expected: Homepage with statistics
+
+[ ] Test 2: Admin login works
+    http://10.2.2.18/admin/login
+    Expected: Can login successfully
+
+[ ] Test 3: Dashboard shows data
+    http://10.2.2.18/admin/dashboard
+    Expected: Charts and statistics visible
+
+[ ] Test 4: Manual data pull works
+    http://10.2.2.18/admin/data-pull
+    - Fill form with date range
+    - Click "Tarik Data Sekarang"
+    Expected: Data pulled successfully
+
+[ ] Test 5: Queue worker is running
+    ssh root@10.2.2.18
+    systemctl status idle-monitor-queue
+    Expected: Active (running)
+
+[ ] Test 6: Scheduler is working
+    ssh root@10.2.2.18
+    php artisan schedule:list
+    Expected: Shows scheduled tasks
+
+[ ] Test 7: Database connection works
+    ssh root@10.2.2.18
+    docker exec -it idle-monitor-mysql mysql -u idle_user -pIdleUser@2026!
+    Expected: MySQL prompt appears
+
+[ ] Test 8: Check logs for errors
+    ssh root@10.2.2.18
+    tail -100 /var/www/idle-monitor/storage/logs/laravel.log
+    Expected: No critical errors
+
+═══════════════════════════════════════════════════════════════
+ROLLBACK PLAN (IF SOMETHING GOES WRONG)
+═══════════════════════════════════════════════════════════════
+
+If deployment fails:
+
+1. Stop services:
+   systemctl stop nginx
+   systemctl stop idle-monitor-queue
+   docker-compose down
+
+2. Remove application:
+   rm -rf /var/www/idle-monitor
+
+3. Investigate error:
+   - Check deployment script output
+   - Check system logs
+   - Check Docker logs
+
+4. Re-run deployment after fixing issue
+
+═══════════════════════════════════════════════════════════════
+COMMON ISSUES & SOLUTIONS
+═══════════════════════════════════════════════════════════════
+
+Issue: SSH connection refused
+Solution: 
+  - Check server is running: ping 10.2.2.18
+  - Check SSH port: nmap 10.2.2.18 -p 22
+  - Verify SSH credentials
+
+Issue: Git clone failed
+Solution:
+  - Check GitHub repository is accessible
+  - Check internet connection on server
+  - Verify repository URL
+
+Issue: Docker containers won't start
+Solution:
+  - Check Docker is running: systemctl status docker
+  - Check logs: docker logs idle-monitor-mysql
+  - Check ports are not in use: netstat -tulpn | grep 3306
+
+Issue: Nginx returns 502 Bad Gateway
+Solution:
+  - Check PHP-FPM: systemctl status php8.1-fpm
+  - Check socket: ls -la /var/run/php/
+  - Restart services: systemctl restart php8.1-fpm nginx
+
+Issue: Database connection error
+Solution:
+  - Verify .env DB credentials
+  - Check MySQL is running: docker ps
+  - Test connection: docker exec -it idle-monitor-mysql mysql -u idle_user -p
+
+Issue: Queue worker not processing jobs
+Solution:
+  - Check service: systemctl status idle-monitor-queue
+  - Check logs: journalctl -u idle-monitor-queue -n 50
+  - Restart: systemctl restart idle-monitor-queue
+
+═══════════════════════════════════════════════════════════════
+USEFUL COMMANDS REFERENCE
+═══════════════════════════════════════════════════════════════
+
+SSH to server:
+  ssh root@10.2.2.18
+
+Navigate to application:
+  cd /var/www/idle-monitor
+
+Update application:
+  git pull origin main
+  composer install --no-dev
+  php artisan migrate --force
+  php artisan cache:clear
+  systemctl restart idle-monitor-queue
+
+Check services:
+  systemctl status nginx
+  systemctl status php8.1-fpm
+  systemctl status idle-monitor-queue
+  docker ps
+
+View logs:
+  tail -f storage/logs/laravel.log
+  docker logs -f idle-monitor-mysql
+  journalctl -u idle-monitor-queue -f
+  tail -f /var/log/nginx/error.log
+
+Restart services:
+  systemctl restart nginx
+  systemctl restart php8.1-fpm
+  systemctl restart idle-monitor-queue
+  docker-compose restart
+
+Clear cache:
+  php artisan cache:clear
+  php artisan config:clear
+  php artisan route:clear
+  php artisan view:clear
+
+Database operations:
+  docker exec -it idle-monitor-mysql mysql -u idle_user -pIdleUser@2026!
+  mysqldump -u idle_user -pIdleUser@2026! vss > backup.sql
+
+═══════════════════════════════════════════════════════════════
+SUPPORT CONTACTS
+═══════════════════════════════════════════════════════════════
+
+Documentation:
+  - DEPLOYMENT_GUIDE.txt (detailed manual)
+  - QUICK_DEPLOY_STEPS.txt (quick reference)
+  - DEVELOPMENT_PROGRESS.md (development docs)
+
+═══════════════════════════════════════════════════════════════
+DEPLOYMENT COMPLETION SIGN-OFF
+═══════════════════════════════════════════════════════════════
+
+Deployment Date: ____________________
+Deployed By: ________________________
+Server IP: 10.2.2.18
+GitHub Commit: ______________________
+
+All tests passed: [ ] YES  [ ] NO
+
+Issues encountered:
+_______________________________________________________
+_______________________________________________________
+_______________________________________________________
+
+Resolution:
+_______________________________________________________
+_______________________________________________________
+_______________________________________________________
+
+Sign-off: ___________________________  Date: __________
+
+═══════════════════════════════════════════════════════════════

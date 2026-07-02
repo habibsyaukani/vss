@@ -26,12 +26,24 @@ class UserController extends Controller
 
         return DataTables::of($users)
             ->addColumn('role_badge', function ($user) {
-                $class = $user->role === 'admin' ? 'badge-danger' : 'badge-primary';
-                return '<span class="badge ' . $class . '">' . ucfirst($user->role) . '</span>';
+                if ($user->role === 'admin') {
+                    $class = 'bg-danger';
+                    $icon = '<i class="fas fa-shield-alt me-1"></i>';
+                } else {
+                    $class = 'bg-primary';
+                    $icon = '<i class="fas fa-user me-1"></i>';
+                }
+                return '<span class="badge ' . $class . ' text-white px-2 py-1">' . $icon . ucfirst(str_replace('_', ' ', $user->role)) . '</span>';
             })
             ->addColumn('status_badge', function ($user) {
-                $class = $user->status === 'active' ? 'badge-success' : 'badge-secondary';
-                return '<span class="badge ' . $class . '">' . ucfirst($user->status) . '</span>';
+                if ($user->status === 'active') {
+                    $class = 'bg-success';
+                    $icon = '<i class="fas fa-check-circle me-1"></i>';
+                } else {
+                    $class = 'bg-secondary';
+                    $icon = '<i class="fas fa-times-circle me-1"></i>';
+                }
+                return '<span class="badge ' . $class . ' text-white px-2 py-1">' . $icon . ucfirst($user->status) . '</span>';
             })
             ->addColumn('created_at_formatted', function ($user) {
                 return $user->created_at->format('Y-m-d H:i');

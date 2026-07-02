@@ -12,44 +12,7 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Juni 2026</h6>
-                    <h3 class="mb-0" id="stat-juni">{{ number_format($stats['total_juni']) }}</h3>
-                    <small>GPS records</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Devices</h6>
-                    <h3 class="mb-0" id="stat-devices">{{ number_format($stats['total_devices']) }}</h3>
-                    <small>active devices</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Keseluruhan</h6>
-                    <h3 class="mb-0" id="stat-total">{{ number_format($stats['total_all']) }}</h3>
-                    <small>GPS records</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Last Pull</h6>
-                    <p class="mb-0"><small id="stat-last-pull">{{ $stats['last_pull'] }}</small></p>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Data Pull Form -->
     <div class="row">
@@ -109,29 +72,7 @@
 
         <!-- Quick Actions & Log -->
         <div class="col-md-6">
-            <!-- Quick Actions -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
-                </div>
-                <div class="card-body">
-                    <button class="btn btn-outline-primary mb-2 w-100" onclick="quickPullGps('today')">
-                        <i class="fas fa-calendar-day"></i> Tarik Data Hari Ini
-                    </button>
-                    <button class="btn btn-outline-primary mb-2 w-100" onclick="quickPullGps('yesterday')">
-                        <i class="fas fa-calendar-minus"></i> Tarik Data Kemarin
-                    </button>
-                    <button class="btn btn-outline-primary mb-2 w-100" onclick="quickPullGps('june_9')">
-                        <i class="fas fa-star"></i> Tarik Data 9 Juni (Best Data Day)
-                    </button>
-                    <button class="btn btn-outline-primary mb-2 w-100" onclick="quickPullGps('june_11')">
-                        <i class="fas fa-calendar-alt"></i> Tarik Data 11 Juni
-                    </button>
-                    <button class="btn btn-outline-success mb-2 w-100" onclick="quickPullGps('test_10')">
-                        <i class="fas fa-vial"></i> Test Pull (10 Device Only)
-                    </button>
-                </div>
-            </div>
+
 
             <!-- Progress & Log -->
             <div class="card">
@@ -154,6 +95,11 @@
                             </div>
                             <div class="mt-2 text-center">
                                 <small id="progressDetails" class="text-muted">Menghubungi VSS API...</small>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <button type="button" id="cancelPullBtn" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-times-circle"></i> Batal Tarik Data
+                                </button>
                             </div>
                         </div>
 

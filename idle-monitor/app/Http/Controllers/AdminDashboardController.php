@@ -16,17 +16,26 @@ class AdminDashboardController extends Controller
      */
     public function index()
     {
-        $today = Carbon::today();
+        $todayStart = Carbon::today()->startOfDay();
+        $todayEnd = Carbon::today()->endOfDay();
         
         // Get statistics
         $stats = [
             'total_devices' => Device::count(),
-            'total_idle_today' => IdleAlarm::whereDate('created_at', $today)->count(),
+            'total_idle_today' => IdleAlarm::whereBetween('created_at', [$todayStart, $todayEnd])->count(),
+            'total_idle_min' => IdleAlarm::sum('duration_minutes') ?? 0,
             'active_idle' => IdleAlarm::where('alarm_status', 'ALARM_END')->count(),
-            'avg_duration' => IdleAlarm::whereDate('created_at', $today)->avg('duration_minutes') ?? 0,
-            'total_alarm_today' => IdleAlarm::whereDate('created_at', $today)->count(),
+            'avg_duration' => IdleAlarm::whereBetween('created_at', [$todayStart, $todayEnd])->avg('duration_minutes') ?? 0,
+            'total_alarm_today' => IdleAlarm::whereBetween('created_at', [$todayStart, $todayEnd])->count(),
             'total_users' => User::count(),
             'active_users' => User::where('status', 'active')->count(),
+            // Mock Trends
+            'trend_devices' => ['value' => '+ 12 (2.1%)', 'label' => 'vs last 7 days', 'color' => 'text-success', 'icon' => 'fa-arrow-up'],
+            'trend_idle' => ['value' => '+ 85 (10.4%)', 'label' => 'vs yesterday', 'color' => 'text-success', 'icon' => 'fa-arrow-up'],
+            'trend_total_idle' => ['value' => '+ 1,232 (4.8%)', 'label' => 'vs last 7 days', 'color' => 'text-success', 'icon' => 'fa-arrow-up'],
+            'trend_avg' => ['value' => '- 0.8 (-11.8%)', 'label' => 'vs last 7 days', 'color' => 'text-danger', 'icon' => 'fa-arrow-down'],
+            'trend_users' => ['value' => '-', 'label' => 'vs last 7 days', 'color' => 'text-muted', 'icon' => ''],
+            'trend_active_users' => ['value' => '+ 1 (100%)', 'label' => 'vs last 7 days', 'color' => 'text-success', 'icon' => 'fa-arrow-up'],
         ];
 
         // Get idle per hour (last 24 hours)
@@ -72,9 +81,10 @@ class AdminDashboardController extends Controller
             $hour = $time->format('H:00');
             $hours[] = $hour;
 
-            $count = IdleAlarm::whereDate('created_at', $time->toDateString())
-                ->whereRaw('HOUR(created_at) = ?', [$time->hour])
-                ->count();
+            $startOfHour = $time->copy()->startOfHour();
+            $endOfHour = $time->copy()->endOfHour();
+            
+            $count = IdleAlarm::whereBetween('created_at', [$startOfHour, $endOfHour])->count();
             $counts[] = $count;
         }
 
@@ -97,7 +107,10 @@ class AdminDashboardController extends Controller
             $dayName = $date->format('D');
             $days[] = $dayName;
 
-            $count = IdleAlarm::whereDate('created_at', $date->toDateString())->count();
+            $startOfDay = $date->copy()->startOfDay();
+            $endOfDay = $date->copy()->endOfDay();
+            
+            $count = IdleAlarm::whereBetween('created_at', [$startOfDay, $endOfDay])->count();
             $counts[] = $count;
         }
 
@@ -112,7 +125,7 @@ class AdminDashboardController extends Controller
      */
     private function getTopDevices($limit = 10)
     {
-        return IdleAlarm::select('device_name', DB::raw('COUNT(*) as total_idle'), DB::raw('SUM(duration_minutes) as total_duration'))
+        return IdleAlarm::select('device_name', DB::raw('COUNT(*) as total_idle'), DB::raw('SUM(duration_minutes) as total_duration'), DB::raw('MAX(created_at) as last_seen'))
             ->groupBy('device_name')
             ->orderBy('total_idle', 'desc')
             ->limit($limit)

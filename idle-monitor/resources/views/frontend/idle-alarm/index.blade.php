@@ -17,7 +17,7 @@
 
     /* Sidebar Specific Styles */
     .filter-section {
-        border-bottom: 1px solid #eaedf2;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .filter-section:first-child {
         padding-top: 35px !important; /* Push down from the top navbar */
@@ -45,16 +45,30 @@
         padding-left: 35px;
         border-radius: 6px;
         font-size: 13px;
-        border: 1px solid #eaedf2;
+        border: 1px solid rgba(255,255,255,0.1);
+        background-color: rgba(255,255,255,0.05);
+        color: white;
     }
     .search-box input:focus {
-        border-color: #1963f2;
-        box-shadow: 0 0 0 0.2rem rgba(25, 99, 242, 0.15);
+        border-color: #3b82f6;
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+        box-shadow: none;
+        outline: none;
+    }
+    .search-box input::placeholder {
+        color: #64748b;
     }
     .form-select-sm {
         font-size: 13px;
-        border-color: #eaedf2;
+        border-color: rgba(255,255,255,0.1);
         border-radius: 6px;
+        background-color: rgba(255,255,255,0.05);
+        color: white;
+    }
+    .form-select-sm option {
+        background-color: #0b1a30;
+        color: white;
     }
     .btn-select-all {
         color: #1963f2;
@@ -93,11 +107,11 @@
         border-radius: 6px;
         font-size: 13px;
         font-weight: 600;
-        color: #334155;
+        color: #cbd5e1;
         transition: background 0.2s;
     }
     .tree-parent:hover {
-        background-color: #f8f9fa;
+        background-color: rgba(255,255,255,0.05);
     }
     .tree-parent i.toggle-icon {
         width: 15px;
@@ -115,7 +129,7 @@
         cursor: pointer;
     }
     .group-icon {
-        color: #1963f2;
+        color: #3b82f6;
         margin-right: 8px;
         font-size: 14px;
     }
@@ -137,11 +151,12 @@
         align-items: center;
         padding: 6px 10px;
         font-size: 13px;
-        color: #475569;
+        color: #94a3b8;
         border-radius: 6px;
     }
     .tree-child:hover {
-        background-color: #f8f9fa;
+        background-color: rgba(255,255,255,0.05);
+        color: white;
     }
     .tree-child input[type="checkbox"] {
         margin-right: 10px;
@@ -151,12 +166,12 @@
     .system-active-box {
         margin: 20px;
         padding: 15px;
-        background-color: #f0fdf4;
-        border: 1px solid #bbf7d0;
+        background-color: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.2);
         border-radius: 8px;
     }
     .system-active-title {
-        color: #16a34a;
+        color: #4ade80;
         font-weight: 600;
         font-size: 13px;
         display: flex;
@@ -168,11 +183,11 @@
         display: inline-block;
         width: 8px;
         height: 8px;
-        background-color: #16a34a;
+        background-color: #4ade80;
         border-radius: 50%;
     }
     .system-active-desc {
-        color: #475569;
+        color: #94a3b8;
         font-size: 12px;
         margin-top: 5px;
         margin-bottom: 0;
@@ -283,14 +298,14 @@
         width: 100% !important;
     }
     #alarmTable th, #alarmTable td {
-        white-space: nowrap;
+        white-space: normal;
         overflow: visible;
         position: relative;
     }
     
-    /* Allow horizontal scroll */
+    /* No horizontal scroll */
     .table-responsive {
-        overflow-x: auto !important;
+        overflow-x: visible !important;
     }
     
     /* Custom resize handle */
@@ -326,154 +341,7 @@
        ❌ NO vertical freeze for header
        ======================================== */
     
-    /* Table container - Enable horizontal scrolling */
-    .table-container {
-        background: white;
-        border-radius: 8px;
-        border: 1px solid #eaedf2;
-        padding: 20px;
-        position: relative; /* Establish positioning context */
-        overflow-x: auto !important; /* Enable horizontal scroll */
-        overflow-y: visible;
-    }
-    
-    /* Enable horizontal scrolling for DataTables wrapper */
-    .dataTables_scrollBody {
-        overflow-x: auto !important;
-    }
-    
-    /* ========================================
-       COLUMN 1: CHECKBOX (left: 0px)
-       ======================================== */
-    #alarmTable thead th:nth-child(1) {
-        position: sticky !important;
-        left: 0px !important;
-        z-index: 15 !important;
-        background-color: #f8fafc !important;
-        min-width: 50px;
-    }
-    
-    #alarmTable tbody td:nth-child(1) {
-        position: sticky !important;
-        left: 0px !important;
-        z-index: 10 !important;
-        background-color: white !important;
-        min-width: 50px;
-    }
-    
-    #alarmTable tbody tr:hover td:nth-child(1) {
-        background-color: #f8fafc !important;
-    }
-    
-    /* ========================================
-       COLUMN 2: DEVICE ID (left: 50px)
-       ======================================== */
-    #alarmTable thead th:nth-child(2) {
-        position: sticky !important;
-        left: 50px !important;
-        z-index: 15 !important;
-        background-color: #f8fafc !important;
-        min-width: 120px;
-    }
-    
-    #alarmTable tbody td:nth-child(2) {
-        position: sticky !important;
-        left: 50px !important;
-        z-index: 10 !important;
-        background-color: white !important;
-        min-width: 120px;
-    }
-    
-    #alarmTable tbody tr:hover td:nth-child(2) {
-        background-color: #f8fafc !important;
-    }
-    
-    /* ========================================
-       COLUMN 3: DEVICE NAME (left: 170px)
-       ======================================== */
-    #alarmTable thead th:nth-child(3) {
-        position: sticky !important;
-        left: 170px !important;
-        z-index: 15 !important;
-        background-color: #f8fafc !important;
-        min-width: 180px;
-    }
-    
-    #alarmTable tbody td:nth-child(3) {
-        position: sticky !important;
-        left: 170px !important;
-        z-index: 10 !important;
-        background-color: white !important;
-        min-width: 180px;
-    }
-    
-    #alarmTable tbody tr:hover td:nth-child(3) {
-        background-color: #f8fafc !important;
-    }
-    
-    /* ========================================
-       COLUMN 4: ALARM TYPE (left: 350px)
-       ======================================== */
-    #alarmTable thead th:nth-child(4) {
-        position: sticky !important;
-        left: 350px !important;
-        z-index: 15 !important;
-        background-color: #f8fafc !important;
-        min-width: 120px;
-    }
-    
-    #alarmTable tbody td:nth-child(4) {
-        position: sticky !important;
-        left: 350px !important;
-        z-index: 10 !important;
-        background-color: white !important;
-        min-width: 120px;
-    }
-    
-    #alarmTable tbody tr:hover td:nth-child(4) {
-        background-color: #f8fafc !important;
-    }
-    
-    /* ========================================
-       COLUMN 5: ALARM STATUS (left: 470px) + SHADOW
-       ======================================== */
-    #alarmTable thead th:nth-child(5) {
-        position: sticky !important;
-        left: 470px !important;
-        z-index: 15 !important;
-        background-color: #f8fafc !important;
-        min-width: 130px;
-        box-shadow: 3px 0 5px -2px rgba(0,0,0,0.15) !important; /* Shadow to indicate frozen edge */
-    }
-    
-    #alarmTable tbody td:nth-child(5) {
-        position: sticky !important;
-        left: 470px !important;
-        z-index: 10 !important;
-        background-color: white !important;
-        min-width: 130px;
-        box-shadow: 3px 0 5px -2px rgba(0,0,0,0.15) !important; /* Shadow to indicate frozen edge */
-    }
-    
-    #alarmTable tbody tr:hover td:nth-child(5) {
-        background-color: #f8fafc !important;
-    }
-    
-    /* ========================================
-       BORDERS FOR FROZEN COLUMNS
-       ======================================== */
-    #alarmTable thead th:nth-child(1),
-    #alarmTable thead th:nth-child(2),
-    #alarmTable thead th:nth-child(3),
-    #alarmTable thead th:nth-child(4),
-    #alarmTable thead th:nth-child(5),
-    #alarmTable tbody td:nth-child(1),
-    #alarmTable tbody td:nth-child(2),
-    #alarmTable tbody td:nth-child(3),
-    #alarmTable tbody td:nth-child(4),
-    #alarmTable tbody td:nth-child(5) {
-        border-right: 1px solid #e2e8f0 !important;
-    }
+    /* No sticky columns needed - table fits on screen */
     .table > thead {
         background-color: #f8fafc;
     }
@@ -594,11 +462,19 @@
 
     /* COMPACT TABLE STYLES */
     #alarmTable {
-        font-size: 11.5px;
+        font-size: 10.5px;
+        width: 100% !important;
     }
-    #alarmTable th, #alarmTable td {
-        padding: 4px 8px !important;
+    #alarmTable th {
+        padding: 6px 5px !important;
         vertical-align: middle;
+        font-size: 10px;
+        white-space: nowrap;
+    }
+    #alarmTable td {
+        padding: 5px 5px !important;
+        vertical-align: middle;
+        font-size: 10.5px;
     }
     .dataTables_wrapper .dataTables_length, 
     .dataTables_wrapper .dataTables_info, 
@@ -606,6 +482,28 @@
         font-size: 12px;
         margin-top: 5px;
     }
+    /* Tooltip for detail columns */
+    .detail-tooltip {
+        cursor: help;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        color: #64748b;
+        font-size: 10px;
+    }
+    /* Map link compact */
+    .map-link-compact {
+        color: #1963f2;
+        text-decoration: none;
+        font-size: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        white-space: nowrap;
+    }
+    .map-link-compact:hover { text-decoration: underline; }
 </style>
 @endsection
 
@@ -644,7 +542,7 @@
 </div>
 
 <!-- Actions -->
-<div class="px-4 py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+<div class="px-4 py-3 d-flex justify-content-between align-items-center border-bottom" style="border-color: rgba(255,255,255,0.05) !important;">
     <button class="btn-select-all" id="selectAllBtn"><i class="far fa-check-square me-1"></i> Select All</button>
     <button class="btn-clear" id="clearBtn"><i class="fas fa-times"></i> Clear</button>
 </div>
@@ -656,9 +554,9 @@
             <div class="tree-parent open">
                 <i class="fas fa-chevron-right toggle-icon me-2"></i>
                 <input type="checkbox" class="tree-checkbox group-checkbox" data-group="all" checked>
-                <i class="fas fa-car-side group-icon" style="color: #0f766e;"></i>
-                <span style="font-weight: 700; color: #1e293b;">ALL GPE</span>
-                <span class="group-count">({{ $totalDevices }}|<span style="color: #16a34a; font-weight: 700;">{{ $totalActive }}</span>)</span>
+                <i class="fas fa-car-side group-icon" style="color: #0d9488;"></i>
+                <span style="font-weight: 700; color: #f8fafc;">ALL GPE</span>
+                <span class="group-count">({{ $totalDevices }}|<span style="color: #4ade80; font-weight: 700;">{{ $totalActive }}</span>)</span>
             </div>
             <ul class="tree-children">
                 @foreach($deviceGroups as $groupName => $groupData)
@@ -673,9 +571,9 @@
                                 elseif(str_contains($groupName, 'FT') || str_contains($groupName, 'WT')) $icon = 'fa-truck';
                                 elseif(str_contains($groupName, 'HD')) $icon = 'fa-truck-front';
                             @endphp
-                            <i class="fas {{ $icon }} group-icon" style="color: #0f766e;"></i>
-                            <span style="font-weight: 700; color: #334155;">{{ $groupName }}</span>
-                            <span class="group-count">({{ $groupData['total'] }}|<span style="color: #16a34a; font-weight: 700;">{{ $groupData['active'] }}</span>)</span>
+                            <i class="fas {{ $icon }} group-icon" style="color: #0d9488;"></i>
+                            <span style="font-weight: 700; color: #cbd5e1;">{{ $groupName }}</span>
+                            <span class="group-count">({{ $groupData['total'] }}|<span style="color: #4ade80; font-weight: 700;">{{ $groupData['active'] }}</span>)</span>
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
@@ -778,21 +676,21 @@
     <table id="alarmTable" class="table table-sm table-hover" style="width:100%">
         <thead>
             <tr>
-                <th style="width: 2%;"><input type="checkbox" id="selectAllRows"></th>
-                <th style="min-width: 80px;">DEVICE ID</th>
-                <th style="min-width: 120px;">DEVICE NAME</th>
-                <th style="min-width: 80px;">ALARM TYPE</th>
-                <th style="min-width: 100px;">ALARM STATUS</th>
-                <th style="min-width: 150px;">STARTING TIME</th>
-                <th style="min-width: 150px;">STARTING LOCATION</th>
-                <th style="min-width: 150px;">ENDING TIME</th>
-                <th style="min-width: 150px;">ENDING LOCATION</th>
-                <th style="min-width: 250px;">START DETAIL</th>
-                <th style="min-width: 250px;">END DETAIL</th>
-                <th style="min-width: 80px;">START SPEED</th>
-                <th style="min-width: 80px;">END SPEED</th>
-                <th style="min-width: 150px;">REPORT TIME</th>
-                <th style="min-width: 100px;">DUR (SEC)</th>
+                <th style="width: 25px;"><input type="checkbox" id="selectAllRows"></th>
+                <th>DEVICE ID</th>
+                <th>DEVICE NAME</th>
+                <th>ALARM TYPE</th>
+                <th>STATUS</th>
+                <th>START TIME</th>
+                <th>START LOC</th>
+                <th>END TIME</th>
+                <th>END LOC</th>
+                <th>START DETAIL</th>
+                <th>END DETAIL</th>
+                <th>S.SPD</th>
+                <th>E.SPD</th>
+                <th>REPORT TIME</th>
+                <th>DUR</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -1289,6 +1187,10 @@ $(document).ready(function() {
         },
         ajax: {
             url: "{{ route('frontend.idle-alarm.data') }}",
+            type: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             data: function(d) {
                 d.start_date = $('#startDate').val();
                 d.end_date = $('#endDate').val();
@@ -1312,43 +1214,41 @@ $(document).ready(function() {
                     return '<input type="checkbox" class="row-checkbox" value="' + data.id + '">';
                 }
             },
-            { data: 'device_id', name: 'device_id' },
-            { data: 'device_name', name: 'device_name' },
-            { data: 'alarm_type', name: 'alarm_type', render: function(data) { return data || '-'; } },
+            { data: 'device_id', name: 'device_id', render: function(data) { return `<span style="font-size:10px;color:#64748b;">${data||'-'}</span>`; } },
+            { 
+                data: 'device_name', 
+                name: 'device_name',
+                render: function(data) {
+                    return `<span style="font-weight:600;color:#1e293b;font-size:10.5px;">${data || '-'}</span>`;
+                }
+            },
+            { data: 'alarm_type', name: 'alarm_type', render: function(data) { return `<span style="font-size:10px;color:#475569;">${data || '-'}</span>`; } },
             { 
                 data: 'alarm_status', 
                 name: 'alarm_status', 
                 render: function(data, type, row) {
                     if (!data) return '-';
-                    
-                    // Gunakan duration_seconds_calc (dihitung dari starting_time → ending_time) untuk color coding
                     let totalSeconds = parseInt(row.duration_seconds_calc || row.duration_seconds || 0);
                     let bgColor, textColor;
-                    
                     if (totalSeconds <= 0) {
                         bgColor = '#9ca3af'; textColor = '#ffffff';
                     } else if (totalSeconds < 300) {
-                        // Hijau: 0–4 menit 59 detik
                         bgColor = '#10b981'; textColor = '#ffffff';
                     } else if (totalSeconds < 900) {
-                        // Kuning: 5–14 menit 59 detik
                         bgColor = '#fbbf24'; textColor = '#000000';
                     } else if (totalSeconds < 1800) {
-                        // Oranye: 15–29 menit 59 detik
                         bgColor = '#f97316'; textColor = '#ffffff';
                     } else {
-                        // Merah: 30 menit ke atas
                         bgColor = '#ef4444'; textColor = '#ffffff';
                     }
-                    
-                    return `<span style="display: inline-block; padding: 6px 12px; background: ${bgColor}; color: ${textColor}; border-radius: 6px; font-weight: 600; font-size: 11px; text-transform: uppercase;">${data}</span>`;
+                    return `<span style="display:inline-block;padding:2px 6px;background:${bgColor};color:${textColor};border-radius:4px;font-weight:600;font-size:9px;text-transform:uppercase;white-space:nowrap;">${data}</span>`;
                 } 
             },
             { 
                 data: 'starting_time', 
                 name: 'starting_time', 
                 render: function(data) { 
-                    return data || '-'; 
+                    return `<span style="font-size:10px;color:#334155;white-space:nowrap;">${data || '-'}</span>`;
                 } 
             },
             { 
@@ -1360,16 +1260,18 @@ $(document).ready(function() {
                     if (parts.length === 2) {
                         let long = parts[0].trim();
                         let lat = parts[1].trim();
-                        return `<a href="https://www.google.com/maps?q=${lat},${long}" target="_blank" style="color: #1963f2; text-decoration: underline;" title="View on Google Maps"><i class="fas fa-map-marker-alt me-1"></i>${data}</a>`;
+                        let shortLong = parseFloat(long).toFixed(3);
+                        let shortLat = parseFloat(lat).toFixed(3);
+                        return `<a href="https://www.google.com/maps?q=${lat},${long}" target="_blank" class="map-link-compact" title="${data}"><i class="fas fa-map-marker-alt" style="color:#ef4444;"></i> ${shortLong},${shortLat}</a>`;
                     }
-                    return data; 
+                    return `<span style="font-size:10px;">${data}</span>`; 
                 } 
             },
             { 
                 data: 'ending_time', 
                 name: 'ending_time', 
                 render: function(data) { 
-                    return data || '-'; 
+                    return `<span style="font-size:10px;color:#334155;white-space:nowrap;">${data || '-'}</span>`;
                 } 
             },
             { 
@@ -1381,20 +1283,36 @@ $(document).ready(function() {
                     if (parts.length === 2) {
                         let long = parts[0].trim();
                         let lat = parts[1].trim();
-                        return `<a href="https://www.google.com/maps?q=${lat},${long}" target="_blank" style="color: #1963f2; text-decoration: underline;" title="View on Google Maps"><i class="fas fa-map-marker-alt me-1"></i>${data}</a>`;
+                        let shortLong = parseFloat(long).toFixed(3);
+                        let shortLat = parseFloat(lat).toFixed(3);
+                        return `<a href="https://www.google.com/maps?q=${lat},${long}" target="_blank" class="map-link-compact" title="${data}"><i class="fas fa-map-marker-alt" style="color:#ef4444;"></i> ${shortLong},${shortLat}</a>`;
                     }
-                    return data; 
+                    return `<span style="font-size:10px;">${data}</span>`; 
                 } 
             },
-            { data: 'start_detail', name: 'start_detail', render: function(data) { return data || '-'; } },
-            { data: 'end_detail', name: 'end_detail', render: function(data) { return data || '-'; } },
-            { data: 'start_speed', name: 'start_speed' },
-            { data: 'end_speed', name: 'end_speed' },
+            { 
+                data: 'start_detail', 
+                name: 'start_detail', 
+                render: function(data) { 
+                    let d = data || '-';
+                    return `<span class="detail-tooltip" title="${d}">${d}</span>`;
+                } 
+            },
+            { 
+                data: 'end_detail', 
+                name: 'end_detail', 
+                render: function(data) { 
+                    let d = data || '-';
+                    return `<span class="detail-tooltip" title="${d}">${d}</span>`;
+                } 
+            },
+            { data: 'start_speed', name: 'start_speed', render: function(data) { return `<span style="font-size:10px;">${data||'-'}</span>`; } },
+            { data: 'end_speed', name: 'end_speed', render: function(data) { return `<span style="font-size:10px;">${data||'-'}</span>`; } },
             { 
                 data: 'report_time', 
                 name: 'report_time', 
                 render: function(data) { 
-                    return data || '-'; 
+                    return `<span style="font-size:10px;white-space:nowrap;color:#64748b;">${data || '-'}</span>`;
                 } 
             },
             { 
@@ -1404,16 +1322,13 @@ $(document).ready(function() {
                 searchable: false,
                 render: function(data, type, row) {
                     if (!data || data === '-') return '<span style="color:#9ca3af;">-</span>';
-                    
-                    // Warna badge berdasarkan durasi
                     let secs = parseInt(row.duration_seconds_calc || row.duration_seconds || 0);
                     let color = '#9ca3af';
                     if (secs > 0 && secs < 300)        color = '#10b981';
                     else if (secs < 900)               color = '#d97706';
                     else if (secs < 1800)              color = '#f97316';
                     else if (secs >= 1800)             color = '#ef4444';
-                    
-                    return `<span style="font-weight:600; color:${color};">${data}</span>`;
+                    return `<span style="font-weight:700;color:${color};font-size:11px;white-space:nowrap;">${data}</span>`;
                 }
             }
         ],

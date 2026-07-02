@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use App\Services\SystemLogger;
 
 class ImportAlarmJob implements ShouldQueue
 {
@@ -18,6 +19,8 @@ class ImportAlarmJob implements ShouldQueue
      */
     public function handle(): void
     {
+        SystemLogger::jobStart('ImportAlarmJob');
+        
         $mainLog = \App\Models\ImportLog::create([
             'job_name' => 'ImportAlarmJob',
             'started_at' => now(),
@@ -26,8 +29,6 @@ class ImportAlarmJob implements ShouldQueue
         ]);
 
         try {
-            \Illuminate\Support\Facades\Log::info('ImportAlarmJob started');
-
             // Get last sync time (watermark)
             $lastSync = \App\Models\SystemSetting::get(
                 'last_alarm_sync',
@@ -37,9 +38,10 @@ class ImportAlarmJob implements ShouldQueue
             $beginTime = $lastSync;
             $endTime = now()->toDateTimeString();
 
-            \Illuminate\Support\Facades\Log::info('Alarm import range', [
-                'begin' => $beginTime,
-                'end' => $endTime,
+            SystemLogger::success('DATA_PULL', 'Starting alarm import', [
+                'begin_time' => $beginTime,
+                'end_time' => $endTime,
+                'range_hours' => round((strtotime($endTime) - strtotime($beginTime)) / 3600, 1),
             ]);
 
             $alarmService = new \App\Services\HowenAlarmService();
@@ -49,28 +51,57 @@ class ImportAlarmJob implements ShouldQueue
 
             // Loop through pages and dispatch jobs
             do {
-                $alarms = $alarmService->fetchAlarmsPage(
-                    $pageNum,
-                    $pageCount,
-                    $beginTime,
-                    $endTime
-                );
+                try {
+                    $alarms = $alarmService->fetchAlarmsPage(
+                        $pageNum,
+                        $pageCount,
+                        $beginTime,
+                        $endTime
+                    );
 
-                if (!empty($alarms)) {
-                    // Dispatch job for this page
-                    ImportAlarmPageJob::dispatch($pageNum, $pageCount, $beginTime, $endTime);
-                    $totalRecords += count($alarms);
-                    \Illuminate\Support\Facades\Log::info("Page {$pageNum} dispatched", ['count' => count($alarms)]);
-                }
+                    if (!empty($alarms)) {
+                        // Dispatch job for this page
+                        ImportAlarmPageJob::dispatch($pageNum, $pageCount, $beginTime, $endTime);
+                        $totalRecords += count($alarms);
+                        
+                        SystemLogger::success('DATA_PULL', "Page {$pageNum} dispatched for processing", [
+                            'alarms_count' => count($alarms),
+                            'total_so_far' => $totalRecords,
+                        ]);
+                    } else {
+                        SystemLogger::warning('DATA_PULL', "Page {$pageNum} returned empty", [
+                            'begin_time' => $beginTime,
+                            'end_time' => $endTime,
+                        ]);
+                    }
 
-                $pageNum++;
+                    $pageNum++;
 
-                // Stop if we got fewer records than page size
-                if (count($alarms) < $pageCount) {
-                    break;
+                    // Stop if we got fewer records than page size
+                    if (count($alarms) < $pageCount) {
+                        break;
+                    }
+
+                } catch (\Exception $pageError) {
+                    SystemLogger::error(
+                        'DATA_PULL',
+                        "Failed to fetch alarm page {$pageNum}",
+                        SystemLogger::hints()['api_timeout'],
+                        ['page' => $pageNum],
+                        $pageError
+                    );
+                    break; // Stop processing further pages
                 }
 
             } while (true);
+
+            // Check if we got any data
+            if ($totalRecords === 0) {
+                SystemLogger::warning('DATA_PULL', 'No alarm data pulled', [
+                    'reason' => 'API returned empty or no new alarms in time range',
+                    'troubleshooting' => SystemLogger::hints()['no_data_pulled'],
+                ]);
+            }
 
             // Update last sync time
             \App\Models\SystemSetting::set('last_alarm_sync', $endTime);
@@ -82,9 +113,10 @@ class ImportAlarmJob implements ShouldQueue
                 'message' => "Dispatched " . ($pageNum - 1) . " page jobs, total " . $totalRecords . " records",
             ]);
 
-            \Illuminate\Support\Facades\Log::info("ImportAlarmJob completed", [
-                'pages' => $pageNum - 1,
+            SystemLogger::jobComplete('ImportAlarmJob', [
+                'pages_processed' => $pageNum - 1,
                 'total_records' => $totalRecords,
+                'time_range' => "{$beginTime} to {$endTime}",
             ]);
 
         } catch (\Exception $e) {
@@ -94,7 +126,26 @@ class ImportAlarmJob implements ShouldQueue
                 'message' => $e->getMessage(),
             ]);
 
-            \Illuminate\Support\Facades\Log::error('ImportAlarmJob failed', ['error' => $e->getMessage()]);
+            // Determine error type and provide specific troubleshooting
+            $troubleshooting = 'Check storage/logs/system-monitor.log for details';
+            
+            if (str_contains($e->getMessage(), 'authentication') || str_contains($e->getMessage(), 'token')) {
+                $troubleshooting = SystemLogger::hints()['auth_failed'];
+            } elseif (str_contains($e->getMessage(), 'timeout') || str_contains($e->getMessage(), 'connection')) {
+                $troubleshooting = SystemLogger::hints()['api_timeout'];
+            } elseif (str_contains($e->getMessage(), 'database') || str_contains($e->getMessage(), 'SQLSTATE')) {
+                $troubleshooting = SystemLogger::hints()['database_connection'];
+            }
+
+            SystemLogger::error(
+                'DATA_PULL',
+                'ImportAlarmJob failed completely',
+                $troubleshooting,
+                [],
+                $e
+            );
+            
+            SystemLogger::jobFailed('ImportAlarmJob', $e->getMessage(), $e);
             throw $e;
         }
     }
