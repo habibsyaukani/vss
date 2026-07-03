@@ -8,7 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\AlarmRaw;
-use App\Helpers\SystemLogger;
+use App\Services\SystemLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
