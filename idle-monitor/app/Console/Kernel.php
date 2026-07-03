@@ -84,13 +84,17 @@ class Kernel extends ConsoleKernel
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
         // ========================================
         
-        // Cleanup old raw data (> 1 month) every day at 02:00 AM
-        // Menghapus data raw yang sudah lebih dari 1 bulan
-        // Data sebenarnya sudah ada di tabel inti (idle_alarms, gps_track)
-        $schedule->job(new \App\Jobs\CleanupOldRawDataJob())
-            ->dailyAt('02:00')
-            ->withoutOverlapping()
-            ->description('Cleanup old raw data (> 1 month retention)');
+        // Cleanup old raw data - Schedule berdasarkan setting di database
+        // Setting bisa diubah di System Control Center
+        // Default: Monthly pada tanggal 1 jam 02:00 AM
+        $schedule->call(function () {
+            $cleanupSchedule = \App\Models\SystemSetting::get('cleanup_schedule', 'monthly');
+            
+            // Dispatch job hanya jika cleanup enabled
+            if (\App\Models\SystemSetting::isCleanupEnabled()) {
+                \App\Jobs\CleanupOldRawDataJob::dispatch();
+            }
+        })->cron($this->getCleanupCron())->description('Cleanup old raw data (based on system settings)');
 
         // ========================================
         // 🗄️ HISTORICAL BACKFILL (MANUAL/OPTIONAL)
@@ -120,5 +124,20 @@ class Kernel extends ConsoleKernel
         $this->load(__DIR__.'/Commands');
 
         require base_path('routes/console.php');
+    }
+
+    /**
+     * Get cleanup cron expression based on schedule setting
+     */
+    private function getCleanupCron(): string
+    {
+        $schedule = \App\Models\SystemSetting::get('cleanup_schedule', 'monthly');
+        
+        return match($schedule) {
+            'daily' => '0 2 * * *',           // Every day at 02:00
+            'weekly' => '0 2 * * 0',          // Every Sunday at 02:00
+            'monthly' => '0 2 1 * *',         // 1st of month at 02:00
+            default => '0 2 1 * *',           // Default: monthly
+        };
     }
 }

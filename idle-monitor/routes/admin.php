@@ -95,4 +95,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/system-health/migrate', [SystemHealthController::class, 'runMigration'])->name('system-health.migrate');
     Route::post('/system-health/heal', [SystemHealthController::class, 'manualHeal'])->name('system-health.heal');
     Route::get('/system-health/logs', [SystemHealthController::class, 'getHealingLogs'])->name('system-health.logs');
+
+    // System Control Center (Cleanup Management)
+    Route::get('/system-control-center', [App\Http\Controllers\Admin\SystemControlController::class, 'index'])->name('system-control-center.index');
+    Route::post('/system-control-center/cleanup/update', [App\Http\Controllers\Admin\SystemControlController::class, 'updateCleanupSettings'])->name('system-control.update-cleanup');
+    Route::post('/system-control-center/cleanup/run', [App\Http\Controllers\Admin\SystemControlController::class, 'runCleanupManually'])->name('system-control.run-cleanup');
+    Route::get('/system-control-center/status', [App\Http\Controllers\Admin\SystemControlController::class, 'getStatus'])->name('system-control.status');
 });

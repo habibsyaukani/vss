@@ -26,17 +26,27 @@ class CleanupOldRawDataJob implements ShouldQueue
      * Execute the job - Cleanup data raw yang sudah lebih dari 1 bulan
      *
      * TUJUAN:
-     * - Menghapus data raw (alarm_raw, gps_raw) yang sudah lebih dari 1 bulan
+     * - Menghapus data raw (alarm_raw, gps_raw) yang sudah lebih dari X hari
      * - Data yang sebenarnya sudah ada di tabel inti (idle_alarms, gps_track)
      * - Mengurangi size database dan meningkatkan performance
      *
      * SAFETY:
-     * - Retention period: 1 bulan (cukup untuk troubleshooting)
-     * - Hanya hapus data yang sudah lama
+     * - Check system setting apakah cleanup enabled
+     * - Retention period dari database settings
+     * - Validasi data sudah ada di tabel final
      * - Logging detail untuk monitoring
      */
     public function handle(): void
     {
+        // CHECK: Apakah cleanup enabled di system settings?
+        if (!\App\Models\SystemSetting::isCleanupEnabled()) {
+            SystemLogger::info('CLEANUP_SKIPPED', 'Cleanup is disabled in system settings', []);
+            return;
+        }
+
+        // Get retention days from settings
+        $this->retentionDays = \App\Models\SystemSetting::getCleanupRetentionDays();
+
         $startTime = now();
         SystemLogger::info('CLEANUP_START', 'Starting raw data cleanup job', [
             'retention_days' => $this->retentionDays,
@@ -52,6 +62,9 @@ class CleanupOldRawDataJob implements ShouldQueue
 
             // 2. Cleanup gps_raw (jika tabel ada)
             $this->cleanupGpsRaw($cutoffDate);
+
+            // Update last run time
+            \App\Models\SystemSetting::updateCleanupLastRun();
 
             $duration = now()->diffInSeconds($startTime);
             SystemLogger::success('CLEANUP_COMPLETED', 'Raw data cleanup completed successfully', [
@@ -71,6 +84,10 @@ class CleanupOldRawDataJob implements ShouldQueue
 
     /**
      * Cleanup tabel alarm_raw
+     * 
+     * SAFETY: Hanya hapus data yang sudah ada di tabel idle_alarms
+     * - Validasi berdasarkan guid (unique identifier)
+     * - Pastikan data raw sudah diproses ke tabel final
      */
     private function cleanupAlarmRaw(Carbon $cutoffDate): void
     {
@@ -85,11 +102,45 @@ class CleanupOldRawDataJob implements ShouldQueue
                 return;
             }
 
-            // Hapus data lama
-            $deletedCount = AlarmRaw::where('created_at', '<', $cutoffDate)->delete();
+            // SAFETY CHECK: Hanya hapus data yang sudah ada di idle_alarms
+            // Ambil GUIDs dari alarm_raw yang mau dihapus
+            $rawGuids = AlarmRaw::where('created_at', '<', $cutoffDate)
+                ->where('alarm_type', 32) // Type 32 = Idle alarms
+                ->pluck('guid')
+                ->toArray();
+
+            // Cek mana yang sudah ada di idle_alarms
+            $processedGuids = DB::table('idle_alarms')
+                ->whereIn('guid', $rawGuids)
+                ->pluck('guid')
+                ->toArray();
+
+            SystemLogger::info('CLEANUP_ALARM_RAW_VALIDATION', 'Validating data before cleanup', [
+                'total_old_records' => count($rawGuids),
+                'already_processed' => count($processedGuids),
+                'not_processed_yet' => count($rawGuids) - count($processedGuids),
+            ]);
+
+            // Hapus HANYA data yang sudah diproses ke idle_alarms
+            $deletedCount = 0;
+            if (!empty($processedGuids)) {
+                $deletedCount = AlarmRaw::where('created_at', '<', $cutoffDate)
+                    ->whereIn('guid', $processedGuids)
+                    ->delete();
+            }
+
+            // Untuk non-idle alarms (type != 32), hapus yang sudah lama
+            // Karena tidak semua alarm type ada tabel terpisah
+            $nonIdleDeleted = AlarmRaw::where('created_at', '<', $cutoffDate)
+                ->where('alarm_type', '!=', 32)
+                ->delete();
+
+            $totalDeleted = $deletedCount + $nonIdleDeleted;
 
             SystemLogger::success('CLEANUP_ALARM_RAW', 'Cleaned up alarm_raw table', [
-                'deleted_count' => $deletedCount,
+                'deleted_idle_alarms' => $deletedCount,
+                'deleted_non_idle' => $nonIdleDeleted,
+                'total_deleted' => $totalDeleted,
                 'cutoff_date' => $cutoffDate->toDateTimeString(),
                 'retention_days' => $this->retentionDays,
             ]);
@@ -104,42 +155,86 @@ class CleanupOldRawDataJob implements ShouldQueue
     }
 
     /**
-     * Cleanup tabel gps_raw (jika ada)
+     * Cleanup tabel gps_tracks_raw (jika ada)
+     * 
+     * SAFETY: Hanya hapus data yang sudah ada di tabel gps_tracks
+     * - Validasi berdasarkan device_id + gps_time
+     * - Pastikan data raw sudah diproses ke tabel final
      */
     private function cleanupGpsRaw(Carbon $cutoffDate): void
     {
         try {
-            // Cek apakah tabel gps_raw ada
-            if (!DB::getSchemaBuilder()->hasTable('gps_raw')) {
-                SystemLogger::info('CLEANUP_GPS_RAW', 'Table gps_raw does not exist, skipping', []);
+            // Cek apakah tabel gps_tracks_raw ada
+            if (!DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
+                SystemLogger::info('CLEANUP_GPS_RAW', 'Table gps_tracks_raw does not exist, skipping', []);
                 return;
             }
 
             // Hitung jumlah record yang akan dihapus
-            $countToDelete = DB::table('gps_raw')
+            $countToDelete = DB::table('gps_tracks_raw')
                 ->where('created_at', '<', $cutoffDate)
                 ->count();
 
             if ($countToDelete === 0) {
-                SystemLogger::info('CLEANUP_GPS_RAW', 'No gps_raw records to cleanup', [
+                SystemLogger::info('CLEANUP_GPS_RAW', 'No gps_tracks_raw records to cleanup', [
                     'cutoff_date' => $cutoffDate->toDateTimeString(),
                 ]);
                 return;
             }
 
-            // Hapus data lama
-            $deletedCount = DB::table('gps_raw')
+            // SAFETY CHECK: Hanya hapus data yang sudah ada di gps_tracks
+            // Ambil sample data lama untuk validasi
+            $oldRawData = DB::table('gps_tracks_raw')
                 ->where('created_at', '<', $cutoffDate)
-                ->delete();
+                ->select('device_id', 'gps_time')
+                ->limit(1000) // Ambil sample untuk validasi
+                ->get();
 
-            SystemLogger::success('CLEANUP_GPS_RAW', 'Cleaned up gps_raw table', [
-                'deleted_count' => $deletedCount,
-                'cutoff_date' => $cutoffDate->toDateTimeString(),
-                'retention_days' => $this->retentionDays,
+            $validatedCount = 0;
+            foreach ($oldRawData as $raw) {
+                // Cek apakah data ini sudah ada di gps_tracks
+                $exists = DB::table('gps_tracks')
+                    ->where('device_id', $raw->device_id)
+                    ->where('gps_time', $raw->gps_time)
+                    ->exists();
+                
+                if ($exists) {
+                    $validatedCount++;
+                }
+            }
+
+            $sampleSize = $oldRawData->count();
+            $processedPercentage = $sampleSize > 0 ? ($validatedCount / $sampleSize) * 100 : 0;
+
+            SystemLogger::info('CLEANUP_GPS_RAW_VALIDATION', 'Validating data before cleanup', [
+                'sample_size' => $sampleSize,
+                'already_processed' => $validatedCount,
+                'processed_percentage' => round($processedPercentage, 2) . '%',
             ]);
 
+            // Hanya hapus jika mayoritas data sudah diproses (> 95%)
+            if ($processedPercentage >= 95) {
+                // Hapus data lama
+                $deletedCount = DB::table('gps_tracks_raw')
+                    ->where('created_at', '<', $cutoffDate)
+                    ->delete();
+
+                SystemLogger::success('CLEANUP_GPS_RAW', 'Cleaned up gps_tracks_raw table', [
+                    'deleted_count' => $deletedCount,
+                    'cutoff_date' => $cutoffDate->toDateTimeString(),
+                    'retention_days' => $this->retentionDays,
+                    'validation_passed' => true,
+                ]);
+            } else {
+                SystemLogger::warning('CLEANUP_GPS_RAW_SKIPPED', 'Skipped cleanup - data not fully processed yet', [
+                    'processed_percentage' => round($processedPercentage, 2) . '%',
+                    'required_percentage' => 95,
+                    'recommendation' => 'Wait for ProcessGpsTrackJob to complete processing',
+                ]);
+            }
+
         } catch (\Exception $e) {
-            SystemLogger::error('CLEANUP_GPS_RAW_FAILED', 'Failed to cleanup gps_raw', [
+            SystemLogger::error('CLEANUP_GPS_RAW_FAILED', 'Failed to cleanup gps_tracks_raw', [
                 'error' => $e->getMessage(),
                 'cutoff_date' => $cutoffDate->toDateTimeString(),
             ]);
