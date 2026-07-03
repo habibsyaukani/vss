@@ -99,6 +99,137 @@
         </div>
     </div>
 
+    <!-- Cleanup Control Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-trash-alt"></i> Automatic Cleanup Control</h5>
+        </div>
+        <div class="card-body">
+            <!-- Status Badge -->
+            <div class="row align-items-center mb-3">
+                <div class="col-md-4">
+                    <h6>Status:</h6>
+                    <h3 id="cleanupStatusBadge">
+                        <span class="badge {{ $cleanupSettings['cleanup_enabled'] ? 'bg-success' : 'bg-danger' }}">
+                            {{ $cleanupSettings['cleanup_enabled'] ? 'ENABLED' : 'DISABLED' }}
+                        </span>
+                    </h3>
+                    <small class="text-muted">Last Run: <span id="cleanupLastRun">{{ $cleanupSettings['cleanup_last_run'] ?? 'Never' }}</span></small>
+                </div>
+                <div class="col-md-8">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>What it does:</strong> Automatically deletes old raw data (alarm_raw, gps_tracks_raw) based on retention period. 
+                        Only deletes data that has been processed to final tables.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Form -->
+            <form id="cleanupSettingsForm">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label><strong>Enable Automatic Cleanup</strong></label>
+                            <select name="cleanup_enabled" class="form-control">
+                                <option value="1" {{ $cleanupSettings['cleanup_enabled'] ? 'selected' : '' }}>Enabled</option>
+                                <option value="0" {{ !$cleanupSettings['cleanup_enabled'] ? 'selected' : '' }}>Disabled</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Enable or disable automatic cleanup
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label><strong>Retention Period (Days)</strong></label>
+                            <input type="number" name="cleanup_retention_days" class="form-control" 
+                                   value="{{ $cleanupSettings['cleanup_retention_days'] }}" min="7" max="365">
+                            <small class="form-text text-muted">
+                                Keep data for this many days (7-365)
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label><strong>Schedule</strong></label>
+                            <select name="cleanup_schedule" class="form-control">
+                                <option value="daily" {{ $cleanupSettings['cleanup_schedule'] === 'daily' ? 'selected' : '' }}>Daily (02:00 AM)</option>
+                                <option value="weekly" {{ $cleanupSettings['cleanup_schedule'] === 'weekly' ? 'selected' : '' }}>Weekly (Sunday 02:00 AM)</option>
+                                <option value="monthly" {{ $cleanupSettings['cleanup_schedule'] === 'monthly' ? 'selected' : '' }}>Monthly (1st, 02:00 AM)</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                How often to run cleanup
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                        <button type="button" id="btnRunCleanup" class="btn btn-warning btn-lg">
+                            <i class="fas fa-play"></i> Run Cleanup Now
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Statistics -->
+            <div class="mt-4">
+                <h6><i class="fas fa-chart-bar"></i> Cleanup Preview</h6>
+                <p class="text-muted">
+                    Data older than: <strong id="cutoffDate">{{ $cleanupStats['cutoff_date'] }}</strong>
+                </p>
+                
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Table</th>
+                            <th>Total Records</th>
+                            <th>Old Records (Will Delete)</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cleanupStats">
+                        <tr>
+                            <td><strong>alarm_raw</strong></td>
+                            <td id="alarmRawTotal">{{ number_format($cleanupStats['alarm_raw']['total']) }}</td>
+                            <td id="alarmRawOld" class="text-danger">
+                                <strong>{{ number_format($cleanupStats['alarm_raw']['old']) }}</strong>
+                            </td>
+                            <td id="alarmRawPct">
+                                @if($cleanupStats['alarm_raw']['total'] > 0)
+                                    {{ number_format(($cleanupStats['alarm_raw']['old'] / $cleanupStats['alarm_raw']['total']) * 100, 1) }}%
+                                @else
+                                    0%
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>gps_tracks_raw</strong></td>
+                            <td id="gpsRawTotal">{{ number_format($cleanupStats['gps_raw']['total']) }}</td>
+                            <td id="gpsRawOld" class="text-danger">
+                                <strong>{{ number_format($cleanupStats['gps_raw']['old']) }}</strong>
+                            </td>
+                            <td id="gpsRawPct">
+                                @if($cleanupStats['gps_raw']['total'] > 0)
+                                    {{ number_format(($cleanupStats['gps_raw']['old'] / $cleanupStats['gps_raw']['total']) * 100, 1) }}%
+                                @else
+                                    0%
+                                @endif
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Activity Log -->
     <div class="card">
         <div class="card-header">
@@ -121,6 +252,8 @@ $(document).ready(function() {
     // Auto-refresh status every 5 seconds
     setInterval(refreshStatus, 5000);
 
+    // ========== QUEUE WORKER HANDLERS ==========
+    
     // Start Queue Worker
     $('#startQueueBtn').click(function() {
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
@@ -130,9 +263,7 @@ $(document).ready(function() {
         })
         .done(function(response) {
             addLog(response.message, 'success');
-            // Immediately update status
             $('#queueStatus').html('<span class="badge bg-success">Running</span>');
-            // Wait 2 seconds then refresh from server
             setTimeout(function() {
                 refreshStatus();
                 addLog('Status updated', 'info');
@@ -155,9 +286,7 @@ $(document).ready(function() {
         })
         .done(function(response) {
             addLog(response.message, 'warning');
-            // Immediately update status
             $('#queueStatus').html('<span class="badge bg-secondary">Stopped</span>');
-            // Wait 1 second then refresh from server
             setTimeout(function() {
                 refreshStatus();
                 addLog('Status updated', 'info');
@@ -169,6 +298,8 @@ $(document).ready(function() {
         });
     });
 
+    // ========== REALTIME PULL HANDLERS ==========
+    
     // Start Realtime Pull
     $('#startRealtimeBtn').click(function() {
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
@@ -178,9 +309,7 @@ $(document).ready(function() {
         })
         .done(function(response) {
             addLog(response.message, 'success');
-            // Immediately update status
             $('#realtimeStatus').html('<span class="badge bg-success">Running</span>');
-            // Wait 2 seconds then refresh from server
             setTimeout(function() {
                 refreshStatus();
                 addLog('Status updated', 'info');
@@ -203,9 +332,7 @@ $(document).ready(function() {
         })
         .done(function(response) {
             addLog(response.message, 'warning');
-            // Immediately update status
             $('#realtimeStatus').html('<span class="badge bg-secondary">Stopped</span>');
-            // Wait 1 second then refresh from server
             setTimeout(function() {
                 refreshStatus();
                 addLog('Status updated', 'info');
@@ -217,6 +344,81 @@ $(document).ready(function() {
         });
     });
 
+    // ========== CLEANUP HANDLERS ==========
+    
+    // Save cleanup settings
+    $('#cleanupSettingsForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '{{ route("admin.system-control.update-cleanup") }}',
+            method: 'POST',
+            data: $(this).serialize(),
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                addLog(response.message, 'success');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message,
+                    timer: 2000
+                });
+                refreshStatus();
+            },
+            error: function(xhr) {
+                addLog('Failed to update cleanup settings', 'danger');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Failed to update settings'
+                });
+            }
+        });
+    });
+
+    // Run cleanup manually
+    $('#btnRunCleanup').on('click', function() {
+        Swal.fire({
+            title: 'Run Cleanup Now?',
+            text: 'This will delete old raw data according to your retention settings.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, run cleanup',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ route("admin.system-control.run-cleanup") }}',
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        addLog('Cleanup job started', 'success');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Cleanup Started',
+                            text: response.message
+                        });
+                        setTimeout(refreshStatus, 5000);
+                    },
+                    error: function(xhr) {
+                        addLog('Failed to run cleanup', 'danger');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Failed to run cleanup'
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    // ========== STATUS REFRESH ==========
+    
     // Refresh status
     function refreshStatus() {
         $.get('{{ route('admin.system-control.status') }}')
@@ -230,6 +432,36 @@ $(document).ready(function() {
             $('#realtimeStatus').html('<span class="badge ' + data.realtime.badge_class + '">' + data.realtime.badge_text + '</span>');
             $('#startRealtimeBtn').prop('disabled', data.realtime.running).html('<i class="fas fa-play"></i> Start Realtime Pull');
             $('#stopRealtimeBtn').prop('disabled', !data.realtime.running).html('<i class="fas fa-stop"></i> Stop Realtime Pull');
+            
+            // Update Cleanup status
+            if (data.cleanup) {
+                const enabled = data.cleanup.settings.cleanup_enabled;
+                $('#cleanupStatusBadge span')
+                    .removeClass('bg-success bg-danger')
+                    .addClass(enabled ? 'bg-success' : 'bg-danger')
+                    .text(enabled ? 'ENABLED' : 'DISABLED');
+                
+                $('#cleanupLastRun').text(data.cleanup.settings.cleanup_last_run || 'Never');
+                
+                // Update stats
+                const stats = data.cleanup.stats;
+                $('#alarmRawTotal').text(stats.alarm_raw.total.toLocaleString());
+                $('#alarmRawOld').html('<strong>' + stats.alarm_raw.old.toLocaleString() + '</strong>');
+                $('#gpsRawTotal').text(stats.gps_raw.total.toLocaleString());
+                $('#gpsRawOld').html('<strong>' + stats.gps_raw.old.toLocaleString() + '</strong>');
+                
+                // Update percentages
+                if (stats.alarm_raw.total > 0) {
+                    const pct = (stats.alarm_raw.old / stats.alarm_raw.total * 100).toFixed(1);
+                    $('#alarmRawPct').text(pct + '%');
+                }
+                if (stats.gps_raw.total > 0) {
+                    const pct = (stats.gps_raw.old / stats.gps_raw.total * 100).toFixed(1);
+                    $('#gpsRawPct').text(pct + '%');
+                }
+                
+                $('#cutoffDate').text(stats.cutoff_date);
+            }
         });
     }
 

@@ -81,12 +81,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/gps-track-pull/statistics', [DataPullController::class, 'gpsTrackStatistics'])->name('gps-track-pull.statistics');
     Route::get('/gps-track-pull/devices', [DataPullController::class, 'getActiveDevices'])->name('gps-track-pull.devices');
 
-    // System Control (Queue & Realtime Pull)
+    // System Control (Queue & Realtime Pull & Cleanup)
     Route::get('/system-control', [App\Http\Controllers\SystemControlController::class, 'index'])->name('system-control.index');
     Route::post('/system-control/queue/start', [App\Http\Controllers\SystemControlController::class, 'startQueueWorker'])->name('system-control.queue.start');
     Route::post('/system-control/queue/stop', [App\Http\Controllers\SystemControlController::class, 'stopQueueWorker'])->name('system-control.queue.stop');
     Route::post('/system-control/realtime/start', [App\Http\Controllers\SystemControlController::class, 'startRealtimePull'])->name('system-control.realtime.start');
     Route::post('/system-control/realtime/stop', [App\Http\Controllers\SystemControlController::class, 'stopRealtimePull'])->name('system-control.realtime.stop');
+    Route::post('/system-control/cleanup/update', [App\Http\Controllers\SystemControlController::class, 'updateCleanupSettings'])->name('system-control.update-cleanup');
+    Route::post('/system-control/cleanup/run', [App\Http\Controllers\SystemControlController::class, 'runCleanupManually'])->name('system-control.run-cleanup');
     Route::get('/system-control/status', [App\Http\Controllers\SystemControlController::class, 'getStatus'])->name('system-control.status');
 
     // System Health Check
@@ -95,10 +97,4 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/system-health/migrate', [SystemHealthController::class, 'runMigration'])->name('system-health.migrate');
     Route::post('/system-health/heal', [SystemHealthController::class, 'manualHeal'])->name('system-health.heal');
     Route::get('/system-health/logs', [SystemHealthController::class, 'getHealingLogs'])->name('system-health.logs');
-
-    // System Control Center (Cleanup Management)
-    Route::get('/system-control-center', [App\Http\Controllers\Admin\SystemControlController::class, 'index'])->name('system-control-center.index');
-    Route::post('/system-control-center/cleanup/update', [App\Http\Controllers\Admin\SystemControlController::class, 'updateCleanupSettings'])->name('system-control.update-cleanup');
-    Route::post('/system-control-center/cleanup/run', [App\Http\Controllers\Admin\SystemControlController::class, 'runCleanupManually'])->name('system-control.run-cleanup');
-    Route::get('/system-control-center/status', [App\Http\Controllers\Admin\SystemControlController::class, 'getStatus'])->name('system-control.status');
 });
