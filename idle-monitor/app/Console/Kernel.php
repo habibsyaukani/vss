@@ -4,6 +4,7 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\DB;
 
 class Kernel extends ConsoleKernel
 {
@@ -88,11 +89,19 @@ class Kernel extends ConsoleKernel
         // Setting bisa diubah di System Control Center
         // Default: Monthly pada tanggal 1 jam 02:00 AM
         $schedule->call(function () {
-            $cleanupSchedule = \App\Models\SystemSetting::get('cleanup_schedule', 'monthly');
-            
-            // Dispatch job hanya jika cleanup enabled
-            if (\App\Models\SystemSetting::isCleanupEnabled()) {
-                \App\Jobs\CleanupOldRawDataJob::dispatch();
+            try {
+                // Check jika tabel system_settings ada
+                if (!DB::getSchemaBuilder()->hasTable('system_settings')) {
+                    return; // Skip jika tabel belum ada
+                }
+
+                // Dispatch job hanya jika cleanup enabled
+                if (\App\Models\SystemSetting::isCleanupEnabled()) {
+                    \App\Jobs\CleanupOldRawDataJob::dispatch();
+                }
+            } catch (\Exception $e) {
+                // Silent fail - jangan break scheduler
+                \Log::error('Cleanup scheduler error: ' . $e->getMessage());
             }
         })->cron($this->getCleanupCron())->description('Cleanup old raw data (based on system settings)');
 
@@ -131,13 +140,22 @@ class Kernel extends ConsoleKernel
      */
     private function getCleanupCron(): string
     {
-        $schedule = \App\Models\SystemSetting::get('cleanup_schedule', 'monthly');
-        
-        return match($schedule) {
-            'daily' => '0 2 * * *',           // Every day at 02:00
-            'weekly' => '0 2 * * 0',          // Every Sunday at 02:00
-            'monthly' => '0 2 1 * *',         // 1st of month at 02:00
-            default => '0 2 1 * *',           // Default: monthly
-        };
+        try {
+            // Check jika tabel system_settings ada
+            if (!DB::getSchemaBuilder()->hasTable('system_settings')) {
+                return '0 2 1 * *'; // Default: monthly
+            }
+
+            $schedule = \App\Models\SystemSetting::get('cleanup_schedule', 'monthly');
+            
+            return match($schedule) {
+                'daily' => '0 2 * * *',           // Every day at 02:00
+                'weekly' => '0 2 * * 0',          // Every Sunday at 02:00
+                'monthly' => '0 2 1 * *',         // 1st of month at 02:00
+                default => '0 2 1 * *',           // Default: monthly
+            };
+        } catch (\Exception $e) {
+            return '0 2 1 * *'; // Default: monthly jika error
+        }
     }
 }

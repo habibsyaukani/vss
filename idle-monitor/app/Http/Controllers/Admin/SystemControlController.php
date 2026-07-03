@@ -16,6 +16,11 @@ class SystemControlController extends Controller
      */
     public function index()
     {
+        // Check jika tabel system_settings ada, kalau belum run migration
+        if (!DB::getSchemaBuilder()->hasTable('system_settings')) {
+            return view('admin.system-control-migration-needed');
+        }
+
         $settings = [
             'cleanup_enabled' => SystemSetting::get('cleanup_enabled', true),
             'cleanup_retention_days' => SystemSetting::get('cleanup_retention_days', 30),
