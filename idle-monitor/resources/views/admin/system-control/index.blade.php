@@ -253,6 +253,9 @@
 <script>
 $(document).ready(function() {
     console.log('System Control page loaded');
+    console.log('jQuery version:', $.fn.jquery);
+    console.log('SweetAlert available:', typeof Swal !== 'undefined');
+    console.log('CSRF token:', $('meta[name="csrf-token"]').attr('content'));
 
     // Auto-refresh status every 5 seconds
     setInterval(refreshStatus, 5000);
@@ -355,6 +358,11 @@ $(document).ready(function() {
     $('#cleanupSettingsForm').on('submit', function(e) {
         e.preventDefault();
         
+        // Disable submit button
+        $(this).find('button[type="submit"]')
+            .prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        
         $.ajax({
             url: '{{ route("admin.system-control.update-cleanup") }}',
             method: 'POST',
@@ -363,64 +371,131 @@ $(document).ready(function() {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
-                addLog(response.message, 'success');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: response.message,
-                    timer: 2000
-                });
+                addLog(response.message || 'Settings updated successfully', 'success');
+                
+                // Show success message
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message || 'Cleanup settings updated successfully',
+                        timer: 2000
+                    });
+                } else {
+                    alert('SUCCESS: ' + (response.message || 'Cleanup settings updated successfully'));
+                }
+                
                 refreshStatus();
+                
+                // Re-enable button
+                $('#cleanupSettingsForm button[type="submit"]')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-save"></i> Save Settings');
             },
             error: function(xhr) {
-                addLog('Failed to update cleanup settings', 'danger');
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: xhr.responseJSON?.message || 'Failed to update settings'
-                });
+                const errorMsg = xhr.responseJSON?.message || 'Failed to update settings';
+                addLog('Failed to update cleanup settings: ' + errorMsg, 'danger');
+                
+                // Show error message
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMsg
+                    });
+                } else {
+                    alert('ERROR: ' + errorMsg);
+                }
+                
+                // Re-enable button
+                $('#cleanupSettingsForm button[type="submit"]')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-save"></i> Save Settings');
             }
         });
     });
 
     // Run cleanup manually
     $('#btnRunCleanup').on('click', function() {
-        Swal.fire({
-            title: 'Run Cleanup Now?',
-            text: 'This will delete old raw data according to your retention settings.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, run cleanup',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '{{ route("admin.system-control.run-cleanup") }}',
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function(response) {
-                        addLog('Cleanup job started', 'success');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Cleanup Started',
-                            text: response.message
-                        });
-                        setTimeout(refreshStatus, 5000);
-                    },
-                    error: function(xhr) {
-                        addLog('Failed to run cleanup', 'danger');
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: xhr.responseJSON?.message || 'Failed to run cleanup'
-                        });
-                    }
-                });
+        // Check if SweetAlert is available, fallback to confirm()
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Run Cleanup Now?',
+                text: 'This will delete old raw data according to your retention settings.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, run cleanup',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    executeCleanup();
+                }
+            });
+        } else {
+            // Fallback to native confirm
+            if (confirm('Run Cleanup Now?\n\nThis will delete old raw data according to your retention settings.\n\nAre you sure?')) {
+                executeCleanup();
+            }
+        }
+    });
+    
+    // Execute cleanup function
+    function executeCleanup() {
+        // Disable button and show loading
+        $('#btnRunCleanup')
+            .prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i> Running...');
+        
+        $.ajax({
+            url: '{{ route("admin.system-control.run-cleanup") }}',
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                addLog('Cleanup job dispatched successfully', 'success');
+                
+                // Show success message
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cleanup Started',
+                        text: response.message || 'Cleanup job has been dispatched to queue.'
+                    });
+                } else {
+                    alert('SUCCESS: ' + (response.message || 'Cleanup job has been dispatched to queue.'));
+                }
+                
+                // Re-enable button
+                $('#btnRunCleanup')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-play"></i> Run Cleanup Now');
+                
+                // Refresh status after 5 seconds
+                setTimeout(refreshStatus, 5000);
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'Failed to run cleanup. Check logs for details.';
+                addLog('Failed to run cleanup: ' + errorMsg, 'danger');
+                
+                // Show error message
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMsg
+                    });
+                } else {
+                    alert('ERROR: ' + errorMsg);
+                }
+                
+                // Re-enable button
+                $('#btnRunCleanup')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-play"></i> Run Cleanup Now');
             }
         });
-    });
+    }
 
     // ========== STATUS REFRESH ==========
     
