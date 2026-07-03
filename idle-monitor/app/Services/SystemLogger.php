@@ -34,6 +34,20 @@ class SystemLogger
     }
 
     /**
+     * Log informational message
+     */
+    public static function info(string $category, string $message, array $context = []): void
+    {
+        $timestamp = Carbon::now()->format('Y-m-d H:i:s');
+        $contextStr = !empty($context) ? ' | ' . json_encode($context) : '';
+        
+        $logMessage = "[{$timestamp}] ℹ️  [{$category}] {$message}{$contextStr}";
+        
+        Log::channel('single')->info($logMessage);
+        static::writeToCustomLog($logMessage);
+    }
+
+    /**
      * Log warning (non-critical issue)
      */
     public static function warning(string $category, string $message, array $context = []): void
@@ -53,16 +67,16 @@ class SystemLogger
     public static function error(
         string $category,
         string $message,
-        string $troubleshooting,
         array $context = [],
+        string $troubleshooting = '',
         ?\Throwable $exception = null
     ): void {
         $timestamp = Carbon::now()->format('Y-m-d H:i:s');
         $contextStr = !empty($context) ? ' | Context: ' . json_encode($context) : '';
         $exceptionStr = $exception ? ' | Exception: ' . $exception->getMessage() : '';
+        $troubleshootingStr = $troubleshooting ? "\n   💡 TROUBLESHOOTING: {$troubleshooting}" : '';
         
-        $logMessage = "[{$timestamp}] ❌ [{$category}] {$message}{$contextStr}{$exceptionStr}\n" .
-                     "   💡 TROUBLESHOOTING: {$troubleshooting}";
+        $logMessage = "[{$timestamp}] ❌ [{$category}] {$message}{$contextStr}{$exceptionStr}{$troubleshootingStr}";
         
         Log::channel('single')->error($logMessage);
         static::writeToCustomLog($logMessage);
