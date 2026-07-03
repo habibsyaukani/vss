@@ -349,6 +349,168 @@ class SystemControlController extends Controller
     }
 
     /**
+     * Get available months for manual cleanup
+     * Returns months that are completed + 2 days buffer
+     */
+    public function getAvailableMonths()
+    {
+        try {
+            $today = now();
+            $availableMonths = [];
+            
+            // Get earliest data date from database
+            $earliestAlarm = DB::table('alarm_raw')->min('created_at');
+            $earliestGps = DB::table('gps_tracks_raw')->min('created_at');
+            
+            $earliestDate = $earliestAlarm;
+            if ($earliestGps && (!$earliestDate || $earliestGps < $earliestDate)) {
+                $earliestDate = $earliestGps;
+            }
+            
+            if (!$earliestDate) {
+                return response()->json(['months' => []]);
+            }
+            
+            $startDate = \Carbon\Carbon::parse($earliestDate)->startOfMonth();
+            $currentMonth = $today->copy()->startOfMonth();
+            
+            // Loop through months from earliest to current
+            while ($startDate->lte($currentMonth)) {
+                $monthEnd = $startDate->copy()->endOfMonth();
+                $bufferDate = $monthEnd->copy()->addDays(2); // +2 days buffer
+                
+                // Only show months that have passed + 2 days buffer
+                if ($today->gte($bufferDate)) {
+                    // Get count for this month
+                    $alarmCount = DB::table('alarm_raw')
+                        ->whereYear('created_at', $startDate->year)
+                        ->whereMonth('created_at', $startDate->month)
+                        ->count();
+                    
+                    $gpsCount = 0;
+                    if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
+                        // Use sample for large tables
+                        $gpsCount = DB::table('gps_tracks_raw')
+                            ->whereYear('created_at', $startDate->year)
+                            ->whereMonth('created_at', $startDate->month)
+                            ->limit(10000)
+                            ->count();
+                        
+                        if ($gpsCount >= 10000) {
+                            $gpsCount = $gpsCount . '+'; // Indicate more than sample
+                        }
+                    }
+                    
+                    $availableMonths[] = [
+                        'year' => $startDate->year,
+                        'month' => $startDate->month,
+                        'display' => $startDate->format('F Y'),
+                        'alarm_count' => $alarmCount,
+                        'gps_count' => $gpsCount,
+                        'total_estimate' => is_numeric($gpsCount) ? $alarmCount + $gpsCount : $alarmCount,
+                    ];
+                }
+                
+                $startDate->addMonth();
+            }
+            
+            return response()->json(['months' => array_reverse($availableMonths)]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to get available months: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Preview cleanup for specific month
+     */
+    public function previewMonthCleanup(Request $request)
+    {
+        $validated = $request->validate([
+            'year' => 'required|integer|min:2020|max:2100',
+            'month' => 'required|integer|min:1|max:12',
+        ]);
+        
+        try {
+            $year = $validated['year'];
+            $month = $validated['month'];
+            
+            $monthStart = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $monthEnd = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth();
+            
+            // Count data in this month
+            $alarmCount = DB::table('alarm_raw')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->count();
+            
+            $gpsCount = 0;
+            if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
+                $gpsCount = DB::table('gps_tracks_raw')
+                    ->whereBetween('created_at', [$monthStart, $monthEnd])
+                    ->count();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'month_display' => $monthStart->format('F Y'),
+                'date_range' => $monthStart->format('Y-m-d') . ' to ' . $monthEnd->format('Y-m-d'),
+                'alarm_raw_count' => $alarmCount,
+                'gps_raw_count' => $gpsCount,
+                'total_count' => $alarmCount + $gpsCount,
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Execute cleanup for specific month
+     */
+    public function cleanupByMonth(Request $request)
+    {
+        $validated = $request->validate([
+            'year' => 'required|integer|min:2020|max:2100',
+            'month' => 'required|integer|min:1|max:12',
+        ]);
+        
+        try {
+            $year = $validated['year'];
+            $month = $validated['month'];
+            
+            // Validate: month must be completed + 2 days buffer
+            $monthEnd = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth();
+            $bufferDate = $monthEnd->copy()->addDays(2);
+            
+            if (now()->lt($bufferDate)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This month cannot be cleaned yet. Must wait until ' . $bufferDate->format('Y-m-d') . ' (2 days after month end)',
+                ], 422);
+            }
+            
+            // Dispatch job
+            \App\Jobs\CleanupByMonthJob::dispatch($year, $month);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Cleanup job for ' . $monthEnd->format('F Y') . ' has been dispatched to queue.',
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to dispatch month cleanup: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to dispatch cleanup job: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Check if Queue Worker is running
      */
     private function isQueueWorkerRunning()

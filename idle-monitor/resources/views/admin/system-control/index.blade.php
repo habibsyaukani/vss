@@ -235,6 +235,60 @@
         </div>
     </div>
 
+    <!-- Manual Cleanup by Month Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="fas fa-calendar-times"></i> Manual Cleanup by Month</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> 
+                <strong>For Past Months Only:</strong> Use this to cleanup specific months that have already passed (+ 2 days buffer).<br>
+                <strong>Example:</strong> Today is {{ now()->format('d M Y') }} → You can cleanup months before {{ now()->subDays(2)->format('F Y') }}.
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label><strong>Select Month to Cleanup</strong></label>
+                        <select id="selectMonth" class="form-control">
+                            <option value="">-- Select Month --</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Only months that have passed + 2 days buffer are shown
+                        </small>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label><strong>Actions</strong></label>
+                        <div class="d-grid gap-2">
+                            <button type="button" id="btnPreviewMonth" class="btn btn-info btn-lg" disabled>
+                                <i class="fas fa-eye"></i> Preview Data
+                            </button>
+                            <button type="button" id="btnDeleteMonth" class="btn btn-danger btn-lg" disabled>
+                                <i class="fas fa-trash"></i> Delete Selected Month
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Results -->
+            <div id="monthPreview" class="mt-3" style="display: none;">
+                <h6><i class="fas fa-info-circle"></i> Preview</h6>
+                <div class="alert alert-info">
+                    <strong>Month:</strong> <span id="previewMonth"></span><br>
+                    <strong>Date Range:</strong> <span id="previewDateRange"></span><br>
+                    <strong>alarm_raw records:</strong> <span id="previewAlarmCount"></span><br>
+                    <strong>gps_tracks_raw records:</strong> <span id="previewGpsCount"></span><br>
+                    <strong class="text-danger">Total records to delete:</strong> <span id="previewTotalCount" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Activity Log -->
     <div class="card">
         <div class="card-header">
@@ -259,6 +313,9 @@ $(document).ready(function() {
 
     // Auto-refresh status every 5 seconds
     setInterval(refreshStatus, 5000);
+    
+    // Load available months on page load
+    loadAvailableMonths();
 
     // ========== QUEUE WORKER HANDLERS ==========
     
@@ -558,6 +615,126 @@ $(document).ready(function() {
         const logEntry = `<div style="color: ${colors[type]};">[${time}] ${message}</div>`;
         $('#activityLog').prepend(logEntry);
     }
+    
+    // ========== MANUAL CLEANUP BY MONTH ==========
+    
+    // Load available months
+    function loadAvailableMonths() {
+        $.get('{{ route("admin.system-control.months.available") }}')
+            .done(function(data) {
+                const select = $('#selectMonth');
+                select.empty().append('<option value="">-- Select Month --</option>');
+                
+                if (data.months && data.months.length > 0) {
+                    data.months.forEach(function(month) {
+                        const optionText = `${month.display} (${month.total_estimate.toLocaleString()} records)`;
+                        const optionValue = JSON.stringify({year: month.year, month: month.month});
+                        select.append(`<option value='${optionValue}'>${optionText}</option>`);
+                    });
+                    
+                    addLog(`Loaded ${data.months.length} months available for cleanup`, 'info');
+                } else {
+                    select.append('<option value="">No months available for cleanup</option>');
+                    addLog('No months available for cleanup yet', 'warning');
+                }
+            })
+            .fail(function(xhr) {
+                addLog('Failed to load available months: ' + (xhr.responseJSON?.message || 'Unknown error'), 'danger');
+            });
+    }
+    
+    // Month selection changed
+    $('#selectMonth').on('change', function() {
+        const value = $(this).val();
+        if (value) {
+            $('#btnPreviewMonth, #btnDeleteMonth').prop('disabled', false);
+            $('#monthPreview').hide();
+        } else {
+            $('#btnPreviewMonth, #btnDeleteMonth').prop('disabled', true);
+            $('#monthPreview').hide();
+        }
+    });
+    
+    // Preview month data
+    $('#btnPreviewMonth').on('click', function() {
+        const monthData = JSON.parse($('#selectMonth').val());
+        
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Loading...');
+        
+        $.ajax({
+            url: '{{ route("admin.system-control.months.preview") }}',
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            data: monthData,
+            success: function(response) {
+                $('#previewMonth').text(response.month_display);
+                $('#previewDateRange').text(response.date_range);
+                $('#previewAlarmCount').text(response.alarm_raw_count.toLocaleString());
+                $('#previewGpsCount').text(response.gps_raw_count.toLocaleString());
+                $('#previewTotalCount').text(response.total_count.toLocaleString());
+                $('#monthPreview').show();
+                
+                addLog('Preview loaded for ' + response.month_display, 'success');
+                
+                $('#btnPreviewMonth').prop('disabled', false).html('<i class="fas fa-eye"></i> Preview Data');
+            },
+            error: function(xhr) {
+                addLog('Failed to preview: ' + (xhr.responseJSON?.message || 'Unknown error'), 'danger');
+                alert('ERROR: ' + (xhr.responseJSON?.message || 'Failed to preview'));
+                $('#btnPreviewMonth').prop('disabled', false).html('<i class="fas fa-eye"></i> Preview Data');
+            }
+        });
+    });
+    
+    // Delete month data
+    $('#btnDeleteMonth').on('click', function() {
+        const monthData = JSON.parse($('#selectMonth').val());
+        const monthText = $('#selectMonth option:selected').text();
+        
+        const confirmMsg = `DELETE ALL DATA FOR ${monthText}?\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?`;
+        
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+        
+        // Double confirmation
+        if (!confirm('FINAL CONFIRMATION: Delete this month\'s data permanently?')) {
+            return;
+        }
+        
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+        
+        $.ajax({
+            url: '{{ route("admin.system-control.months.cleanup") }}',
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            data: monthData,
+            success: function(response) {
+                addLog('Cleanup job dispatched for ' + monthText, 'success');
+                alert('SUCCESS: ' + response.message);
+                
+                // Reset UI
+                $('#btnDeleteMonth').prop('disabled', false).html('<i class="fas fa-trash"></i> Delete Selected Month');
+                $('#selectMonth').val('').trigger('change');
+                $('#monthPreview').hide();
+                
+                // Reload available months
+                setTimeout(loadAvailableMonths, 2000);
+                
+                // Refresh status
+                setTimeout(refreshStatus, 5000);
+            },
+            error: function(xhr) {
+                addLog('Failed to cleanup: ' + (xhr.responseJSON?.message || 'Unknown error'), 'danger');
+                alert('ERROR: ' + (xhr.responseJSON?.message || 'Failed to cleanup'));
+                $('#btnDeleteMonth').prop('disabled', false).html('<i class="fas fa-trash"></i> Delete Selected Month');
+            }
+        });
+    });
 });
 </script>
 @endpush

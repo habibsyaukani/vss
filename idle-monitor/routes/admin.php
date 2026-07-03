@@ -90,6 +90,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/system-control/cleanup/update', [App\Http\Controllers\SystemControlController::class, 'updateCleanupSettings'])->name('system-control.update-cleanup');
     Route::post('/system-control/cleanup/run', [App\Http\Controllers\SystemControlController::class, 'runCleanupManually'])->name('system-control.run-cleanup');
     Route::get('/system-control/status', [App\Http\Controllers\SystemControlController::class, 'getStatus'])->name('system-control.status');
+    
+    // Manual Cleanup by Month
+    Route::get('/system-control/months/available', [App\Http\Controllers\SystemControlController::class, 'getAvailableMonths'])->name('system-control.months.available');
+    Route::post('/system-control/months/preview', [App\Http\Controllers\SystemControlController::class, 'previewMonthCleanup'])->name('system-control.months.preview');
+    Route::post('/system-control/months/cleanup', [App\Http\Controllers\SystemControlController::class, 'cleanupByMonth'])->name('system-control.months.cleanup');
 
     // System Health Check
     Route::get('/system-health', [SystemHealthController::class, 'index'])->name('system-health.index');
