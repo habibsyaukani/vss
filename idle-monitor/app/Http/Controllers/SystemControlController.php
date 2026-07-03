@@ -23,7 +23,7 @@ class SystemControlController extends Controller
             // Get cleanup settings with try-catch for safety
             try {
                 $cleanupSettings = [
-                    'cleanup_enabled' => SystemSetting::get('cleanup_enabled', true),
+                    'cleanup_enabled' => SystemSetting::get('cleanup_enabled', false), // Default: DISABLED (user must enable manually)
                     'cleanup_retention_days' => SystemSetting::get('cleanup_retention_days', 30),
                     'cleanup_last_run' => SystemSetting::get('cleanup_last_run'),
                     'cleanup_schedule' => SystemSetting::get('cleanup_schedule', 'monthly'),
@@ -31,7 +31,7 @@ class SystemControlController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to get cleanup settings: ' . $e->getMessage());
                 $cleanupSettings = [
-                    'cleanup_enabled' => true,
+                    'cleanup_enabled' => false, // Default: DISABLED
                     'cleanup_retention_days' => 30,
                     'cleanup_last_run' => null,
                     'cleanup_schedule' => 'monthly',

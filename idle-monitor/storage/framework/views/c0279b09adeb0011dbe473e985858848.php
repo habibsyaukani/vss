@@ -1,8 +1,8 @@
-@extends('admin.layouts.app')
 
-@section('title', 'System Control')
 
-@section('content')
+<?php $__env->startSection('title', 'System Control'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <h3 class="mb-4"><i class="fas fa-cogs"></i> System Control Center</h3>
 
@@ -20,20 +20,21 @@
                 <div class="col-md-4">
                     <h6>Status:</h6>
                     <h3 id="queueStatus">
-                        <span class="badge {{ $queueStatus['badge_class'] }}">
-                            {{ $queueStatus['badge_text'] }}
+                        <span class="badge <?php echo e($queueStatus['badge_class']); ?>">
+                            <?php echo e($queueStatus['badge_text']); ?>
+
                         </span>
                     </h3>
-                    @if($queueStatus['started_at'])
-                        <small class="text-muted">Started at: {{ $queueStatus['started_at'] }}</small>
-                    @endif
+                    <?php if($queueStatus['started_at']): ?>
+                        <small class="text-muted">Started at: <?php echo e($queueStatus['started_at']); ?></small>
+                    <?php endif; ?>
                 </div>
                 <div class="col-md-8">
                     <div class="d-grid gap-2 d-md-flex">
-                        <button id="startQueueBtn" class="btn btn-success btn-lg" {{ $queueStatus['running'] ? 'disabled' : '' }}>
+                        <button id="startQueueBtn" class="btn btn-success btn-lg" <?php echo e($queueStatus['running'] ? 'disabled' : ''); ?>>
                             <i class="fas fa-play"></i> Start Queue Worker
                         </button>
-                        <button id="stopQueueBtn" class="btn btn-danger btn-lg" {{ !$queueStatus['running'] ? 'disabled' : '' }}>
+                        <button id="stopQueueBtn" class="btn btn-danger btn-lg" <?php echo e(!$queueStatus['running'] ? 'disabled' : ''); ?>>
                             <i class="fas fa-stop"></i> Stop Queue Worker
                         </button>
                     </div>
@@ -57,35 +58,38 @@
                 <div class="col-md-4">
                     <h6>Status:</h6>
                     <h3 id="realtimeStatus">
-                        <span class="badge {{ $realtimeStatus['badge_class'] }}">
-                            {{ $realtimeStatus['badge_text'] }}
+                        <span class="badge <?php echo e($realtimeStatus['badge_class']); ?>">
+                            <?php echo e($realtimeStatus['badge_text']); ?>
+
                         </span>
                     </h3>
-                    @if($realtimeStatus['started_at'])
-                        <small class="text-muted d-block">Started: {{ $realtimeStatus['started_at'] }}</small>
-                    @endif
-                    @php
+                    <?php if($realtimeStatus['started_at']): ?>
+                        <small class="text-muted d-block">Started: <?php echo e($realtimeStatus['started_at']); ?></small>
+                    <?php endif; ?>
+                    <?php
                         $lastSuccess = \App\Models\SystemSetting::get('realtime_pull_last_success_at');
                         $lastError = \App\Models\SystemSetting::get('realtime_pull_last_error');
                         $lastErrorAt = \App\Models\SystemSetting::get('realtime_pull_last_error_at');
-                    @endphp
-                    @if($lastSuccess)
+                    ?>
+                    <?php if($lastSuccess): ?>
                         <small class="text-success d-block">
-                            <i class="fas fa-check-circle"></i> Last success: {{ \Carbon\Carbon::parse($lastSuccess)->diffForHumans() }}
+                            <i class="fas fa-check-circle"></i> Last success: <?php echo e(\Carbon\Carbon::parse($lastSuccess)->diffForHumans()); ?>
+
                         </small>
-                    @endif
-                    @if($lastError && $lastErrorAt)
-                        <small class="text-danger d-block" title="{{ $lastError }}">
-                            <i class="fas fa-exclamation-circle"></i> Last error: {{ \Carbon\Carbon::parse($lastErrorAt)->diffForHumans() }}
+                    <?php endif; ?>
+                    <?php if($lastError && $lastErrorAt): ?>
+                        <small class="text-danger d-block" title="<?php echo e($lastError); ?>">
+                            <i class="fas fa-exclamation-circle"></i> Last error: <?php echo e(\Carbon\Carbon::parse($lastErrorAt)->diffForHumans()); ?>
+
                         </small>
-                    @endif
+                    <?php endif; ?>
                 </div>
                 <div class="col-md-8">
                     <div class="d-grid gap-2 d-md-flex">
-                        <button id="startRealtimeBtn" class="btn btn-success btn-lg" {{ $realtimeStatus['running'] ? 'disabled' : '' }}>
+                        <button id="startRealtimeBtn" class="btn btn-success btn-lg" <?php echo e($realtimeStatus['running'] ? 'disabled' : ''); ?>>
                             <i class="fas fa-play"></i> Start Realtime Pull
                         </button>
-                        <button id="stopRealtimeBtn" class="btn btn-danger btn-lg" {{ !$realtimeStatus['running'] ? 'disabled' : '' }}>
+                        <button id="stopRealtimeBtn" class="btn btn-danger btn-lg" <?php echo e(!$realtimeStatus['running'] ? 'disabled' : ''); ?>>
                             <i class="fas fa-stop"></i> Stop Realtime Pull
                         </button>
                     </div>
@@ -110,19 +114,18 @@
                 <div class="col-md-4">
                     <h6>Status:</h6>
                     <h3 id="cleanupStatusBadge">
-                        <span class="badge {{ $cleanupSettings['cleanup_enabled'] ? 'bg-success' : 'bg-danger' }}">
-                            {{ $cleanupSettings['cleanup_enabled'] ? 'ENABLED' : 'DISABLED' }}
+                        <span class="badge <?php echo e($cleanupSettings['cleanup_enabled'] ? 'bg-success' : 'bg-danger'); ?>">
+                            <?php echo e($cleanupSettings['cleanup_enabled'] ? 'ENABLED' : 'DISABLED'); ?>
+
                         </span>
                     </h3>
-                    <small class="text-muted">Last Run: <span id="cleanupLastRun">{{ $cleanupSettings['cleanup_last_run'] ?? 'Never' }}</span></small>
+                    <small class="text-muted">Last Run: <span id="cleanupLastRun"><?php echo e($cleanupSettings['cleanup_last_run'] ?? 'Never'); ?></span></small>
                 </div>
                 <div class="col-md-8">
                     <div class="alert alert-info mb-0">
                         <i class="fas fa-info-circle"></i> 
-                        <strong>What it does:</strong> Automatically deletes old raw data (alarm_raw, gps_tracks_raw) based on retention period.<br>
-                        <strong>How it works:</strong> Keeps last <strong>{{ $cleanupSettings['cleanup_retention_days'] }} days</strong> of data, deletes older data.<br>
-                        <strong>Example:</strong> Today is {{ now()->format('d M Y') }} → Data before {{ now()->subDays($cleanupSettings['cleanup_retention_days'])->format('d M Y') }} will be deleted.<br>
-                        <small class="text-muted"><em>Note: Only deletes data that has been processed to final tables (safe).</em></small>
+                        <strong>What it does:</strong> Automatically deletes old raw data (alarm_raw, gps_tracks_raw) based on retention period. 
+                        Only deletes data that has been processed to final tables.
                     </div>
                 </div>
             </div>
@@ -134,8 +137,8 @@
                         <div class="form-group">
                             <label><strong>Enable Automatic Cleanup</strong></label>
                             <select name="cleanup_enabled" class="form-control">
-                                <option value="1" {{ $cleanupSettings['cleanup_enabled'] ? 'selected' : '' }}>Enabled</option>
-                                <option value="0" {{ !$cleanupSettings['cleanup_enabled'] ? 'selected' : '' }}>Disabled</option>
+                                <option value="1" <?php echo e($cleanupSettings['cleanup_enabled'] ? 'selected' : ''); ?>>Enabled</option>
+                                <option value="0" <?php echo e(!$cleanupSettings['cleanup_enabled'] ? 'selected' : ''); ?>>Disabled</option>
                             </select>
                             <small class="form-text text-muted">
                                 Enable or disable automatic cleanup
@@ -147,10 +150,9 @@
                         <div class="form-group">
                             <label><strong>Retention Period (Days)</strong></label>
                             <input type="number" name="cleanup_retention_days" class="form-control" 
-                                   value="{{ $cleanupSettings['cleanup_retention_days'] }}" min="7" max="365">
+                                   value="<?php echo e($cleanupSettings['cleanup_retention_days']); ?>" min="7" max="365">
                             <small class="form-text text-muted">
-                                <strong>Keep last X days</strong> of data (7-365 days).<br>
-                                Example: 30 = Keep 30 days, delete older data.
+                                Keep data for this many days (7-365)
                             </small>
                         </div>
                     </div>
@@ -159,13 +161,12 @@
                         <div class="form-group">
                             <label><strong>Schedule</strong></label>
                             <select name="cleanup_schedule" class="form-control">
-                                <option value="daily" {{ $cleanupSettings['cleanup_schedule'] === 'daily' ? 'selected' : '' }}>Daily (Every day at 02:00 AM)</option>
-                                <option value="weekly" {{ $cleanupSettings['cleanup_schedule'] === 'weekly' ? 'selected' : '' }}>Weekly (Every Sunday at 02:00 AM)</option>
-                                <option value="monthly" {{ $cleanupSettings['cleanup_schedule'] === 'monthly' ? 'selected' : '' }}>Monthly (Every 1st of month at 02:00 AM)</option>
+                                <option value="daily" <?php echo e($cleanupSettings['cleanup_schedule'] === 'daily' ? 'selected' : ''); ?>>Daily (02:00 AM)</option>
+                                <option value="weekly" <?php echo e($cleanupSettings['cleanup_schedule'] === 'weekly' ? 'selected' : ''); ?>>Weekly (Sunday 02:00 AM)</option>
+                                <option value="monthly" <?php echo e($cleanupSettings['cleanup_schedule'] === 'monthly' ? 'selected' : ''); ?>>Monthly (1st, 02:00 AM)</option>
                             </select>
                             <small class="form-text text-muted">
-                                How often cleanup runs automatically.<br>
-                                <strong>Recommended:</strong> Monthly (for most cases)
+                                How often to run cleanup
                             </small>
                         </div>
                     </div>
@@ -185,11 +186,10 @@
 
             <!-- Statistics -->
             <div class="mt-4">
-                <h6><i class="fas fa-chart-bar"></i> Cleanup Preview (What Will Be Deleted)</h6>
-                <div class="alert alert-warning">
-                    <strong><i class="fas fa-calendar-times"></i> Cutoff Date:</strong> <span id="cutoffDate">{{ $cleanupStats['cutoff_date'] }}</span><br>
-                    <small>Data <strong>older than</strong> this date will be deleted. Data from this date onwards will be <strong>kept</strong>.</small>
-                </div>
+                <h6><i class="fas fa-chart-bar"></i> Cleanup Preview</h6>
+                <p class="text-muted">
+                    Data older than: <strong id="cutoffDate"><?php echo e($cleanupStats['cutoff_date']); ?></strong>
+                </p>
                 
                 <table class="table table-sm table-bordered">
                     <thead class="table-light">
@@ -203,30 +203,30 @@
                     <tbody id="cleanupStats">
                         <tr>
                             <td><strong>alarm_raw</strong></td>
-                            <td id="alarmRawTotal">{{ number_format($cleanupStats['alarm_raw']['total']) }}</td>
+                            <td id="alarmRawTotal"><?php echo e(number_format($cleanupStats['alarm_raw']['total'])); ?></td>
                             <td id="alarmRawOld" class="text-danger">
-                                <strong>{{ number_format($cleanupStats['alarm_raw']['old']) }}</strong>
+                                <strong><?php echo e(number_format($cleanupStats['alarm_raw']['old'])); ?></strong>
                             </td>
                             <td id="alarmRawPct">
-                                @if($cleanupStats['alarm_raw']['total'] > 0)
-                                    {{ number_format(($cleanupStats['alarm_raw']['old'] / $cleanupStats['alarm_raw']['total']) * 100, 1) }}%
-                                @else
+                                <?php if($cleanupStats['alarm_raw']['total'] > 0): ?>
+                                    <?php echo e(number_format(($cleanupStats['alarm_raw']['old'] / $cleanupStats['alarm_raw']['total']) * 100, 1)); ?>%
+                                <?php else: ?>
                                     0%
-                                @endif
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <tr>
                             <td><strong>gps_tracks_raw</strong></td>
-                            <td id="gpsRawTotal">{{ number_format($cleanupStats['gps_raw']['total']) }}</td>
+                            <td id="gpsRawTotal"><?php echo e(number_format($cleanupStats['gps_raw']['total'])); ?></td>
                             <td id="gpsRawOld" class="text-danger">
-                                <strong>{{ number_format($cleanupStats['gps_raw']['old']) }}</strong>
+                                <strong><?php echo e(number_format($cleanupStats['gps_raw']['old'])); ?></strong>
                             </td>
                             <td id="gpsRawPct">
-                                @if($cleanupStats['gps_raw']['total'] > 0)
-                                    {{ number_format(($cleanupStats['gps_raw']['old'] / $cleanupStats['gps_raw']['total']) * 100, 1) }}%
-                                @else
+                                <?php if($cleanupStats['gps_raw']['total'] > 0): ?>
+                                    <?php echo e(number_format(($cleanupStats['gps_raw']['old'] / $cleanupStats['gps_raw']['total']) * 100, 1)); ?>%
+                                <?php else: ?>
                                     0%
-                                @endif
+                                <?php endif; ?>
                             </td>
                         </tr>
                     </tbody>
@@ -247,9 +247,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     console.log('System Control page loaded');
@@ -263,8 +263,8 @@ $(document).ready(function() {
     $('#startQueueBtn').click(function() {
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
         
-        $.post('{{ route('admin.system-control.queue.start') }}', {
-            _token: '{{ csrf_token() }}'
+        $.post('<?php echo e(route('admin.system-control.queue.start')); ?>', {
+            _token: '<?php echo e(csrf_token()); ?>'
         })
         .done(function(response) {
             addLog(response.message, 'success');
@@ -286,8 +286,8 @@ $(document).ready(function() {
         
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Stopping...');
         
-        $.post('{{ route('admin.system-control.queue.stop') }}', {
-            _token: '{{ csrf_token() }}'
+        $.post('<?php echo e(route('admin.system-control.queue.stop')); ?>', {
+            _token: '<?php echo e(csrf_token()); ?>'
         })
         .done(function(response) {
             addLog(response.message, 'warning');
@@ -309,8 +309,8 @@ $(document).ready(function() {
     $('#startRealtimeBtn').click(function() {
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Starting...');
         
-        $.post('{{ route('admin.system-control.realtime.start') }}', {
-            _token: '{{ csrf_token() }}'
+        $.post('<?php echo e(route('admin.system-control.realtime.start')); ?>', {
+            _token: '<?php echo e(csrf_token()); ?>'
         })
         .done(function(response) {
             addLog(response.message, 'success');
@@ -332,8 +332,8 @@ $(document).ready(function() {
         
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Stopping...');
         
-        $.post('{{ route('admin.system-control.realtime.stop') }}', {
-            _token: '{{ csrf_token() }}'
+        $.post('<?php echo e(route('admin.system-control.realtime.stop')); ?>', {
+            _token: '<?php echo e(csrf_token()); ?>'
         })
         .done(function(response) {
             addLog(response.message, 'warning');
@@ -356,7 +356,7 @@ $(document).ready(function() {
         e.preventDefault();
         
         $.ajax({
-            url: '{{ route("admin.system-control.update-cleanup") }}',
+            url: '<?php echo e(route("admin.system-control.update-cleanup")); ?>',
             method: 'POST',
             data: $(this).serialize(),
             headers: {
@@ -395,7 +395,7 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '{{ route("admin.system-control.run-cleanup") }}',
+                    url: '<?php echo e(route("admin.system-control.run-cleanup")); ?>',
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -426,7 +426,7 @@ $(document).ready(function() {
     
     // Refresh status
     function refreshStatus() {
-        $.get('{{ route('admin.system-control.status') }}')
+        $.get('<?php echo e(route('admin.system-control.status')); ?>')
         .done(function(data) {
             // Update Queue Worker status
             $('#queueStatus').html('<span class="badge ' + data.queue.badge_class + '">' + data.queue.badge_text + '</span>');
@@ -485,4 +485,6 @@ $(document).ready(function() {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('admin.layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH G:\project\vss\idle-monitor\resources\views/admin/system-control/index.blade.php ENDPATH**/ ?>
