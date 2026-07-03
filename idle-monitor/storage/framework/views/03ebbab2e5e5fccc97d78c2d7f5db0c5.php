@@ -359,4 +359,4 @@
     <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html>
-<?php /**PATH G:\project\vss\idle-monitor\resources\views/admin/layouts/app.blade.php ENDPATH**/ ?>
+<?php /**PATH G:\project\vss\idle-monitor\resources\views\admin\layouts\app.blade.php ENDPATH**/ ?>

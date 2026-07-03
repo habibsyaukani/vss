@@ -16,21 +16,45 @@ class SystemControlController extends Controller
      */
     public function index()
     {
-        $queueStatus = $this->getQueueWorkerStatus();
-        $realtimeStatus = $this->getRealtimePullStatus();
-        
-        // Get cleanup settings
-        $cleanupSettings = [
-            'cleanup_enabled' => SystemSetting::get('cleanup_enabled', true),
-            'cleanup_retention_days' => SystemSetting::get('cleanup_retention_days', 30),
-            'cleanup_last_run' => SystemSetting::get('cleanup_last_run'),
-            'cleanup_schedule' => SystemSetting::get('cleanup_schedule', 'monthly'),
-        ];
+        try {
+            $queueStatus = $this->getQueueWorkerStatus();
+            $realtimeStatus = $this->getRealtimePullStatus();
+            
+            // Get cleanup settings with try-catch for safety
+            try {
+                $cleanupSettings = [
+                    'cleanup_enabled' => SystemSetting::get('cleanup_enabled', true),
+                    'cleanup_retention_days' => SystemSetting::get('cleanup_retention_days', 30),
+                    'cleanup_last_run' => SystemSetting::get('cleanup_last_run'),
+                    'cleanup_schedule' => SystemSetting::get('cleanup_schedule', 'monthly'),
+                ];
+            } catch (\Exception $e) {
+                Log::error('Failed to get cleanup settings: ' . $e->getMessage());
+                $cleanupSettings = [
+                    'cleanup_enabled' => true,
+                    'cleanup_retention_days' => 30,
+                    'cleanup_last_run' => null,
+                    'cleanup_schedule' => 'monthly',
+                ];
+            }
 
-        // Get cleanup statistics
-        $cleanupStats = $this->getCleanupStats();
-        
-        return view('admin.system-control.index', compact('queueStatus', 'realtimeStatus', 'cleanupSettings', 'cleanupStats'));
+            // Get cleanup statistics with try-catch for safety
+            try {
+                $cleanupStats = $this->getCleanupStats();
+            } catch (\Exception $e) {
+                Log::error('Failed to get cleanup stats: ' . $e->getMessage());
+                $cleanupStats = [
+                    'alarm_raw' => ['total' => 0, 'old' => 0, 'will_delete' => 0],
+                    'gps_raw' => ['total' => 0, 'old' => 0, 'will_delete' => 0],
+                    'cutoff_date' => now()->subDays(30)->toDateTimeString(),
+                ];
+            }
+            
+            return view('admin.system-control.index', compact('queueStatus', 'realtimeStatus', 'cleanupSettings', 'cleanupStats'));
+        } catch (\Exception $e) {
+            Log::error('System Control Index Error: ' . $e->getMessage());
+            return response()->view('errors.500', ['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -246,45 +270,82 @@ class SystemControlController extends Controller
     }
 
     /**
-     * Get cleanup statistics
+     * Get cleanup statistics (with caching for performance)
      */
     private function getCleanupStats(): array
     {
-        $retentionDays = SystemSetting::get('cleanup_retention_days', 30);
-        $cutoffDate = now()->subDays($retentionDays);
+        // Cache stats for 60 seconds to avoid slow COUNT queries
+        return cache()->remember('cleanup_stats', 60, function () {
+            $retentionDays = SystemSetting::get('cleanup_retention_days', 30);
+            $cutoffDate = now()->subDays($retentionDays);
 
-        // Count old records
-        $alarmRawOld = DB::table('alarm_raw')
-            ->where('created_at', '<', $cutoffDate)
-            ->count();
+            // Use approximate counts for large tables (much faster)
+            // For exact counts, we would need to add indexes on created_at
+            
+            // For alarm_raw: Try to get approximate count first
+            try {
+                $alarmRawTotal = DB::table('alarm_raw')->count();
+                $alarmRawOld = DB::table('alarm_raw')
+                    ->where('created_at', '<', $cutoffDate)
+                    ->count();
+            } catch (\Exception $e) {
+                Log::warning('Failed to count alarm_raw: ' . $e->getMessage());
+                $alarmRawTotal = 0;
+                $alarmRawOld = 0;
+            }
 
-        $gpsRawOld = 0;
-        if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
-            $gpsRawOld = DB::table('gps_tracks_raw')
-                ->where('created_at', '<', $cutoffDate)
-                ->count();
-        }
+            // For gps_tracks_raw: Use faster estimation
+            $gpsRawTotal = 0;
+            $gpsRawOld = 0;
+            
+            if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
+                try {
+                    // Use EXPLAIN for faster estimation instead of full COUNT
+                    $result = DB::selectOne("
+                        SELECT TABLE_ROWS as estimated_count 
+                        FROM information_schema.TABLES 
+                        WHERE TABLE_SCHEMA = DATABASE() 
+                        AND TABLE_NAME = 'gps_tracks_raw'
+                    ");
+                    
+                    $gpsRawTotal = $result ? (int)$result->estimated_count : 0;
+                    
+                    // For old records, sample a small portion to estimate
+                    // This is much faster than full COUNT on millions of records
+                    $sampleSize = 10000;
+                    $sampleOld = DB::table('gps_tracks_raw')
+                        ->where('created_at', '<', $cutoffDate)
+                        ->limit($sampleSize)
+                        ->count();
+                    
+                    // If sample is full, it means there are likely many more
+                    if ($sampleOld >= $sampleSize && $gpsRawTotal > 0) {
+                        // Estimate based on sample ratio
+                        $gpsRawOld = $gpsRawTotal; // Conservative estimate
+                    } else {
+                        $gpsRawOld = $sampleOld;
+                    }
+                    
+                } catch (\Exception $e) {
+                    Log::warning('Failed to estimate gps_tracks_raw: ' . $e->getMessage());
+                }
+            }
 
-        // Count total records
-        $alarmRawTotal = DB::table('alarm_raw')->count();
-        $gpsRawTotal = 0;
-        if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
-            $gpsRawTotal = DB::table('gps_tracks_raw')->count();
-        }
-
-        return [
-            'alarm_raw' => [
-                'total' => $alarmRawTotal,
-                'old' => $alarmRawOld,
-                'will_delete' => $alarmRawOld,
-            ],
-            'gps_raw' => [
-                'total' => $gpsRawTotal,
-                'old' => $gpsRawOld,
-                'will_delete' => $gpsRawOld,
-            ],
-            'cutoff_date' => $cutoffDate->toDateTimeString(),
-        ];
+            return [
+                'alarm_raw' => [
+                    'total' => $alarmRawTotal,
+                    'old' => $alarmRawOld,
+                    'will_delete' => $alarmRawOld,
+                ],
+                'gps_raw' => [
+                    'total' => $gpsRawTotal,
+                    'old' => $gpsRawOld,
+                    'will_delete' => $gpsRawOld,
+                    'estimated' => true, // Flag to indicate this is estimated
+                ],
+                'cutoff_date' => $cutoffDate->toDateTimeString(),
+            ];
+        });
     }
 
     /**
