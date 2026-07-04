@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -14,15 +15,18 @@ class DataPullController extends Controller
      */
     public function index()
     {
-        $stats = [
-            'total_mei' => DB::table('idle_alarms')
-                ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
-                ->count(),
-            'total_juni' => DB::table('idle_alarms')
-                ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
-                ->count(),
-            'total_all' => DB::table('idle_alarms')->count(),
-        ];
+        // Cache stats 5 menit - count() pada idle_alarms bisa lambat
+        $stats = Cache::remember('datapull_stats', 300, function () {
+            return [
+                'total_mei' => DB::table('idle_alarms')
+                    ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
+                    ->count(),
+                'total_juni' => DB::table('idle_alarms')
+                    ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
+                    ->count(),
+                'total_all' => DB::table('idle_alarms')->count(),
+            ];
+        });
 
         $lastPull = DB::table('system_settings')->where('key', 'last_realtime_pull')->value('value');
         $stats['last_pull'] = $lastPull ? Carbon::parse($lastPull)->format('Y-m-d H:i:s') : 'Never';

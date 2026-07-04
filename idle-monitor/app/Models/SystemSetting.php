@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class SystemSetting extends Model
 {
@@ -13,13 +14,35 @@ class SystemSetting extends Model
      */
     public static function get(string $key, $default = null)
     {
-        $setting = static::where('key', $key)->first();
-        
+        // Cache individual settings for 30 seconds to avoid repeated DB hits
+        $cacheKey = 'system_setting_' . $key;
+        $setting = Cache::remember($cacheKey, 30, function () use ($key) {
+            return static::where('key', $key)->first();
+        });
+
         if (!$setting) {
             return $default;
         }
 
         return static::castValue($setting->value, $setting->type);
+    }
+
+    /**
+     * Get multiple settings in a single query (much faster than calling get() multiple times)
+     */
+    public static function getMany(array $keys): array
+    {
+        $cacheKey = 'system_settings_batch_' . md5(implode(',', $keys));
+        $settings = Cache::remember($cacheKey, 30, function () use ($keys) {
+            return static::whereIn('key', $keys)->get()->keyBy('key');
+        });
+
+        $result = [];
+        foreach ($keys as $key) {
+            $setting = $settings->get($key);
+            $result[$key] = $setting ? static::castValue($setting->value, $setting->type) : null;
+        }
+        return $result;
     }
 
     /**
@@ -31,6 +54,8 @@ class SystemSetting extends Model
             ['key' => $key],
             ['value' => $value, 'updated_at' => now()]
         );
+        // Invalidate cache for this key after update
+        Cache::forget('system_setting_' . $key);
     }
 
     /**

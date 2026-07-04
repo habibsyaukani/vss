@@ -6,58 +6,23 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Device;
 use App\Models\GpsTrack;
+use App\Http\Controllers\Frontend\Traits\HasDeviceGroups;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
 
 class SpeedPerformanceController extends Controller
 {
+    use HasDeviceGroups;
+
     /**
      * Show speed performance page
      */
     public function index()
     {
-        // Load device groups
-        $locations = Device::whereNotNull('location')
-            ->whereNotIn('location', ['MUD UTARA STB', 'STB_001', 'STB_SITE'])
-            ->distinct()->pluck('location')->sort();
-        
-        $rawSeries = Device::whereNotNull('series')->distinct()->pluck('series');
-        $seriesList = $rawSeries->map(function ($s) {
-            if (stripos($s, 'FMX') !== false) return 'VOLVO';
-            return $s;
-        })->unique()->sort()->values();
+        // ✅ All device sidebar data is cached for 5 minutes (trait)
+        $sidebar = $this->getDeviceSidebarData();
 
-        $devices = Device::whereNotNull('device_name')->orderBy('device_name')->get();
-        $deviceGroups = [];
-
-        foreach ($devices as $device) {
-            $parts = explode('-', $device->device_name);
-            $group = 'OTHER - GPE';
-            if (count($parts) >= 2) {
-                $type = $parts[1];
-                if ($type == 'B' || $type == 'BUS') $group = 'BUS - GPE';
-                elseif ($type == 'DT') $group = 'DT - GPE';
-                elseif ($type == 'FT' || $type == 'GFTH') $group = 'FT - GPE';
-                elseif ($type == 'HD') $group = 'HD - GPE';
-                elseif ($type == 'LV') $group = 'PATROL - GPE';
-                elseif ($type == 'WT') $group = 'WT - GPE';
-            }
-
-            if (!isset($deviceGroups[$group])) {
-                $deviceGroups[$group] = ['total' => 0, 'active' => 0, 'devices' => []];
-            }
-            $deviceGroups[$group]['total']++;
-            if ($device->status === 'active') {
-                $deviceGroups[$group]['active']++;
-            }
-            $deviceGroups[$group]['devices'][] = $device;
-        }
-        ksort($deviceGroups);
-
-        $totalDevices = $devices->count();
-        $totalActive = $devices->where('status', 'active')->count();
-
-        return view('frontend.speed-performance.index', compact('deviceGroups', 'totalDevices', 'totalActive', 'locations', 'seriesList'));
+        return view('frontend.speed-performance.index', $sidebar);
     }
 
     /**
@@ -75,9 +40,14 @@ class SpeedPerformanceController extends Controller
             ->where('gps_tracks.speed', '>', 0)
             ->groupBy('gps_tracks.device_id', 'devices.device_name');
 
-        // Filter by specific device IDs (from tree view)
+        // Filter by specific device IDs (from tree view) - Optimized to skip when all devices are selected
         if ($request->device_ids && is_array($request->device_ids)) {
-            $query->whereIn('gps_tracks.device_id', $request->device_ids);
+            $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                return Device::count();
+            });
+            if (count($request->device_ids) < $totalDevices) {
+                $query->whereIn('gps_tracks.device_id', $request->device_ids);
+            }
         }
 
         // Filter by location (via JOIN)
@@ -189,7 +159,12 @@ class SpeedPerformanceController extends Controller
             if ($request->filled('device_ids')) {
                 $deviceIds = explode(',', $request->device_ids);
                 if (!empty($deviceIds)) {
-                    $query->whereIn('gps_tracks.device_id', $deviceIds);
+                    $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                        return Device::count();
+                    });
+                    if (count($deviceIds) < $totalDevices) {
+                        $query->whereIn('gps_tracks.device_id', $deviceIds);
+                    }
                 }
             }
         }

@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Services\SystemLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class CleanupByMonthJob implements ShouldQueue
 {
@@ -41,6 +42,13 @@ class CleanupByMonthJob implements ShouldQueue
         $monthStart = Carbon::createFromDate($this->year, $this->month, 1)->startOfMonth();
         $monthEnd = Carbon::createFromDate($this->year, $this->month, 1)->endOfMonth();
         
+        $cacheKey = "cleanup_progress_{$this->year}_{$this->month}";
+        Cache::put($cacheKey, [
+            'status' => 'Starting...',
+            'percentage' => 0,
+            'details' => 'Initializing cleanup job.'
+        ], now()->addHours(2));
+
         SystemLogger::info('CLEANUP_BY_MONTH_START', 'Starting cleanup for specific month', [
             'year' => $this->year,
             'month' => $this->month,
@@ -49,13 +57,31 @@ class CleanupByMonthJob implements ShouldQueue
         ]);
 
         try {
+            Cache::put($cacheKey, [
+                'status' => 'Processing...',
+                'percentage' => 5,
+                'details' => 'Cleaning up alarm_raw...'
+            ], now()->addHours(2));
+            
             // 1. Cleanup alarm_raw for this month
-            $alarmDeleted = $this->cleanupAlarmRawByMonth($monthStart, $monthEnd);
+            $alarmDeleted = $this->cleanupAlarmRawByMonth($monthStart, $monthEnd, $cacheKey);
 
+            Cache::put($cacheKey, [
+                'status' => 'Processing...',
+                'percentage' => 50,
+                'details' => 'Cleaning up gps_tracks_raw...'
+            ], now()->addHours(2));
+            
             // 2. Cleanup gps_tracks_raw for this month
-            $gpsDeleted = $this->cleanupGpsRawByMonth($monthStart, $monthEnd);
+            $gpsDeleted = $this->cleanupGpsRawByMonth($monthStart, $monthEnd, $cacheKey);
 
             $duration = now()->diffInSeconds($startTime);
+            
+            Cache::put($cacheKey, [
+                'status' => 'Completed',
+                'percentage' => 100,
+                'details' => "Cleanup completed. Deleted $alarmDeleted alarms and $gpsDeleted GPS tracks."
+            ], now()->addHours(2));
             
             SystemLogger::success('CLEANUP_BY_MONTH_COMPLETED', 'Month cleanup completed successfully', [
                 'year' => $this->year,
@@ -68,6 +94,12 @@ class CleanupByMonthJob implements ShouldQueue
             ]);
 
         } catch (\Exception $e) {
+            Cache::put($cacheKey, [
+                'status' => 'Error',
+                'percentage' => 0,
+                'details' => "Error: " . $e->getMessage()
+            ], now()->addHours(2));
+            
             SystemLogger::error('CLEANUP_BY_MONTH_FAILED', 'Month cleanup failed', [
                 'year' => $this->year,
                 'month' => $this->month,
@@ -82,7 +114,7 @@ class CleanupByMonthJob implements ShouldQueue
     /**
      * Cleanup alarm_raw for specific month
      */
-    private function cleanupAlarmRawByMonth(Carbon $monthStart, Carbon $monthEnd): int
+    private function cleanupAlarmRawByMonth(Carbon $monthStart, Carbon $monthEnd, string $cacheKey): int
     {
         try {
             // Get GUIDs from this month
@@ -99,27 +131,48 @@ class CleanupByMonthJob implements ShouldQueue
                 return 0;
             }
 
-            // Check which ones are already processed
-            $processedGuids = DB::table('idle_alarms')
-                ->whereIn('guid', $rawGuids)
-                ->pluck('guid')
-                ->toArray();
+            // Chunk to avoid SQL placeholder limits
+            $guidChunks = array_chunk($rawGuids, 1000);
+            $deletedCount = 0;
+            $totalProcessedGuids = 0;
+            
+            $totalChunks = count($guidChunks);
+            $currentChunk = 0;
+
+            foreach ($guidChunks as $chunk) {
+                $currentChunk++;
+                $progressPct = 5 + round(($currentChunk / $totalChunks) * 40); // 5% to 45%
+                
+                Cache::put($cacheKey, [
+                    'status' => 'Processing...',
+                    'percentage' => $progressPct,
+                    'details' => "Cleaning up alarm_raw... (Chunk $currentChunk of $totalChunks)"
+                ], now()->addHours(2));
+                
+                // Check which ones are already processed in this chunk
+                $processedGuids = DB::table('idle_alarms')
+                    ->whereIn('guid', $chunk)
+                    ->pluck('guid')
+                    ->toArray();
+                
+                $totalProcessedGuids += count($processedGuids);
+
+                // Delete only processed data for this chunk
+                if (!empty($processedGuids)) {
+                    $deleted = DB::table('alarm_raw')
+                        ->whereBetween('created_at', [$monthStart, $monthEnd])
+                        ->whereIn('guid', $processedGuids)
+                        ->delete();
+                    $deletedCount += $deleted;
+                }
+            }
 
             SystemLogger::info('CLEANUP_ALARM_BY_MONTH_VALIDATION', 'Validating month data', [
                 'month' => $monthStart->format('F Y'),
                 'total_records' => count($rawGuids),
-                'already_processed' => count($processedGuids),
-                'not_processed_yet' => count($rawGuids) - count($processedGuids),
+                'already_processed' => $totalProcessedGuids,
+                'not_processed_yet' => count($rawGuids) - $totalProcessedGuids,
             ]);
-
-            // Delete only processed data
-            $deletedCount = 0;
-            if (!empty($processedGuids)) {
-                $deletedCount = DB::table('alarm_raw')
-                    ->whereBetween('created_at', [$monthStart, $monthEnd])
-                    ->whereIn('guid', $processedGuids)
-                    ->delete();
-            }
 
             // Delete non-idle alarms (type != 32) from this month
             $nonIdleDeleted = DB::table('alarm_raw')
@@ -127,11 +180,26 @@ class CleanupByMonthJob implements ShouldQueue
                 ->where('alarm_type', '!=', 32)
                 ->delete();
 
-            $totalDeleted = $deletedCount + $nonIdleDeleted;
+            // Delete skipped/invalid idle alarms that will never be processed (e.g., end_speed = 0, alarm_state != 0)
+            $skippedDeleted = DB::table('alarm_raw')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->where('alarm_type', 32)
+                ->where(function ($query) {
+                    $query->where('alarm_state', '!=', 0)
+                          ->orWhere('end_speed', '<=', 0)
+                          ->orWhereNull('end_time')
+                          ->orWhere('end_time', '')
+                          ->orWhereNull('duration_seconds')
+                          ->orWhere('duration_seconds', '<=', 0);
+                })
+                ->delete();
+
+            $totalDeleted = $deletedCount + $nonIdleDeleted + $skippedDeleted;
 
             SystemLogger::success('CLEANUP_ALARM_BY_MONTH', 'Cleaned up alarm_raw for month', [
                 'month' => $monthStart->format('F Y'),
-                'deleted_idle' => $deletedCount,
+                'deleted_idle_processed' => $deletedCount,
+                'deleted_idle_skipped' => $skippedDeleted,
                 'deleted_non_idle' => $nonIdleDeleted,
                 'total_deleted' => $totalDeleted,
             ]);
@@ -150,7 +218,7 @@ class CleanupByMonthJob implements ShouldQueue
     /**
      * Cleanup gps_tracks_raw for specific month
      */
-    private function cleanupGpsRawByMonth(Carbon $monthStart, Carbon $monthEnd): int
+    private function cleanupGpsRawByMonth(Carbon $monthStart, Carbon $monthEnd, string $cacheKey): int
     {
         try {
             // Check if table exists
@@ -172,25 +240,51 @@ class CleanupByMonthJob implements ShouldQueue
             }
 
             // Sample validation (check if data is processed)
-            $sample = DB::table('gps_tracks_raw')
+            // 1. Pluck 1,000 IDs first (fast covering index scan on created_at)
+            $sampleIds = DB::table('gps_tracks_raw')
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->select('device_id', 'gps_time')
                 ->limit(1000)
-                ->get();
+                ->pluck('id')
+                ->toArray();
 
+            $sampleSize = count($sampleIds);
             $validatedCount = 0;
-            foreach ($sample as $raw) {
-                $exists = DB::table('gps_tracks')
-                    ->where('device_id', $raw->device_id)
-                    ->where('gps_time', $raw->gps_time)
-                    ->exists();
+
+            if ($sampleSize > 0) {
+                Cache::put($cacheKey, [
+                    'status' => 'Validating...',
+                    'percentage' => 50,
+                    'details' => "Validating GPS tracks... (Checking $sampleSize samples)"
+                ], now()->addHours(2));
+
+                // 2. Fetch device_id and gps_time for these 1,000 IDs (fast primary key lookup)
+                $sample = DB::table('gps_tracks_raw')
+                    ->whereIn('id', $sampleIds)
+                    ->select('device_id', 'gps_time')
+                    ->get();
+
+                // 3. Batch check their existence in gps_tracks in a single query with OR clauses
+                $grouped = $sample->groupBy('device_id');
+                $query = DB::table('gps_tracks');
+                $first = true;
                 
-                if ($exists) {
-                    $validatedCount++;
+                foreach ($grouped as $deviceId => $items) {
+                    $gpsTimes = $items->pluck('gps_time')->toArray();
+                    if ($first) {
+                        $query->where(function($q) use ($deviceId, $gpsTimes) {
+                            $q->where('device_id', $deviceId)->whereIn('gps_time', $gpsTimes);
+                        });
+                        $first = false;
+                    } else {
+                        $query->orWhere(function($q) use ($deviceId, $gpsTimes) {
+                            $q->where('device_id', $deviceId)->whereIn('gps_time', $gpsTimes);
+                        });
+                    }
                 }
+                
+                $validatedCount = $query->count();
             }
 
-            $sampleSize = $sample->count();
             $processedPercentage = $sampleSize > 0 ? ($validatedCount / $sampleSize) * 100 : 0;
 
             SystemLogger::info('CLEANUP_GPS_BY_MONTH_VALIDATION', 'Validating GPS data for month', [
@@ -203,6 +297,12 @@ class CleanupByMonthJob implements ShouldQueue
 
             // Delete if >95% processed
             if ($processedPercentage >= 95) {
+                Cache::put($cacheKey, [
+                    'status' => 'Deleting...',
+                    'percentage' => 80,
+                    'details' => 'Deleting gps_tracks_raw... this may take a while.'
+                ], now()->addHours(2));
+                
                 $deletedCount = DB::table('gps_tracks_raw')
                     ->whereBetween('created_at', [$monthStart, $monthEnd])
                     ->delete();

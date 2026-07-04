@@ -17,24 +17,36 @@ class SystemControlController extends Controller
     public function index()
     {
         try {
-            $queueStatus = $this->getQueueWorkerStatus();
-            $realtimeStatus = $this->getRealtimePullStatus();
-            
-            // Get cleanup settings with try-catch for safety
+            // Load all needed settings in ONE query (was 8+ separate queries before)
+            $allSettings = SystemSetting::getMany([
+                'cleanup_enabled',
+                'cleanup_retention_days',
+                'cleanup_last_run',
+                'cleanup_schedule',
+                'queue_worker_status',
+                'queue_worker_started_at',
+                'realtime_pull_status',
+                'realtime_pull_started_at',
+            ]);
+
+            $queueStatus   = $this->buildQueueWorkerStatus($allSettings);
+            $realtimeStatus = $this->buildRealtimePullStatus($allSettings);
+
+            // Get cleanup settings with defaults
             try {
                 $cleanupSettings = [
-                    'cleanup_enabled' => SystemSetting::get('cleanup_enabled', false), // Default: DISABLED (user must enable manually)
-                    'cleanup_retention_days' => SystemSetting::get('cleanup_retention_days', 30),
-                    'cleanup_last_run' => SystemSetting::get('cleanup_last_run'),
-                    'cleanup_schedule' => SystemSetting::get('cleanup_schedule', 'monthly'),
+                    'cleanup_enabled'        => $allSettings['cleanup_enabled']        ?? false,
+                    'cleanup_retention_days' => $allSettings['cleanup_retention_days'] ?? 30,
+                    'cleanup_last_run'       => $allSettings['cleanup_last_run']       ?? null,
+                    'cleanup_schedule'       => $allSettings['cleanup_schedule']       ?? 'monthly',
                 ];
             } catch (\Exception $e) {
                 Log::error('Failed to get cleanup settings: ' . $e->getMessage());
                 $cleanupSettings = [
-                    'cleanup_enabled' => false, // Default: DISABLED
+                    'cleanup_enabled'        => false,
                     'cleanup_retention_days' => 30,
-                    'cleanup_last_run' => null,
-                    'cleanup_schedule' => 'monthly',
+                    'cleanup_last_run'       => null,
+                    'cleanup_schedule'       => 'monthly',
                 ];
             }
 
@@ -45,11 +57,11 @@ class SystemControlController extends Controller
                 Log::error('Failed to get cleanup stats: ' . $e->getMessage());
                 $cleanupStats = [
                     'alarm_raw' => ['total' => 0, 'old' => 0, 'will_delete' => 0],
-                    'gps_raw' => ['total' => 0, 'old' => 0, 'will_delete' => 0],
+                    'gps_raw'   => ['total' => 0, 'old' => 0, 'will_delete' => 0],
                     'cutoff_date' => now()->subDays(30)->toDateTimeString(),
                 ];
             }
-            
+
             return view('admin.system-control.index', compact('queueStatus', 'realtimeStatus', 'cleanupSettings', 'cleanupStats'));
         } catch (\Exception $e) {
             Log::error('System Control Index Error: ' . $e->getMessage());
@@ -214,13 +226,20 @@ class SystemControlController extends Controller
      */
     public function getStatus()
     {
+        // Load all settings in one query
+        $allSettings = SystemSetting::getMany([
+            'queue_worker_status', 'queue_worker_started_at',
+            'realtime_pull_status', 'realtime_pull_started_at',
+            'cleanup_enabled', 'cleanup_last_run',
+        ]);
+
         return response()->json([
-            'queue' => $this->getQueueWorkerStatus(),
-            'realtime' => $this->getRealtimePullStatus(),
+            'queue'   => $this->buildQueueWorkerStatus($allSettings),
+            'realtime' => $this->buildRealtimePullStatus($allSettings),
             'cleanup' => [
                 'settings' => [
-                    'cleanup_enabled' => SystemSetting::get('cleanup_enabled', true),
-                    'cleanup_last_run' => SystemSetting::get('cleanup_last_run'),
+                    'cleanup_enabled'  => $allSettings['cleanup_enabled'] ?? true,
+                    'cleanup_last_run' => $allSettings['cleanup_last_run'] ?? null,
                 ],
                 'stats' => $this->getCleanupStats(),
             ]
@@ -274,60 +293,54 @@ class SystemControlController extends Controller
      */
     private function getCleanupStats(): array
     {
-        // Cache stats for 60 seconds to avoid slow COUNT queries
-        return cache()->remember('cleanup_stats', 60, function () {
+        // Cache stats for 5 minutes (300 seconds) since we have optimized index queries
+        return cache()->remember('cleanup_stats', 300, function () {
             $retentionDays = SystemSetting::get('cleanup_retention_days', 30);
             $cutoffDate = now()->subDays($retentionDays);
 
-            // Use approximate counts for large tables (much faster)
-            // For exact counts, we would need to add indexes on created_at
-            
-            // For alarm_raw: Try to get approximate count first
+            // ── 1. For alarm_raw ──────────────────────────────────────────
+            $alarmRawTotal = 0;
+            $alarmRawOld = 0;
+
             try {
-                $alarmRawTotal = DB::table('alarm_raw')->count();
+                // Estimate total rows using information_schema (0ms)
+                $result = DB::selectOne("
+                    SELECT TABLE_ROWS as estimated_count 
+                    FROM information_schema.TABLES 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'alarm_raw'
+                ");
+                $alarmRawTotal = $result ? (int)$result->estimated_count : 0;
+
+                // Exact count of old records using the new created_at index (extremely fast)
                 $alarmRawOld = DB::table('alarm_raw')
                     ->where('created_at', '<', $cutoffDate)
                     ->count();
             } catch (\Exception $e) {
-                Log::warning('Failed to count alarm_raw: ' . $e->getMessage());
-                $alarmRawTotal = 0;
-                $alarmRawOld = 0;
+                Log::warning('Failed to get alarm_raw stats: ' . $e->getMessage());
             }
 
-            // For gps_tracks_raw: Use faster estimation
+            // ── 2. For gps_tracks_raw ──────────────────────────────────────
             $gpsRawTotal = 0;
             $gpsRawOld = 0;
             
             if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
                 try {
-                    // Use EXPLAIN for faster estimation instead of full COUNT
+                    // Estimate total rows using information_schema (0ms)
                     $result = DB::selectOne("
                         SELECT TABLE_ROWS as estimated_count 
                         FROM information_schema.TABLES 
                         WHERE TABLE_SCHEMA = DATABASE() 
                         AND TABLE_NAME = 'gps_tracks_raw'
                     ");
-                    
                     $gpsRawTotal = $result ? (int)$result->estimated_count : 0;
                     
-                    // For old records, sample a small portion to estimate
-                    // This is much faster than full COUNT on millions of records
-                    $sampleSize = 10000;
-                    $sampleOld = DB::table('gps_tracks_raw')
+                    // Exact count of old records using the new created_at index (extremely fast)
+                    $gpsRawOld = DB::table('gps_tracks_raw')
                         ->where('created_at', '<', $cutoffDate)
-                        ->limit($sampleSize)
                         ->count();
-                    
-                    // If sample is full, it means there are likely many more
-                    if ($sampleOld >= $sampleSize && $gpsRawTotal > 0) {
-                        // Estimate based on sample ratio
-                        $gpsRawOld = $gpsRawTotal; // Conservative estimate
-                    } else {
-                        $gpsRawOld = $sampleOld;
-                    }
-                    
                 } catch (\Exception $e) {
-                    Log::warning('Failed to estimate gps_tracks_raw: ' . $e->getMessage());
+                    Log::warning('Failed to get gps_tracks_raw stats: ' . $e->getMessage());
                 }
             }
 
@@ -341,7 +354,6 @@ class SystemControlController extends Controller
                     'total' => $gpsRawTotal,
                     'old' => $gpsRawOld,
                     'will_delete' => $gpsRawOld,
-                    'estimated' => true, // Flag to indicate this is estimated
                 ],
                 'cutoff_date' => $cutoffDate->toDateTimeString(),
             ];
@@ -355,66 +367,71 @@ class SystemControlController extends Controller
     public function getAvailableMonths()
     {
         try {
-            $today = now();
-            $availableMonths = [];
-            
-            // Get earliest data date from database
-            $earliestAlarm = DB::table('alarm_raw')->min('created_at');
-            $earliestGps = DB::table('gps_tracks_raw')->min('created_at');
-            
-            $earliestDate = $earliestAlarm;
-            if ($earliestGps && (!$earliestDate || $earliestGps < $earliestDate)) {
-                $earliestDate = $earliestGps;
-            }
-            
-            if (!$earliestDate) {
-                return response()->json(['months' => []]);
-            }
-            
-            $startDate = \Carbon\Carbon::parse($earliestDate)->startOfMonth();
-            $currentMonth = $today->copy()->startOfMonth();
-            
-            // Loop through months from earliest to current
-            while ($startDate->lte($currentMonth)) {
-                $monthEnd = $startDate->copy()->endOfMonth();
-                $bufferDate = $monthEnd->copy()->addDays(2); // +2 days buffer
+            $data = cache()->remember('available_months_for_cleanup', 300, function () {
+                $today = now();
+                $availableMonths = [];
                 
-                // Only show months that have passed + 2 days buffer
-                if ($today->gte($bufferDate)) {
-                    // Get count for this month
-                    $alarmCount = DB::table('alarm_raw')
-                        ->whereYear('created_at', $startDate->year)
-                        ->whereMonth('created_at', $startDate->month)
-                        ->count();
-                    
-                    $gpsCount = 0;
-                    if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
-                        // Use sample for large tables
-                        $gpsCount = DB::table('gps_tracks_raw')
-                            ->whereYear('created_at', $startDate->year)
-                            ->whereMonth('created_at', $startDate->month)
-                            ->limit(10000)
-                            ->count();
-                        
-                        if ($gpsCount >= 10000) {
-                            $gpsCount = $gpsCount . '+'; // Indicate more than sample
-                        }
-                    }
-                    
-                    $availableMonths[] = [
-                        'year' => $startDate->year,
-                        'month' => $startDate->month,
-                        'display' => $startDate->format('F Y'),
-                        'alarm_count' => $alarmCount,
-                        'gps_count' => $gpsCount,
-                        'total_estimate' => is_numeric($gpsCount) ? $alarmCount + $gpsCount : $alarmCount,
-                    ];
+                // Get earliest data date from database
+                $earliestAlarm = DB::table('alarm_raw')->min('created_at');
+                $earliestGps = DB::table('gps_tracks_raw')->min('created_at');
+                
+                $earliestDate = $earliestAlarm;
+                if ($earliestGps && (!$earliestDate || $earliestGps < $earliestDate)) {
+                    $earliestDate = $earliestGps;
                 }
                 
-                $startDate->addMonth();
-            }
+                if (!$earliestDate) {
+                    return ['months' => []];
+                }
+                
+                $startDate = \Carbon\Carbon::parse($earliestDate)->startOfMonth();
+                $currentMonth = $today->copy()->startOfMonth();
+                
+                // Loop through months from earliest to current
+                while ($startDate->lte($currentMonth)) {
+                    $monthEnd = $startDate->copy()->endOfMonth();
+                    $bufferDate = $monthEnd->copy()->addDays(2); // +2 days buffer
+                    
+                    // Only show months that have passed + 2 days buffer
+                    if ($today->gte($bufferDate)) {
+                        // Get count for this month using whereBetween for index optimization
+                        $alarmCount = DB::table('alarm_raw')
+                            ->whereBetween('created_at', [$startDate, $monthEnd])
+                            ->count();
+                        
+                        $gpsCount = 0;
+                        if (DB::getSchemaBuilder()->hasTable('gps_tracks_raw')) {
+                            // Use fast subquery to check up to 10000 records
+                            $sampleCount = DB::selectOne("
+                                SELECT COUNT(*) as cnt 
+                                FROM (
+                                    SELECT 1 
+                                    FROM gps_tracks_raw 
+                                    WHERE created_at BETWEEN ? AND ? 
+                                    LIMIT 10000
+                                ) as sub
+                            ", [$startDate->toDateTimeString(), $monthEnd->toDateTimeString()])->cnt;
+                            
+                            $gpsCount = $sampleCount >= 10000 ? '10000+' : $sampleCount;
+                        }
+                        
+                        $availableMonths[] = [
+                            'year' => $startDate->year,
+                            'month' => $startDate->month,
+                            'display' => $startDate->format('F Y'),
+                            'alarm_count' => $alarmCount,
+                            'gps_count' => $gpsCount,
+                            'total_estimate' => is_numeric($gpsCount) ? $alarmCount + $gpsCount : $alarmCount,
+                        ];
+                    }
+                    
+                    $startDate->addMonth();
+                }
+                
+                return ['months' => array_reverse($availableMonths)];
+            });
             
-            return response()->json(['months' => array_reverse($availableMonths)]);
+            return response()->json($data);
             
         } catch (\Exception $e) {
             Log::error('Failed to get available months: ' . $e->getMessage());
@@ -511,29 +528,34 @@ class SystemControlController extends Controller
     }
 
     /**
+     * Get cleanup progress
+     */
+    public function getCleanupProgress(Request $request)
+    {
+        $year = $request->query('year');
+        $month = $request->query('month');
+        
+        if (!$year || !$month) {
+            return response()->json(['error' => 'Missing year or month'], 400);
+        }
+        
+        $cacheKey = "cleanup_progress_{$year}_{$month}";
+        $progress = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        
+        return response()->json([
+            'progress' => $progress // returns null if job not started, or array with stats
+        ]);
+    }
+
+    /**
      * Check if Queue Worker is running
      */
     private function isQueueWorkerRunning()
     {
-        // Method 1: Check via WMIC (most reliable on Windows)
-        exec('wmic process where "commandline like \'%queue:work%\' and name=\'php.exe\'" get processid 2>nul', $output);
-        
-        // Filter out empty lines and header
-        $output = array_filter($output, function($line) {
-            return trim($line) !== '' && !stripos($line, 'ProcessId');
-        });
-        
-        if (count($output) > 0) {
-            return true;
-        }
-        
-        // Method 2: Check via tasklist
-        exec('tasklist /FI "IMAGENAME eq php.exe" /FO CSV 2>nul | findstr /i "queue:work"', $output2);
-        if (!empty($output2)) {
-            return true;
-        }
-        
-        return false;
+        // OS process checks (wmic, tasklist) are extremely slow on this Windows environment
+        // and cause the PHP single-threaded development server to hang indefinitely.
+        // We will rely on the database flag instead.
+        return \App\Models\SystemSetting::get('queue_worker_status') === 'running';
     }
 
     /**
@@ -541,25 +563,26 @@ class SystemControlController extends Controller
      */
     private function isRealtimePullRunning()
     {
-        // Method 1: Check via WMIC (most reliable on Windows)
-        exec('wmic process where "commandline like \'%pull:realtime-loop%\' and name=\'php.exe\'" get processid 2>nul', $output);
-        
-        // Filter out empty lines and header
-        $output = array_filter($output, function($line) {
-            return trim($line) !== '' && !stripos($line, 'ProcessId');
-        });
-        
-        if (count($output) > 0) {
-            return true;
-        }
-        
-        // Method 2: Check via tasklist
-        exec('tasklist /FI "IMAGENAME eq php.exe" /FO CSV 2>nul | findstr /i "pull:realtime-loop"', $output2);
-        if (!empty($output2)) {
-            return true;
-        }
-        
-        return false;
+        // OS process checks are extremely slow, rely on database flag
+        return \App\Models\SystemSetting::get('realtime_pull_status') === 'running';
+    }
+
+    /**
+     * Build Queue Worker status dari settings yang sudah di-load
+     */
+    private function buildQueueWorkerStatus(array $settings)
+    {
+        $savedStatus = $settings['queue_worker_status'] ?? 'stopped';
+        $startedAt   = $settings['queue_worker_started_at'] ?? null;
+        $isRunning   = ($savedStatus === 'running');
+
+        return [
+            'running'     => $isRunning,
+            'status'      => $isRunning ? 'running' : 'stopped',
+            'started_at'  => $startedAt,
+            'badge_class' => $isRunning ? 'bg-success' : 'bg-secondary',
+            'badge_text'  => $isRunning ? 'Running' : 'Stopped',
+        ];
     }
 
     /**
@@ -592,6 +615,24 @@ class SystemControlController extends Controller
             'started_at' => $startedAt,
             'badge_class' => $isRunning ? 'bg-success' : 'bg-secondary',
             'badge_text' => $isRunning ? 'Running' : 'Stopped'
+        ];
+    }
+
+    /**
+     * Build Realtime Pull status dari settings yang sudah di-load
+     */
+    private function buildRealtimePullStatus(array $settings)
+    {
+        $savedStatus = $settings['realtime_pull_status'] ?? 'stopped';
+        $startedAt   = $settings['realtime_pull_started_at'] ?? null;
+        $isRunning   = ($savedStatus === 'running');
+
+        return [
+            'running'     => $isRunning,
+            'status'      => $isRunning ? 'running' : 'stopped',
+            'started_at'  => $startedAt,
+            'badge_class' => $isRunning ? 'bg-success' : 'bg-secondary',
+            'badge_text'  => $isRunning ? 'Running' : 'Stopped',
         ];
     }
 

@@ -109,25 +109,33 @@ class CleanupOldRawDataJob implements ShouldQueue
                 ->pluck('guid')
                 ->toArray();
 
-            // Cek mana yang sudah ada di idle_alarms
-            $processedGuids = DB::table('idle_alarms')
-                ->whereIn('guid', $rawGuids)
-                ->pluck('guid')
-                ->toArray();
+            $guidChunks = array_chunk($rawGuids, 1000);
+            $deletedCount = 0;
+            $totalProcessedGuids = 0;
+
+            foreach ($guidChunks as $chunk) {
+                // Cek mana yang sudah ada di idle_alarms
+                $processedGuids = DB::table('idle_alarms')
+                    ->whereIn('guid', $chunk)
+                    ->pluck('guid')
+                    ->toArray();
+
+                $totalProcessedGuids += count($processedGuids);
+
+                // Hapus HANYA data yang sudah diproses ke idle_alarms
+                if (!empty($processedGuids)) {
+                    $deleted = AlarmRaw::where('created_at', '<', $cutoffDate)
+                        ->whereIn('guid', $processedGuids)
+                        ->delete();
+                    $deletedCount += $deleted;
+                }
+            }
 
             SystemLogger::info('CLEANUP_ALARM_RAW_VALIDATION', 'Validating data before cleanup', [
                 'total_old_records' => count($rawGuids),
-                'already_processed' => count($processedGuids),
-                'not_processed_yet' => count($rawGuids) - count($processedGuids),
+                'already_processed' => $totalProcessedGuids,
+                'not_processed_yet' => count($rawGuids) - $totalProcessedGuids,
             ]);
-
-            // Hapus HANYA data yang sudah diproses ke idle_alarms
-            $deletedCount = 0;
-            if (!empty($processedGuids)) {
-                $deletedCount = AlarmRaw::where('created_at', '<', $cutoffDate)
-                    ->whereIn('guid', $processedGuids)
-                    ->delete();
-            }
 
             // Untuk non-idle alarms (type != 32), hapus yang sudah lama
             // Karena tidak semua alarm type ada tabel terpisah

@@ -286,6 +286,18 @@
                     <strong class="text-danger">Total records to delete:</strong> <span id="previewTotalCount" class="text-danger"></span>
                 </div>
             </div>
+
+            <!-- Progress Bar (Added) -->
+            <div id="cleanupProgressContainer" class="mt-4" style="display: none;">
+                <h6><i class="fas fa-tasks"></i> Cleanup Progress</h6>
+                <div class="progress mb-2" style="height: 25px; border-radius: 5px;">
+                    <div id="cleanupProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%; font-weight: bold; font-size: 14px;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <small id="cleanupProgressStatus" class="text-primary fw-bold">Initializing...</small>
+                    <small id="cleanupProgressDetails" class="text-muted">Please wait...</small>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -689,6 +701,8 @@ $(document).ready(function() {
     });
     
     // Delete month data
+    let progressInterval = null;
+
     $('#btnDeleteMonth').on('click', function() {
         const monthData = JSON.parse($('#selectMonth').val());
         const monthText = $('#selectMonth option:selected').text();
@@ -705,6 +719,7 @@ $(document).ready(function() {
         }
         
         $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+        $('#btnPreviewMonth, #selectMonth').prop('disabled', true);
         
         $.ajax({
             url: '{{ route("admin.system-control.months.cleanup") }}',
@@ -714,27 +729,83 @@ $(document).ready(function() {
             },
             data: monthData,
             success: function(response) {
-                addLog('Cleanup job dispatched for ' + monthText, 'success');
-                alert('SUCCESS: ' + response.message);
+                addLog('Cleanup job dispatched for ' + monthText + '. Monitoring progress...', 'success');
                 
-                // Reset UI
-                $('#btnDeleteMonth').prop('disabled', false).html('<i class="fas fa-trash"></i> Delete Selected Month');
-                $('#selectMonth').val('').trigger('change');
-                $('#monthPreview').hide();
+                // Show progress bar
+                $('#cleanupProgressContainer').slideDown();
+                $('#cleanupProgressBar').css('width', '0%').text('0%');
+                $('#cleanupProgressStatus').text('Starting job...');
+                $('#cleanupProgressDetails').text('Waiting for queue worker...');
                 
-                // Reload available months
-                setTimeout(loadAvailableMonths, 2000);
-                
-                // Refresh status
-                setTimeout(refreshStatus, 5000);
+                // Start polling progress
+                startProgressPolling(monthData.year, monthData.month, monthText);
             },
             error: function(xhr) {
-                addLog('Failed to cleanup: ' + (xhr.responseJSON?.message || 'Unknown error'), 'danger');
-                alert('ERROR: ' + (xhr.responseJSON?.message || 'Failed to cleanup'));
+                addLog('Failed to dispatch cleanup: ' + (xhr.responseJSON?.message || 'Unknown error'), 'danger');
+                alert('ERROR: ' + (xhr.responseJSON?.message || 'Failed to dispatch cleanup'));
                 $('#btnDeleteMonth').prop('disabled', false).html('<i class="fas fa-trash"></i> Delete Selected Month');
+                $('#btnPreviewMonth, #selectMonth').prop('disabled', false);
             }
         });
     });
+
+    function startProgressPolling(year, month, monthText) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        
+        progressInterval = setInterval(function() {
+            $.get('{{ route("admin.system-control.months.progress") }}', { year: year, month: month })
+                .done(function(response) {
+                    if (response.progress) {
+                        const pct = response.progress.percentage || 0;
+                        const status = response.progress.status || 'Processing';
+                        const details = response.progress.details || '';
+                        
+                        $('#cleanupProgressBar').css('width', pct + '%').text(pct + '%');
+                        $('#cleanupProgressStatus').text(status);
+                        $('#cleanupProgressDetails').text(details);
+                        
+                        if (pct >= 100 || status === 'Completed' || status === 'Error') {
+                            clearInterval(progressInterval);
+                            
+                            if (status === 'Completed' || pct >= 100) {
+                                $('#cleanupProgressBar').removeClass('progress-bar-animated bg-primary').addClass('bg-success');
+                                addLog('Cleanup completed for ' + monthText, 'success');
+                                
+                                setTimeout(function() {
+                                    if (typeof Swal !== 'undefined') {
+                                        Swal.fire('Success', 'Data for ' + monthText + ' has been successfully deleted!', 'success');
+                                    } else {
+                                        alert('SUCCESS: Data has been deleted!');
+                                    }
+                                    
+                                    // Reset UI
+                                    $('#cleanupProgressContainer').slideUp();
+                                    $('#btnDeleteMonth').prop('disabled', false).html('<i class="fas fa-trash"></i> Delete Selected Month');
+                                    $('#btnPreviewMonth, #selectMonth').prop('disabled', false);
+                                    $('#selectMonth').val('').trigger('change');
+                                    $('#monthPreview').hide();
+                                    
+                                    loadAvailableMonths();
+                                    refreshStatus();
+                                }, 1500);
+                            } else if (status === 'Error') {
+                                $('#cleanupProgressBar').removeClass('progress-bar-animated bg-primary').addClass('bg-danger');
+                                addLog('Cleanup error: ' + details, 'danger');
+                                alert('ERROR: ' + details);
+                                
+                                $('#btnDeleteMonth').prop('disabled', false).html('<i class="fas fa-trash"></i> Delete Selected Month');
+                                $('#btnPreviewMonth, #selectMonth').prop('disabled', false);
+                            }
+                        }
+                    }
+                })
+                .fail(function() {
+                    console.error('Failed to poll progress');
+                });
+        }, 2000); // poll every 2 seconds
+    }
 });
 </script>
 @endpush

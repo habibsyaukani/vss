@@ -95,6 +95,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/system-control/months/available', [App\Http\Controllers\SystemControlController::class, 'getAvailableMonths'])->name('system-control.months.available');
     Route::post('/system-control/months/preview', [App\Http\Controllers\SystemControlController::class, 'previewMonthCleanup'])->name('system-control.months.preview');
     Route::post('/system-control/months/cleanup', [App\Http\Controllers\SystemControlController::class, 'cleanupByMonth'])->name('system-control.months.cleanup');
+    Route::get('/system-control/months/progress', [App\Http\Controllers\SystemControlController::class, 'getCleanupProgress'])->name('system-control.months.progress');
+
 
     // System Health Check
     Route::get('/system-health', [SystemHealthController::class, 'index'])->name('system-health.index');

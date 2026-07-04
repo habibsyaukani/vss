@@ -77,8 +77,7 @@ class SystemHealer
             SystemLogger::error(
                 'HEALING',
                 'Failed to auto-heal API token',
-                'Check HOWEN_USERNAME and HOWEN_PASSWORD in .env',
-                [],
+                ['hint' => 'Check HOWEN_USERNAME and HOWEN_PASSWORD in .env'],
                 $e
             );
 

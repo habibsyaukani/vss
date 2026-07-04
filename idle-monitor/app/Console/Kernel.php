@@ -123,6 +123,17 @@ class Kernel extends ConsoleKernel
         //     ->dailyAt('01:00')
         //     ->withoutOverlapping()
         //     ->description('Backfill alarm data (last 7 days)');
+
+        // ========================================
+        // 🔥 CACHE WARM-UP (PERFORMANCE)
+        // ========================================
+
+        // Pre-warm dashboard caches every hour so users never hit cold cache.
+        // This prevents the 100-second first-load delay on Speed/Idle/Dashboard.
+        $schedule->command('cache:warm-dashboard')
+            ->hourly()
+            ->withoutOverlapping()
+            ->description('Pre-warm dashboard & speed per-day caches');
     }
 
     /**

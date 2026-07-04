@@ -4,59 +4,23 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\IdleAlarm;
-use App\Models\DeviceGroup;
+use App\Http\Controllers\Frontend\Traits\HasDeviceGroups;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 
 class IdleAlarmController extends Controller
 {
+    use HasDeviceGroups;
+
     /**
      * Show idle alarms list (read-only for fleet manager)
      */
     public function index()
     {
-        // For the new sidebar filters
-        $locations = \App\Models\Device::whereNotNull('location')
-            ->whereNotIn('location', ['MUD UTARA STB', 'STB_001', 'STB_SITE'])
-            ->distinct()->pluck('location')->sort();
-        
-        $rawSeries = \App\Models\Device::whereNotNull('series')->distinct()->pluck('series');
-        $seriesList = $rawSeries->map(function ($s) {
-            if (stripos($s, 'FMX') !== false) return 'VOLVO';
-            return $s;
-        })->unique()->sort()->values();
+        // ✅ All device sidebar data is cached for 5 minutes (trait)
+        $sidebar = $this->getDeviceSidebarData();
 
-        $devices = \App\Models\Device::whereNotNull('device_name')->orderBy('device_name')->get();
-        $deviceGroups = [];
-        
-        foreach ($devices as $device) {
-            $parts = explode('-', $device->device_name);
-            $group = 'OTHER - GPE';
-            if (count($parts) >= 2) {
-                $type = $parts[1];
-                if ($type == 'B' || $type == 'BUS') $group = 'BUS - GPE';
-                elseif ($type == 'DT') $group = 'DT - GPE';
-                elseif ($type == 'FT' || $type == 'GFTH') $group = 'FT - GPE';
-                elseif ($type == 'HD') $group = 'HD - GPE';
-                elseif ($type == 'LV') $group = 'PATROL - GPE';
-                elseif ($type == 'WT') $group = 'WT - GPE';
-            }
-            
-            if (!isset($deviceGroups[$group])) {
-                $deviceGroups[$group] = ['total' => 0, 'active' => 0, 'devices' => []];
-            }
-            $deviceGroups[$group]['total']++;
-            if ($device->status === 'active') {
-                $deviceGroups[$group]['active']++;
-            }
-            $deviceGroups[$group]['devices'][] = $device;
-        }
-        ksort($deviceGroups);
-
-        $totalDevices = $devices->count();
-        $totalActive = $devices->where('status', 'active')->count();
-
-        return view('frontend.idle-alarm.index', compact('locations', 'seriesList', 'deviceGroups', 'totalDevices', 'totalActive'));
+        return view('frontend.idle-alarm.index', $sidebar);
     }
 
     /**
@@ -87,9 +51,14 @@ class IdleAlarmController extends Controller
             }
         }
 
-        // Filter by specific devices (from tree view) - optimized
+        // Filter by specific devices (from tree view) - Optimized to skip when all devices are selected
         if ($request->device_ids && is_array($request->device_ids)) {
-            $query->whereIn('idle_alarms.device_id', $request->device_ids);
+            $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                return \App\Models\Device::count();
+            });
+            if (count($request->device_ids) < $totalDevices) {
+                $query->whereIn('idle_alarms.device_id', $request->device_ids);
+            }
         }
 
         // Filter by group (if entire group selected but not individual devices, fallback logic) - optimized
@@ -210,7 +179,12 @@ class IdleAlarmController extends Controller
                 });
             }
             if ($request->device_ids && is_array($request->device_ids)) {
-                $query->whereIn('device_id', $request->device_ids);
+                $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                    return \App\Models\Device::count();
+                });
+                if (count($request->device_ids) < $totalDevices) {
+                    $query->whereIn('device_id', $request->device_ids);
+                }
             }
             if ($request->start_date) {
                 $query->whereDate('starting_time', '>=', $request->start_date);

@@ -9,6 +9,17 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- NProgress: top loading bar for fast navigation feedback -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.css">
+    <style>
+        /* NProgress customization - purple to match admin theme */
+        #nprogress .bar { background: #5a5ced !important; height: 3px !important; }
+        #nprogress .peg  { box-shadow: 0 0 10px #5a5ced, 0 0 5px #5a5ced !important; }
+        #nprogress .spinner-icon { border-top-color: #5a5ced !important; border-left-color: #5a5ced !important; }
+        /* Page fade-in */
+        .page-fade { animation: pageFadeIn 0.18s ease; }
+        @keyframes pageFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
     <style>
         body {
             background-color: #f8f9fc;
@@ -356,5 +367,38 @@
     </script>
     
     @stack('scripts')
+
+    <!-- instant.page: prefetch pages on hover for faster navigation -->
+    <script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.js" type="module"></script>
+
+    <!-- NProgress: show loading bar when navigating between pages -->
+    <script src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.js"></script>
+    <script>
+        NProgress.configure({ showSpinner: false, speed: 200, minimum: 0.1 });
+
+        // Start NProgress on any internal link click
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('a[href]');
+            if (!link) return;
+            var href = link.getAttribute('href');
+            // Only internal links, not anchors or javascript:
+            if (!href || href.startsWith('#') || href.startsWith('javascript') || href.startsWith('mailto')) return;
+            // Skip links that open in new tab
+            if (link.target === '_blank') return;
+            // Skip form-trigger links (logout etc)
+            if (link.closest('form')) return;
+            NProgress.start();
+        });
+
+        // Also start on form submit (e.g. filters)
+        document.addEventListener('submit', function() {
+            NProgress.start();
+        });
+
+        // Stop NProgress when page fully loads
+        window.addEventListener('pageshow', function() {
+            NProgress.done();
+        });
+    </script>
 </body>
 </html>
