@@ -44,9 +44,9 @@ class Kernel extends ConsoleKernel
         
         // ✅ PRIMARY: Pull alarms every 3 minutes (last 2 hours)
         // This ensures real-time monitoring without overwhelming the API
+        // NOTE: howen:pull-alarms-realtime only accepts --hours option
         $schedule->command('howen:pull-alarms-realtime', [
             '--hours' => 2,
-            '--concurrency' => 1,
         ])
             ->everyThreeMinutes()
             ->withoutOverlapping()

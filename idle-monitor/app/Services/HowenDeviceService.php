@@ -17,7 +17,7 @@ class HowenDeviceService
     public function __construct()
     {
         $this->client = new Client();
-        $this->apiUrl = rtrim(env('HOWEN_API_URL'), '/');
+        $this->apiUrl = rtrim(config('vss.howen_api_url'), '/');
         $this->authService = new HowenAuthService();
     }
 

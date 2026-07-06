@@ -19,7 +19,7 @@ class HowenAlarmService
     public function __construct()
     {
         $this->client = new Client();
-        $this->apiUrl = rtrim(env('HOWEN_API_URL'), '/');
+        $this->apiUrl = rtrim(config('vss.howen_api_url'), '/');
         // Use VssAuthService because HowenAuthService is failing due to JSON vs Form differences
         $this->authService = new VssAuthService();
     }

@@ -20,6 +20,12 @@ class SingleSessionMiddleware
         }
 
         $user           = Auth::user();
+
+        // ── Admin bebas login dari banyak perangkat/tab sekaligus ───────────
+        if ($user->role === 'admin') {
+            return $next($request);
+        }
+
         $sessionToken   = session('session_token');
 
         // ── Cek 1: Token sesi cocok dengan DB? ────────────────────────────
