@@ -522,10 +522,9 @@
     <div class="filter-label">LOCATION</div>
     <select class="form-select form-select-sm" id="locationFilter">
         <option value="">Semua</option>
-        <option value="UTARA">Lokasi Utara</option>
-        <option value="JO SELATAN">JO Selatan</option>
-        <option value="SELATAN">Selatan</option>
-        <option value="M.SERVICE">M Service</option>
+        @foreach($locations as $loc)
+            <option value="{{ $loc }}">{{ $loc }}</option>
+        @endforeach
     </select>
 </div>
 
@@ -534,10 +533,9 @@
     <div class="filter-label">SERIES</div>
     <select class="form-select form-select-sm" id="seriesFilter">
         <option value="">Semua</option>
-        <option value="HD 465">HD 465</option>
-        <option value="HD 785">HD 785</option>
-        <option value="OHT 773">OHT 773</option>
-        <option value="VOLVO">Volvo</option>
+        @foreach($seriesList as $series)
+            <option value="{{ $series }}">{{ $series }}</option>
+        @endforeach
     </select>
 </div>
 
@@ -981,7 +979,7 @@ $(document).ready(function() {
         
         console.log('Selected filters:', { location: selectedLocation, series: selectedSeries });
         
-        // If no filter, show all (but preserve user checkbox selections)
+        // If no filter, show all and re-check all devices
         if (!selectedLocation && !selectedSeries) {
             console.log('✅ No filter - showing all');
             $('.tree-child').each(function() {
@@ -993,9 +991,9 @@ $(document).ready(function() {
             $('.tree-parent').each(function() {
                 $(this).show().css('display', 'flex');
             });
-            // REMOVED: $('.device-checkbox').prop('checked', true);
-            // REMOVED: $('.group-checkbox').prop('checked', true);
-            // ✅ User checkbox selections are preserved
+            // Restore all checkboxes when filter is cleared
+            $('.device-checkbox').prop('checked', true);
+            $('.group-checkbox').prop('checked', true);
             return;
         }
         
@@ -1042,9 +1040,12 @@ $(document).ready(function() {
             
             if (shouldShow) {
                 $treeChild.show().css('display', 'flex');
-                // REMOVED: $treeChild.find('.device-checkbox').prop('checked', true);
-                // ✅ Checkbox state preserved - user's manual selection respected
+                // Auto-check devices that match the combined filter
+                $treeChild.find('.device-checkbox').prop('checked', true);
                 totalMatches++;
+            } else {
+                // Auto-uncheck devices hidden by filter so they don't pollute device_ids
+                $treeChild.find('.device-checkbox').prop('checked', false);
             }
             
             // Debug first 3
@@ -1198,11 +1199,31 @@ $(document).ready(function() {
                 d.location = $('#locationFilter').val();
                 d.series = $('#seriesFilter').val();
                 
-                // Collect selected device IDs
+                // Collect selected device IDs — only from VISIBLE (filtered) devices
+                // This ensures location+series combined filter works correctly:
+                // If location=UTARA & series=OHT773 → only send device_ids of UTARA+OHT773 devices
                 let selectedDevices = [];
-                $('.device-checkbox:checked').each(function() {
-                    selectedDevices.push($(this).val());
-                });
+                let hasLocationOrSeries = d.location || d.series;
+                
+                if (hasLocationOrSeries) {
+                    // Only include checked devices that are currently VISIBLE in the sidebar
+                    $('.tree-child').each(function() {
+                        let isVisible = $(this).is(':visible') || 
+                                        ($(this).attr('style') && $(this).attr('style').includes('display: flex'));
+                        if (isVisible) {
+                            let $checkbox = $(this).find('.device-checkbox');
+                            if ($checkbox.prop('checked')) {
+                                selectedDevices.push($checkbox.val());
+                            }
+                        }
+                    });
+                } else {
+                    // No location/series filter — collect all checked devices normally
+                    $('.device-checkbox:checked').each(function() {
+                        selectedDevices.push($(this).val());
+                    });
+                }
+                
                 d.device_ids = selectedDevices;
             }
         },
