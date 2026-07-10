@@ -690,44 +690,128 @@ $(document).ready(function() {
         let location = $('#locationFilter').val();
         let series = $('#seriesFilter').val();
 
+        // Jika kedua filter kosong → tampilkan SEMUA
         if (!location && !series) {
-            $('.tree-child').show();
-            $('.tree-parent').removeClass('open');
-            $('.tree-parent').first().addClass('open');
-            $('.tree-item').show();
+            $('.tree-child').attr('style', 'display: flex !important');
+            $('.tree-item').attr('style', 'display: list-item !important');
+            $('.tree-parent').attr('style', 'display: flex !important');
+            
+            // Reset children containers
+            $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-children').each(function() {
+                let $children = $(this);
+                let $parent = $children.prev('.tree-parent');
+                if ($parent.hasClass('open')) {
+                    $children.css('display', 'block');
+                } else {
+                    $children.css('display', '');
+                }
+            });
+            
+            // Reset group counters
+            $('.tree-view > .tree-item > .tree-children > .tree-item').each(function() {
+                let $groupItem = $(this);
+                let total = $groupItem.find('> .tree-children > .tree-child').length;
+                let $counter = $groupItem.find('> .tree-parent .group-count');
+                $counter.html(`(${total}|<span style="color: #16a34a; font-weight: 700;">${total}</span>)`);
+            });
+            
+            // Update master counter
+            let totalDevices = $('.tree-child').length;
+            let $masterCounter = $('.tree-view > .tree-item > .tree-parent .group-count').eq(0);
+            $masterCounter.html(`(${totalDevices}|<span style="color: #16a34a; font-weight: 700;">${totalDevices}</span>)`);
+            
             return;
         }
 
-        $('.tree-item').hide();
-        $('.tree-parent').removeClass('open');
-        $('.tree-child').hide();
-
+        let totalMatches = 0;
+        
+        // First, hide all devices
         $('.tree-child').each(function() {
-            let loc = $(this).data('location') || '';
-            let ser = $(this).data('series') || '';
+            $(this).attr('style', 'display: none !important');
+        });
+        
+        // Show only devices that match filter
+        $('.tree-child').each(function() {
+            let $treeChild = $(this);
+            let deviceLocation = $treeChild.data('location') || '';
+            let deviceSeries = $treeChild.data('series') || '';
+            let shouldShow = true;
             
-            let matchLoc = location === '' || loc === location;
-            let matchSeries = true;
-            if (series !== '') {
+            // Check location match
+            if (location && deviceLocation !== location) {
+                shouldShow = false;
+            }
+            
+            // Check series match  
+            if (series && shouldShow) {
+                let normalizedSelected = series.trim().toUpperCase().replace(/\s+/g, ' ');
+                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
+                
                 if (series.toUpperCase() === 'VOLVO') {
-                    matchSeries = ser.toUpperCase().includes('FMX');
+                    if (normalizedDevice !== 'VOLVO') {
+                        shouldShow = false;
+                    }
                 } else {
-                    matchSeries = ser === series;
+                    if (normalizedDevice !== normalizedSelected && !normalizedDevice.includes(normalizedSelected)) {
+                        shouldShow = false;
+                    }
                 }
             }
-
-            if (matchLoc && matchSeries) {
-                $(this).show();
-                
-                // Show parents and open them
-                let $parents = $(this).parents('.tree-item');
-                $parents.show();
-                $parents.children('.tree-parent').addClass('open');
+            
+            if (shouldShow) {
+                $treeChild.attr('style', 'display: flex !important');
+                totalMatches++;
             }
         });
+        
+        // Hide/show groups based on visible devices
+        let visibleGroups = 0;
+        $('.tree-view > .tree-item > .tree-children > .tree-item').each(function() {
+            let $groupItem = $(this);
+            let $groupChildren = $groupItem.find('> .tree-children > .tree-child');
+            let visibleCount = 0;
+            
+            $groupChildren.each(function() {
+                let style = $(this).attr('style') || '';
+                if (style.includes('display: flex')) {
+                    visibleCount++;
+                }
+            });
+            
+            if (visibleCount > 0) {
+                $groupItem.attr('style', 'display: list-item !important');
+                $groupItem.find('> .tree-parent').attr('style', 'display: flex !important');
+                
+                // Allow children to be displayed IF parent is manually opened
+                let $children = $groupItem.find('> .tree-children');
+                if ($groupItem.find('> .tree-parent').hasClass('open')) {
+                    $children.attr('style', 'display: block !important');
+                } else {
+                    $children.css('display', '');
+                }
+                
+                // Update group counter
+                let $counter = $groupItem.find('> .tree-parent .group-count');
+                $counter.html(`(${visibleCount}|<span style="color: #16a34a; font-weight: 700;">${visibleCount}</span>)`);
+                
+                visibleGroups++;
+            } else {
+                $groupItem.attr('style', 'display: none !important');
+                $groupItem.find('> .tree-parent').removeClass('open');
+                $groupItem.find('> .tree-children').attr('style', 'display: none !important');
+            }
+        });
+        
+        // Update master ALL GPE counter
+        let $masterCounter = $('.tree-view > .tree-item > .tree-parent .group-count').eq(0);
+        $masterCounter.html(`(${totalMatches}|<span style="color: #16a34a; font-weight: 700;">${totalMatches}</span>)`);
     }
 
     $('#locationFilter, #seriesFilter').on('change', function() {
+        // Close all sub-groups (collapse them) when filter changes
+        $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-parent').removeClass('open');
+        $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-children').slideUp(200);
+        
         filterTree();
         triggerReload(); // trigger table reload for server-side
     });

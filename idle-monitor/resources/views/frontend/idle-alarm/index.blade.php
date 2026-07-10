@@ -958,6 +958,11 @@ $(document).ready(function() {
             series: $('#seriesFilter').val(),
             triggerElement: this.id
         });
+        
+        // Close all sub-groups (collapse them) when filter changes
+        $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-parent').removeClass('open');
+        $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-children').slideUp(200);
+        
         filterTreeBySeriesLocation(); // Hide/show tree groups based on filter
         reloadTable();
     });
@@ -979,18 +984,44 @@ $(document).ready(function() {
         
         console.log('Selected filters:', { location: selectedLocation, series: selectedSeries });
         
-        // If no filter, show all and re-check all devices
+        // Jika kedua filter kosong → tampilkan SEMUA
         if (!selectedLocation && !selectedSeries) {
             console.log('✅ No filter - showing all');
             $('.tree-child').each(function() {
-                $(this).show().css('display', 'flex');
+                $(this).attr('style', 'display: flex !important');
             });
             $('.tree-item').each(function() {
-                $(this).show().css('display', 'list-item');
+                $(this).attr('style', 'display: list-item !important');
             });
             $('.tree-parent').each(function() {
-                $(this).show().css('display', 'flex');
+                $(this).attr('style', 'display: flex !important');
             });
+            
+            // ✅ Reset children containers to allow toggle functionality
+            $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-children').each(function() {
+                let $children = $(this);
+                let $parent = $children.prev('.tree-parent');
+                // If parent is open, show children; otherwise hide
+                if ($parent.hasClass('open')) {
+                    $children.css('display', 'block');
+                } else {
+                    $children.css('display', '');  // Remove inline style
+                }
+            });
+            
+            // Reset semua group counter
+            $('.tree-view > .tree-item > .tree-children > .tree-item').each(function() {
+                let $groupItem = $(this);
+                let total = $groupItem.find('> .tree-children > .tree-child').length;
+                let $counter = $groupItem.find('> .tree-parent .group-count');
+                $counter.html(`(${total}|<span style="color: #16a34a; font-weight: 700;">${total}</span>)`);
+            });
+            
+            // Update master ALL GPE counter
+            let totalDevices = $('.tree-child').length;
+            let $masterCounter = $('.tree-view > .tree-item > .tree-parent .group-count').eq(0);
+            $masterCounter.html(`(${totalDevices}|<span style="color: #16a34a; font-weight: 700;">${totalDevices}</span>)`);
+            
             // Restore all checkboxes when filter is cleared
             $('.device-checkbox').prop('checked', true);
             $('.group-checkbox').prop('checked', true);
@@ -1004,7 +1035,7 @@ $(document).ready(function() {
         
         // First, hide all devices (but preserve checkbox state)
         $('.tree-child').each(function() {
-            $(this).hide().css('display', 'none');
+            $(this).attr('style', 'display: none !important');
             // REMOVED: $(this).find('.device-checkbox').prop('checked', false);
             // ✅ Checkbox state preserved - only visibility changed
         });
@@ -1039,7 +1070,7 @@ $(document).ready(function() {
             }
             
             if (shouldShow) {
-                $treeChild.show().css('display', 'flex');
+                $treeChild.attr('style', 'display: flex !important');
                 // Auto-check devices that match the combined filter
                 $treeChild.find('.device-checkbox').prop('checked', true);
                 totalMatches++;
@@ -1076,7 +1107,8 @@ $(document).ready(function() {
             console.log(`Checking group ${groupIndex} "${groupName}" - found ${$groupChildren.length} direct children`);
             
             $groupChildren.each(function(i) {
-                if ($(this).is(':visible') || $(this).css('display') !== 'none') {
+                let style = $(this).attr('style') || '';
+                if (style.includes('display: flex')) {
                     visibleCount++;
                 }
             });
@@ -1085,18 +1117,23 @@ $(document).ready(function() {
             
             if (visibleCount > 0) {
                 // Show group (but preserve checkbox state)
-                $groupItem.show().css('display', 'list-item');
+                $groupItem.attr('style', 'display: list-item !important');
                 
-                // Auto-expand only if was collapsed - but respect user's choice
-                let wasCollapsed = !$groupItem.find('> .tree-parent').hasClass('open');
-                if (wasCollapsed && visibleCount > 0) {
-                    $groupItem.find('> .tree-parent').addClass('open');
+                // ❌ REMOVED: Auto-expand logic - let user manually expand groups
+                // Groups should stay collapsed after filter change
+                
+                $groupItem.find('> .tree-parent').attr('style', 'display: flex !important');
+                
+                // ✅ ALLOW children to be displayed IF parent is manually opened
+                // Remove the inline 'display: none' so click-to-expand works
+                let $children = $groupItem.find('> .tree-children');
+                if ($groupItem.find('> .tree-parent').hasClass('open')) {
+                    // Parent is open - show children
+                    $children.attr('style', 'display: block !important');
+                } else {
+                    // Parent is closed - hide children (but allow toggle to work)
+                    $children.css('display', '');  // Remove inline style, let CSS handle it
                 }
-                
-                $groupItem.find('> .tree-parent').show().css('display', 'flex');
-                $groupItem.find('> .tree-children').show().css('display', 'block');
-                // REMOVED: $groupItem.find('> .tree-parent .group-checkbox').prop('checked', true);
-                // ✅ Group checkbox state preserved - user's manual selection respected
                 
                 // Update group counter
                 let $counter = $groupItem.find('> .tree-parent .group-count');
@@ -1106,9 +1143,9 @@ $(document).ready(function() {
                 visibleGroups++;
             } else {
                 // Hide group (but preserve checkbox state)
-                $groupItem.hide().css('display', 'none');
-                $groupItem.find('> .tree-parent').hide().css('display', 'none').removeClass('open');
-                $groupItem.find('> .tree-children').hide().css('display', 'none');
+                $groupItem.attr('style', 'display: none !important');
+                $groupItem.find('> .tree-parent').attr('style', 'display: none !important').removeClass('open');
+                $groupItem.find('> .tree-children').attr('style', 'display: none !important');
                 // REMOVED: $groupItem.find('> .tree-parent .group-checkbox').prop('checked', false);
                 // ✅ Group checkbox state preserved - user's manual selection respected
                 

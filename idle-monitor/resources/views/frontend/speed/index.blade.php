@@ -848,6 +848,10 @@ $(function() {
 
     // ---- Location & Series Filter ----
     $('#locationFilter, #seriesFilter').change(function() {
+        // Close all sub-groups (collapse them) when filter changes
+        $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-parent').removeClass('open');
+        $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-children').slideUp(200);
+        
         filterTreeBySeriesLocation();
         reloadTable();
     });
@@ -856,25 +860,55 @@ $(function() {
         let selectedLocation = $('#locationFilter').val();
         let selectedSeries = $('#seriesFilter').val();
         
+        // Jika kedua filter kosong → tampilkan SEMUA
         if (!selectedLocation && !selectedSeries) {
-            $('.tree-child').show().css('display', 'flex');
-            $('.tree-item').show().css('display', 'list-item');
-            $('.tree-parent').show().css('display', 'flex');
+            $('.tree-child').attr('style', 'display: flex !important');
+            $('.tree-item').attr('style', 'display: list-item !important');
+            $('.tree-parent').attr('style', 'display: flex !important');
+            
+            // ✅ Reset children containers
+            $('.tree-view > .tree-item > .tree-children > .tree-item > .tree-children').each(function() {
+                let $children = $(this);
+                let $parent = $children.prev('.tree-parent');
+                if ($parent.hasClass('open')) {
+                    $children.css('display', 'block');
+                } else {
+                    $children.css('display', '');
+                }
+            });
+            
+            // Reset semua group counter
+            $('.tree-view > .tree-item > .tree-children > .tree-item').each(function() {
+                let $groupItem = $(this);
+                let total = $groupItem.find('> .tree-children > .tree-child').length;
+                let $counter = $groupItem.find('> .tree-parent .group-count');
+                $counter.html(`(${total}|<span style="color: #16a34a; font-weight: 700;">${total}</span>)`);
+            });
+            
+            // Update master counter
+            let totalDevices = $('.tree-child').length;
+            let $masterCounter = $('.tree-view > .tree-item > .tree-parent .group-count').eq(0);
+            $masterCounter.html(`(${totalDevices}|<span style="color: #16a34a; font-weight: 700;">${totalDevices}</span>)`);
+            
             return;
         }
         
         let totalMatches = 0;
         
-        $('.tree-child').hide().css('display', 'none');
+        // Sembunyikan semua device dulu
+        $('.tree-child').attr('style', 'display: none !important');
         
+        // Tampilkan hanya device yang cocok dengan filter
         $('.tree-child').each(function() {
             let $treeChild = $(this);
             let deviceLocation = $treeChild.data('location') || '';
             let deviceSeries = $treeChild.data('series') || '';
             let shouldShow = true;
             
+            // Cek filter location — jika filter kosong, semua location lolos
             if (selectedLocation && deviceLocation !== selectedLocation) shouldShow = false;
             
+            // Cek filter series — jika filter kosong, semua series lolos
             if (selectedSeries && shouldShow) {
                 let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/\s+/g, ' ');
                 let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
@@ -886,11 +920,13 @@ $(function() {
             }
             
             if (shouldShow) {
-                $treeChild.show().css('display', 'flex');
+                $treeChild.attr('style', 'display: flex !important');
                 totalMatches++;
             }
         });
         
+        // Update visibilitas group berdasarkan jumlah device yang terlihat
+        // Gunakan pengecekan attr('style') karena :visible tidak mendeteksi !important
         let $allGroups = $('.tree-view > .tree-item > .tree-children > .tree-item');
         $allGroups.each(function() {
             let $groupItem = $(this);
@@ -898,22 +934,30 @@ $(function() {
             let visibleCount = 0;
             
             $groupChildren.each(function() {
-                if ($(this).is(':visible') || $(this).css('display') !== 'none') visibleCount++;
+                let style = $(this).attr('style') || '';
+                if (style.includes('display: flex')) visibleCount++;
             });
             
             if (visibleCount > 0) {
-                $groupItem.show().css('display', 'list-item');
-                let wasCollapsed = !$groupItem.find('> .tree-parent').hasClass('open');
-                if (wasCollapsed && visibleCount > 0) $groupItem.find('> .tree-parent').addClass('open');
-                $groupItem.find('> .tree-parent').show().css('display', 'flex');
-                $groupItem.find('> .tree-children').show().css('display', 'block');
+                $groupItem.attr('style', 'display: list-item !important');
+                // ❌ REMOVED: Auto-expand - let user manually expand groups
+                // $groupItem.find('> .tree-parent').addClass('open');
+                $groupItem.find('> .tree-parent').attr('style', 'display: flex !important');
+                
+                // ✅ ALLOW children to be displayed IF parent is manually opened
+                let $children = $groupItem.find('> .tree-children');
+                if ($groupItem.find('> .tree-parent').hasClass('open')) {
+                    $children.attr('style', 'display: block !important');
+                } else {
+                    $children.css('display', '');  // Remove inline style
+                }
                 
                 let $counter = $groupItem.find('> .tree-parent .group-count');
                 $counter.html(`(${visibleCount}|<span style="color: #16a34a; font-weight: 700;">${visibleCount}</span>)`);
             } else {
-                $groupItem.hide().css('display', 'none');
-                $groupItem.find('> .tree-parent').hide().css('display', 'none').removeClass('open');
-                $groupItem.find('> .tree-children').hide().css('display', 'none');
+                $groupItem.attr('style', 'display: none !important');
+                $groupItem.find('> .tree-parent').removeClass('open');
+                $groupItem.find('> .tree-children').attr('style', 'display: none !important');
             }
         });
         
