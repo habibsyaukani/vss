@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title>Admin Portal - Idle Monitor System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -504,24 +504,24 @@
             
             <h1>Admin Portal</h1>
 
-            @if ($errors->any())
+            <?php if($errors->any()): ?>
                 <div class="alert alert-danger">
-                    @foreach ($errors->all() as $error)
-                        <div>{{ $error }}</div>
-                    @endforeach
+                    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div><?php echo e($error); ?></div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
-            @endif
+            <?php endif; ?>
 
-            @if (session('error'))
-                <div class="alert alert-danger">{{ session('error') }}</div>
-            @endif
+            <?php if(session('error')): ?>
+                <div class="alert alert-danger"><?php echo e(session('error')); ?></div>
+            <?php endif; ?>
 
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
+            <?php if(session('success')): ?>
+                <div class="alert alert-success"><?php echo e(session('success')); ?></div>
+            <?php endif; ?>
 
-            <form action="{{ route('admin.login') }}" method="POST">
-                @csrf
+            <form action="<?php echo e(route('admin.login')); ?>" method="POST">
+                <?php echo csrf_field(); ?>
 
                 <div class="form-group">
                     <label class="form-label">
@@ -530,7 +530,7 @@
                     </label>
                     <input type="text" name="username" class="form-control" 
                            placeholder="Enter your username" 
-                           value="{{ old('username') }}" required autofocus>
+                           value="<?php echo e(old('username')); ?>" required autofocus>
                 </div>
 
                 <div class="form-group">
@@ -727,3 +727,4 @@
     </script>
 </body>
 </html>
+<?php /**PATH G:\project\vss\idle-monitor\resources\views/admin/auth/login.blade.php ENDPATH**/ ?>

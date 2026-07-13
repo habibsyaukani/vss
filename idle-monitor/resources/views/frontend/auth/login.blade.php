@@ -446,10 +446,10 @@
                         @csrf
                         
                         <div class="form-group">
-                            <label class="form-label">Email Address</label>
+                            <label class="form-label">Username</label>
                             <div class="input-group-custom">
-                                <i class="fas fa-envelope icon-left"></i>
-                                <input type="email" name="email" class="form-control" placeholder="user@example.com" value="{{ old('email') }}" required autofocus>
+                                <i class="fas fa-user icon-left"></i>
+                                <input type="text" name="username" class="form-control" placeholder="Enter your username" value="{{ old('username') }}" required autofocus>
                             </div>
                         </div>
 
@@ -578,9 +578,9 @@
             }
             
             // Clear the reload flag when user starts typing (fresh login attempt)
-            const emailInput = document.querySelector('input[name="email"]');
-            if (emailInput) {
-                emailInput.addEventListener('focus', function() {
+            const usernameInput = document.querySelector('input[name="username"]');
+            if (usernameInput) {
+                usernameInput.addEventListener('focus', function() {
                     sessionStorage.removeItem('login_page_reloaded');
                 });
             }

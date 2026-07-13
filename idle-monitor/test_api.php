@@ -1,0 +1,1 @@
+<?php require __DIR__."/vendor/autoload.php"; $app = require_once __DIR__."/bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $s = app(\App\Services\HowenAlarmService::class); $data = $s->fetchAlarmsPage(1, 200, "2026-07-13 00:00:00", "2026-07-13 23:59:59", null, 32); echo "Records: " . count($data) . "\n";

@@ -28,15 +28,15 @@ class FrontendAuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'username' => 'required|string',
             'password' => 'required|min:6',
         ]);
 
         // Cari user terlebih dahulu sebelum Auth::attempt
-        $user = User::where('email', $credentials['email'])->first();
+        $user = User::where('username', $credentials['username'])->first();
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            return back()->with('error', 'Email atau password salah.');
+            return back()->with('error', 'Username atau password salah.');
         }
 
         // Cek role

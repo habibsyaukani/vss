@@ -77,7 +77,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'username' => 'required|string|unique:users,username',
             'password' => 'required|min:6|confirmed',
             'role' => 'required|in:admin,fleet_manager',
             'status' => 'required|in:active,inactive',
@@ -106,7 +106,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'username' => 'required|string|unique:users,username,' . $user->id,
             'password' => 'nullable|min:6|confirmed',
             'role' => 'required|in:admin,fleet_manager',
             'status' => 'required|in:active,inactive',

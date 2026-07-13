@@ -1,26 +1,27 @@
-@extends('admin.layouts.app')
 
-@section('title', 'User Management')
 
-@section('content')
+<?php $__env->startSection('title', 'User Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col-md-6">
             <h3><i class="fas fa-users"></i> User Management</h3>
         </div>
         <div class="col-md-6 text-end">
-            <a href="{{ route('admin.user.create') }}" class="btn btn-primary">
+            <a href="<?php echo e(route('admin.user.create')); ?>" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create User
             </a>
         </div>
     </div>
 
-    @if (session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="card">
         <div class="card-body">
@@ -40,19 +41,19 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(function() {
     console.log('✅ User Management JavaScript loaded');
     console.log('DataTables available?', typeof $.fn.DataTable !== 'undefined');
-    console.log('AJAX URL:', "{{ route('admin.user.data') }}");
+    console.log('AJAX URL:', "<?php echo e(route('admin.user.data')); ?>");
     
     $('.datatable').DataTable({
         processing: true,
         serverSide: true,
-        ajax: "{{ route('admin.user.data') }}",
+        ajax: "<?php echo e(route('admin.user.data')); ?>",
         columns: [
             {data: 'name'},
             {data: 'username'},
@@ -89,4 +90,6 @@ $(function() {
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('admin.layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH G:\project\vss\idle-monitor\resources\views/admin/user/index.blade.php ENDPATH**/ ?>
