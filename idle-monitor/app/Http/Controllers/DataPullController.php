@@ -73,15 +73,18 @@ class DataPullController extends Controller
             $output = "Memulai proses penarikan di latar belakang (Background Queue)...";
             $processOutput = "Proses idle alarm akan berjalan otomatis di background.";
 
-            $stats = [
-                'total_mei' => DB::table('idle_alarms')
-                    ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
-                    ->count(),
-                'total_juni' => DB::table('idle_alarms')
-                    ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
-                    ->count(),
-                'total_all' => DB::table('idle_alarms')->count(),
-            ];
+            // Cache stat calculations to prevent Gateway Time-out on large tables
+            $stats = Cache::remember('datapull_stats', 300, function () {
+                return [
+                    'total_mei' => DB::table('idle_alarms')
+                        ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
+                        ->count(),
+                    'total_juni' => DB::table('idle_alarms')
+                        ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
+                        ->count(),
+                    'total_all' => $this->getApproximateCount('idle_alarms'),
+                ];
+            });
 
             return response()->json([
                 'success' => true,
@@ -104,18 +107,21 @@ class DataPullController extends Controller
      */
     public function statistics()
     {
-        $stats = [
-            'total_mei' => DB::table('idle_alarms')
-                ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
-                ->count(),
-            'total_juni' => DB::table('idle_alarms')
-                ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
-                ->count(),
-            'total_all' => DB::table('idle_alarms')->count(),
-            'last_pull' => DB::table('system_settings')
+        $stats = Cache::remember('datapull_stats', 300, function () {
+            return [
+                'total_mei' => DB::table('idle_alarms')
+                    ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
+                    ->count(),
+                'total_juni' => DB::table('idle_alarms')
+                    ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
+                    ->count(),
+                'total_all' => $this->getApproximateCount('idle_alarms'),
+            ];
+        });
+        
+        $stats['last_pull'] = DB::table('system_settings')
                 ->where('key', 'last_realtime_pull')
-                ->value('value'),
-        ];
+                ->value('value');
 
         return response()->json($stats);
     }
