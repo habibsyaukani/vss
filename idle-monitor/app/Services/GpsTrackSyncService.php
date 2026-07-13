@@ -74,7 +74,7 @@ class GpsTrackSyncService
 
         // --- Sisa halaman ditarik PARALEL, per batch ---
         $remainingPages = range(2, $totalPages);
-        $concurrency    = 5; // jumlah request paralel per batch
+        $concurrency    = 3; // jumlah request paralel per batch dikurangi agar lebih aman dari rate limit
 
         foreach (array_chunk($remainingPages, $concurrency) as $pageBatch) {
             

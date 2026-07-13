@@ -38,26 +38,27 @@
 
                         <div class="mb-3">
                             <label for="pages" class="form-label">Jumlah Pages</label>
-                            <input type="number" class="form-control" id="pages" name="pages" value="100" min="1" max="200">
-                            <small class="text-muted">Default: 100 (1 page = 200 records)</small>
+                            <input type="number" class="form-control" id="pages" name="pages" value="50" min="1" max="200">
+                            <small class="text-muted">Default: 50 (1 page = 200 records, 50 pages = ~10.000 records per hari)</small>
                         </div>
 
                         <div class="mb-3">
                             <label for="concurrency" class="form-label">Concurrency (Paralel)</label>
                             <select class="form-select" id="concurrency" name="concurrency">
-                                <option value="1" selected>1 - Sequential (Safe & Lambat)</option>
-                                <option value="2">2 - Fast</option>
-                                <option value="5">5 - Very Fast (Rawan Kena Limit Howen)</option>
+                                <option value="1">1 - Sequential (Aman tapi Lambat ~5-10 menit)</option>
+                                <option value="3">3 - Balanced (Cukup Cepat ~2-3 menit)</option>
+                                <option value="5" selected>5 - Paralel Cepat ✅ (Direkomendasikan ~1 menit)</option>
                             </select>
-                            <small class="text-muted">Gunakan 1 (Safe) agar tidak diblokir/limit oleh server Howen.</small>
+                            <small class="text-muted">Pilihan 5 (Paralel) lebih cepat dan sudah terbukti aman untuk server Howen.</small>
                         </div>
 
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i> <strong>Perhatian:</strong>
                             <ul class="mb-0 mt-2">
                                 <li>Proses penarikan data memakan waktu tergantung jumlah hari</li>
-                                <li><strong>1 hari = ~10-20 ribu records = ~1-3 menit</strong></li>
-                                <li><strong>Rentang besar (7+ hari) bisa mencapai 10-15 menit</strong></li>
+                                <li><strong>1 hari (Paralel 5) = ~1 menit ⚡</strong></li>
+                                <li><strong>1 hari (Sequential 1) = ~5-10 menit 🐌</strong></li>
+                                <li><strong>Rentang besar (7+ hari, Paralel) bisa mencapai 5-10 menit</strong></li>
                                 <li>Data akan diproses otomatis setelah pull selesai</li>
                                 <li>Tunggu hingga proses selesai, jangan tutup halaman ini</li>
                                 <li><span class="badge bg-warning text-dark">PENTING</span> Jangan refresh atau close browser saat proses berjalan!</li>

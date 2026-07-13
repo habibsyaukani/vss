@@ -144,7 +144,7 @@ class PullGpsTracksCommand extends Command
             }
 
             // Dispatch process job
-            $this->info("🔄 Dispatching ProcessGpsTrackJob...");
+            $this->info("🔄 Dispatching ProcessGpsTrackJob to Queue...");
             ProcessGpsTrackJob::dispatch();
             $this->info("✅ Job dispatched");
             $this->newLine();

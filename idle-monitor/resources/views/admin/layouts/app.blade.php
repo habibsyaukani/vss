@@ -9,6 +9,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 for nice alerts -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <!-- NProgress: top loading bar for fast navigation feedback -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.css">
     <style>
@@ -233,11 +235,11 @@
         <a href="{{ route('admin.gps-track-pull.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.gps-track-pull.index' ? 'active' : '' }}">
             <i class="fas fa-map-marked-alt"></i> GPS Track Pull
         </a>
+        <a href="{{ route('admin.auto-data-pull.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.auto-data-pull.index' ? 'active' : '' }}">
+            <i class="fas fa-sync-alt"></i> Auto Data Pull
+        </a>
         
         <div class="sidebar-section mt-3">SYSTEM</div>
-        <a href="{{ route('admin.system-control.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.system-control.index' ? 'active' : '' }}">
-            <i class="fas fa-play-circle"></i> System Control
-        </a>
         <a href="{{ route('admin.system-health.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.system-health.index' ? 'active' : '' }}">
             <i class="fas fa-heartbeat"></i> System Health
         </a>
@@ -272,6 +274,7 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
         // Setup AJAX CSRF Token

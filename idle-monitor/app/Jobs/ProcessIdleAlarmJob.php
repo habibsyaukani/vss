@@ -130,8 +130,7 @@ class ProcessIdleAlarmJob implements ShouldQueue
                                 $alarmType == 32 &&                     // Idle Alarm Type
                                 $alarmState == 0 &&                     // Alarm End
                                 $durationSeconds > 0 &&                 // Ada durasi valid
-                                !empty($alarmRaw->end_time) &&          // End time exists
-                                $endSpeed > 0                           // Tidak boleh 0 km/h (sesuai request)
+                                !empty($alarmRaw->end_time)             // End time exists
                             );
                             
                             if (!$isIdleAlarm) {

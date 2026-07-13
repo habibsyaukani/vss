@@ -42,11 +42,22 @@
                             <small class="text-muted">0 = semua device (397), 10 = hanya 10 device pertama (untuk testing)</small>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="concurrency" class="form-label">Concurrency (Paralel Batch)</label>
+                            <select class="form-select" id="concurrency" name="concurrency">
+                                <option value="1">1 - Sequential (Paling Aman)</option>
+                                <option value="3" selected>3 - Cepat & Aman (Direkomendasikan) ✅</option>
+                                <option value="5">5 - Sangat Cepat</option>
+                                <option value="20">20 - Ekstrim (Hanya untuk Server Produksi)</option>
+                            </select>
+                            <small class="text-muted">Gunakan 3 agar server lokal tidak hang. Pilihan 20 akan membuat browser stack jika menggunakan artisan serve.</small>
+                        </div>
+
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i> <strong>Perhatian:</strong>
                             <ul class="mb-0 mt-2">
-                                <li>Sistem akan menarik data secara <strong>Paralel Batch (20 device sekaligus)</strong></li>
-                                <li><strong>Waktu pull super cepat: ~30-45 detik</strong> untuk semua 397 device</li>
+                                <li>Sistem akan menarik data secara batch berdasarkan pilihan concurrency.</li>
+                                <li><strong>Waktu pull: ~1-3 menit</strong> untuk semua 397 device.</li>
                                 <li>Data disimpan ke tabel <code>gps_tracks_raw</code></li>
                                 <li><span class="badge bg-warning text-dark">PENTING</span> Jangan refresh atau close browser saat proses berjalan!</li>
                             </ul>

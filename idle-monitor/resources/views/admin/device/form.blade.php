@@ -63,7 +63,7 @@
                                         <option value="">-- Select Location --</option>
                                         <option value="JO SELATAN" {{ old('location', $device->location ?? '') === 'JO SELATAN' ? 'selected' : '' }}>JO SELATAN</option>
                                         <option value="M.SERVICE" {{ old('location', $device->location ?? '') === 'M.SERVICE' ? 'selected' : '' }}>M.SERVICE</option>
-                                        <option value="MUD UTARA" {{ old('location', $device->location ?? '') === 'MUD UTARA' ? 'selected' : '' }}>MUD UTARA</option>
+                                        <option value="MUD" {{ old('location', $device->location ?? '') === 'MUD' ? 'selected' : '' }}>MUD</option>
                                         <option value="SELATAN" {{ old('location', $device->location ?? '') === 'SELATAN' ? 'selected' : '' }}>SELATAN</option>
                                         <option value="STB_001" {{ old('location', $device->location ?? '') === 'STB_001' ? 'selected' : '' }}>STB_001</option>
                                         <option value="STB_SITE" {{ old('location', $device->location ?? '') === 'STB_SITE' ? 'selected' : '' }}>STB_SITE</option>
@@ -77,10 +77,8 @@
                                     <label class="form-label">Series</label>
                                     <select name="series" class="form-control @error('series') is-invalid @enderror">
                                         <option value="">-- Select Series --</option>
-                                        <option value="DT BARU FMX 400" {{ old('series', $device->series ?? '') === 'DT BARU FMX 400' ? 'selected' : '' }}>DT BARU FMX 400</option>
-                                        <option value="DT BARU FMX 420" {{ old('series', $device->series ?? '') === 'DT BARU FMX 420' ? 'selected' : '' }}>DT BARU FMX 420</option>
-                                        <option value="DT LAMA FMX 370" {{ old('series', $device->series ?? '') === 'DT LAMA FMX 370' ? 'selected' : '' }}>DT LAMA FMX 370</option>
-                                        <option value="DT LAMA FMX 400" {{ old('series', $device->series ?? '') === 'DT LAMA FMX 400' ? 'selected' : '' }}>DT LAMA FMX 400</option>
+                                        <option value="DT HINO" {{ old('series', $device->series ?? '') === 'DT HINO' ? 'selected' : '' }}>DT HINO</option>
+                                        <option value="DT VOLVO" {{ old('series', $device->series ?? '') === 'DT VOLVO' ? 'selected' : '' }}>DT VOLVO</option>
                                         <option value="HD 465" {{ old('series', $device->series ?? '') === 'HD 465' ? 'selected' : '' }}>HD 465</option>
                                         <option value="HD 785" {{ old('series', $device->series ?? '') === 'HD 785' ? 'selected' : '' }}>HD 785</option>
                                         <option value="OHT 773" {{ old('series', $device->series ?? '') === 'OHT 773' ? 'selected' : '' }}>OHT 773</option>

@@ -19,50 +19,34 @@ class PullIdleAlarmsRealtimeCommand extends Command
     public function handle()
     {
         try {
-            $hours = (int)$this->option('hours') ?: 24;
+            $hours = (int)$this->option('hours') ?: 2;
             
-            // Define time range: last N hours
-            $dayStart = now()->subHours($hours)->startOfDay();
-            $dayEnd = now()->endOfDay();
+            // ✅ FIX: Use exact N hours lookback, NOT startOfDay()
+            // startOfDay() was causing re-import of all day's data every 3 minutes
+            // Now we use precise timestamp: last N hours from now
+            $beginTime = now()->subHours($hours);
+            $endTime = now();
 
             $this->info("🔄 Real-time pull (last {$hours} hours)");
-            $this->info("   Range: {$dayStart->format('Y-m-d H:i')} → {$dayEnd->format('Y-m-d H:i')}");
+            $this->info("   Range: {$beginTime->format('Y-m-d H:i')} → {$endTime->format('Y-m-d H:i')}");
 
-            // Fetch data
+            // Fetch data secara sequential dengan delay 1 detik per halaman (anti rate-limit)
             $service = new \App\Services\HowenAlarmService();
-            $allAlarms = [];
-            
-            // Fetch pages in parallel (5 concurrent)
-            try {
-                $allAlarms = $service->fetchAlarmsParallel(
-                    1,
-                    20, // Fewer pages needed for real-time (only last 24 hours)
-                    200,
-                    $dayStart->toDateTimeString(),
-                    $dayEnd->toDateTimeString(),
-                    5
-                );
-            } catch (\Exception $e) {
-                $this->warn("⚠️ Parallel fetch failed, trying sequential: {$e->getMessage()}");
-                
-                // Fallback to sequential
-                for ($page = 1; $page <= 20; $page++) {
-                    $alarms = $service->fetchAlarms(
-                        $page,
-                        200,
-                        $dayStart->toDateTimeString(),
-                        $dayEnd->toDateTimeString()
-                    );
-                    
-                    if (empty($alarms)) break;
-                    $allAlarms = array_merge($allAlarms, $alarms);
-                    usleep(150000); // 150ms delay
-                }
-            }
+
+            $this->info("   📡 Fetching pages 1–10 (sequential, 1s delay/page)...");
+            $allAlarms = $service->fetchAlarmsParallel(
+                1,
+                10, // Max 10 halaman untuk last 2 jam (sudah lebih dari cukup)
+                200,
+                $beginTime->toDateTimeString(),
+                $endTime->toDateTimeString()
+            );
 
             if (empty($allAlarms)) {
                 $this->info("   ℹ️ No new alarms in last {$hours} hours");
                 SystemSetting::set('last_realtime_pull', now()->toDateTimeString());
+                // ✅ Also update last_alarm_sync watermark even if empty
+                SystemSetting::set('last_alarm_sync', $endTime->toDateTimeString());
                 return 0;
             }
 
@@ -85,12 +69,14 @@ class PullIdleAlarmsRealtimeCommand extends Command
 
             // Process idle alarms in real-time
             if ($inserted > 0) {
+                // Gunakan antrean Queue Worker agar berjalan di latar belakang bergantian
                 ProcessIdleAlarmJob::dispatch();
-                $this->info("   ⚡ Processing idle alarms...");
+                $this->info("   ⚡ Processing idle alarms (dispatched to Queue)...");
             }
 
-            // Update last pull time
+            // ✅ Update both timestamps so next pull doesn't re-import the same data
             SystemSetting::set('last_realtime_pull', now()->toDateTimeString());
+            SystemSetting::set('last_alarm_sync', $endTime->toDateTimeString());
 
             $this->info("   ✅ Real-time pull completed\n");
             return 0;

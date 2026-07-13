@@ -19,6 +19,8 @@ class ImportGpsTrackJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 900;  // 15 minutes untuk handle banyak device
+    public $tries = 3;       // Max 3 attempts before marking as failed
+    public $maxExceptions = 3; // Max 3 exceptions before marking as failed
 
     protected int $hoursBack;
     protected int $delayBetweenDevicesMs;

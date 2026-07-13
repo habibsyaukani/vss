@@ -44,27 +44,23 @@
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Filter by Series</label>
                     <select id="filterSeries" class="form-select form-select-sm">
-                        <option value="all">-- All Series --</option>
-                        <option value="DT BARU FMX 400">DT BARU FMX 400</option>
-                        <option value="DT BARU FMX 420">DT BARU FMX 420</option>
-                        <option value="DT LAMA FMX 370">DT LAMA FMX 370</option>
-                        <option value="DT LAMA FMX 400">DT LAMA FMX 400</option>
+                        <option value="all">Semua Series</option>
+                        <option value="OHT 773">OHT 773</option>
+                        <option value="DT HINO">DT HINO</option>
+                        <option value="DT VOLVO">DT VOLVO</option>
                         <option value="HD 465">HD 465</option>
                         <option value="HD 785">HD 785</option>
-                        <option value="OHT 773">OHT 773</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Filter by Location</label>
                     <select id="filterLocation" class="form-select form-select-sm">
-                        <option value="all">-- All Locations --</option>
+                        <option value="all">Semua Location</option>
                         <option value="JO SELATAN">JO SELATAN</option>
-                        <option value="M.SERVICE">M.SERVICE</option>
-                        <option value="MUD UTARA">MUD UTARA</option>
+                        <option value="MUD">MUD</option>
                         <option value="SELATAN">SELATAN</option>
-                        <option value="STB_001">STB_001</option>
-                        <option value="STB_SITE">STB_SITE</option>
                         <option value="UTARA">UTARA</option>
+                        <option value="M.SERVICE">M.SERVICE</option>
                     </select>
                 </div>
                 <div class="col-md-3">

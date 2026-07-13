@@ -68,9 +68,8 @@ class WarmDashboardCache extends Command
             ->orderBy('device_name')
             ->get(['device_id', 'device_name', 'status', 'location', 'series']);
 
-        $blacklist    = ['MUD UTARA STB', 'STB_001', 'STB_SITE'];
-        $locations    = $devices->whereNotNull('location')->whereNotIn('location', $blacklist)->pluck('location')->unique()->sort()->values();
-        $seriesList   = $devices->whereNotNull('series')->pluck('series')->map(fn($s) => stripos($s, 'FMX') !== false ? 'VOLVO' : $s)->unique()->sort()->values();
+        $locations    = collect(['JO SELATAN', 'M.SERVICE', 'MUD', 'SELATAN', 'UTARA']);
+        $seriesList   = collect(['DT HINO', 'DT VOLVO', 'HD 465', 'HD 785', 'OHT 773']);
         $deviceGroups = [];
 
         foreach ($devices as $device) {

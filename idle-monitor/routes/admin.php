@@ -10,6 +10,7 @@ use App\Http\Controllers\IdleAlarmController;
 use App\Http\Controllers\ImportLogController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\DataPullController;
+use App\Http\Controllers\AutoDataPullController;
 use App\Http\Controllers\Admin\SystemHealthController;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -81,21 +82,18 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/gps-track-pull/statistics', [DataPullController::class, 'gpsTrackStatistics'])->name('gps-track-pull.statistics');
     Route::get('/gps-track-pull/devices', [DataPullController::class, 'getActiveDevices'])->name('gps-track-pull.devices');
 
-    // System Control (Queue & Realtime Pull & Cleanup)
-    Route::get('/system-control', [App\Http\Controllers\SystemControlController::class, 'index'])->name('system-control.index');
-    Route::post('/system-control/queue/start', [App\Http\Controllers\SystemControlController::class, 'startQueueWorker'])->name('system-control.queue.start');
-    Route::post('/system-control/queue/stop', [App\Http\Controllers\SystemControlController::class, 'stopQueueWorker'])->name('system-control.queue.stop');
-    Route::post('/system-control/realtime/start', [App\Http\Controllers\SystemControlController::class, 'startRealtimePull'])->name('system-control.realtime.start');
-    Route::post('/system-control/realtime/stop', [App\Http\Controllers\SystemControlController::class, 'stopRealtimePull'])->name('system-control.realtime.stop');
-    Route::post('/system-control/cleanup/update', [App\Http\Controllers\SystemControlController::class, 'updateCleanupSettings'])->name('system-control.update-cleanup');
-    Route::post('/system-control/cleanup/run', [App\Http\Controllers\SystemControlController::class, 'runCleanupManually'])->name('system-control.run-cleanup');
-    Route::get('/system-control/status', [App\Http\Controllers\SystemControlController::class, 'getStatus'])->name('system-control.status');
-    
-    // Manual Cleanup by Month
-    Route::get('/system-control/months/available', [App\Http\Controllers\SystemControlController::class, 'getAvailableMonths'])->name('system-control.months.available');
-    Route::post('/system-control/months/preview', [App\Http\Controllers\SystemControlController::class, 'previewMonthCleanup'])->name('system-control.months.preview');
-    Route::post('/system-control/months/cleanup', [App\Http\Controllers\SystemControlController::class, 'cleanupByMonth'])->name('system-control.months.cleanup');
-    Route::get('/system-control/months/progress', [App\Http\Controllers\SystemControlController::class, 'getCleanupProgress'])->name('system-control.months.progress');
+    // Auto Data Pull (Alternating Idle & GPS every 30 minutes)
+    Route::get('/auto-data-pull', [AutoDataPullController::class, 'index'])->name('auto-data-pull.index');
+    Route::post('/auto-data-pull/toggle', [AutoDataPullController::class, 'toggle'])->name('auto-data-pull.toggle');
+    Route::post('/auto-data-pull/run-now', [AutoDataPullController::class, 'runNow'])->name('auto-data-pull.run-now');
+    Route::get('/auto-data-pull/status', [AutoDataPullController::class, 'getStatus'])->name('auto-data-pull.status');
+    Route::post('/auto-data-pull/update-interval', [AutoDataPullController::class, 'updateInterval'])->name('auto-data-pull.update-interval');
+
+    // System Control - REMOVED (UI only, background services still run via scheduler/CLI)
+    // Background services remain functional:
+    // - Queue Worker: php artisan queue:work
+    // - Realtime Pull: Runs automatically via scheduler
+    // - Cleanup: Runs automatically via scheduler
 
 
     // System Health Check

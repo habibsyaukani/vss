@@ -14,7 +14,7 @@ class HowenAlarmService
     private $client;
     private $apiUrl;
     private $authService;
-    private const REQUEST_DELAY_MS = 500; // 500ms delay between requests
+    private const REQUEST_DELAY_MS = 1000; // 1000ms (1s) delay between requests — aman dari rate limit
 
     public function __construct()
     {
@@ -38,73 +38,72 @@ class HowenAlarmService
      */
     public function fetchAlarmsPage($pageNum = 1, $pageCount = 200, $beginTime = null, $endTime = null, $deviceId = null, $alarmType = null)
     {
-        try {
-            $token = $this->authService->getToken();
+        $token = $this->authService->getToken();
+        
+        if (!$beginTime) $beginTime = SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString());
+        if (!$endTime) $endTime = now()->toDateTimeString();
 
-            if (!$beginTime) {
-                $beginTime = SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString());
-            }
-            if (!$endTime) {
-                $endTime = now()->toDateTimeString();
-            }
+        $maxRetries = 5;
+        $retryDelay = 3000000; // 3 seconds awal
 
-            Log::info("Fetching alarms from Howen API", [
-                'page' => $pageNum,
-                'page_count' => $pageCount,
-                'begin' => $beginTime,
-                'end' => $endTime,
-                'device_id' => $deviceId,
-                'alarm_type' => $alarmType,
-            ]);
-
-            $response = $this->client->post("{$this->apiUrl}/alarm/apiFindAllByTime.action", [
-                'form_params' => [
-                    'token' => $token,
-                    'pageNum' => $pageNum,
-                    'pageCount' => $pageCount,
-                    'beginTime' => $beginTime,
-                    'endTime' => $endTime,
-                    'alarmType' => $alarmType ?? '',
-                    'deviceID' => $deviceId ?? '',
-                ],
-                'timeout' => 10,
-                'verify' => false,
-                'connect_timeout' => 10,
-            ]);
-
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            if ($data['status'] == 10000 && isset($data['data'])) {
-                // Handle two possible response structures:
-                // Structure 1: data is array of alarm objects directly
-                // Structure 2: data is object with 'dataList' key containing alarms
-                
-                $dataItem = $data['data'];
-                
-                if (isset($dataItem['dataList'])) {
-                    // New structure: data contains metadata + dataList
-                    $alarms = is_array($dataItem['dataList']) ? $dataItem['dataList'] : [$dataItem['dataList']];
-                    Log::info("Fetched alarms page (new structure)", [
-                        'count' => count($alarms),
-                        'totalCount' => $dataItem['totalCount'] ?? null,
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $response = $this->client->post("{$this->apiUrl}/alarm/apiFindAllByTime.action", [
+                    'form_params' => [
+                        'token' => $token,
                         'pageNum' => $pageNum,
-                    ]);
-                } else {
-                    // Old structure: data is direct array of alarms
-                    $alarms = is_array($dataItem) ? $dataItem : [$dataItem];
-                    Log::info("Fetched alarms page (old structure)", ['count' => count($alarms)]);
-                }
-                
-                return $alarms;
-            } else {
-                Log::error('Failed to fetch alarms', ['status' => $data['status'] ?? null, 'message' => $data['msg'] ?? null]);
-                return [];
-            }
+                        'pageCount' => $pageCount,
+                        'beginTime' => $beginTime,
+                        'endTime' => $endTime,
+                        'alarmType' => $alarmType ?? '',
+                        'deviceID' => $deviceId ?? '',
+                    ],
+                    'timeout' => 20,
+                    'verify' => false,
+                    'connect_timeout' => 20,
+                ]);
 
-        } catch (GuzzleException $e) {
-            Log::error('Howen API request failed', ['error' => $e->getMessage()]);
-            return [];
+                $data = json_decode($response->getBody()->getContents(), true);
+
+                // Status 10129 = Rate limited (Requests too frequent)
+                if (($data['status'] ?? null) == 10129) {
+                    $waitSeconds = (int) round($retryDelay / 1000000);
+                    Log::warning("[HowenAlarm] Rate limited (10129) — halaman {$pageNum}, percobaan {$attempt}/{$maxRetries}, menunggu {$waitSeconds}s...");
+                    usleep($retryDelay);
+                    $retryDelay = min($retryDelay * 2, 30000000); // Backoff max 30 detik
+                    continue;
+                }
+
+                if ($data['status'] == 10000 && isset($data['data'])) {
+                    $dataItem = $data['data'];
+                    
+                    if (isset($dataItem['dataList'])) {
+                        $alarms = is_array($dataItem['dataList']) ? $dataItem['dataList'] : [$dataItem['dataList']];
+                        Log::info("Fetched alarms page (new structure)", [
+                            'count' => count($alarms),
+                            'totalCount' => $dataItem['totalCount'] ?? null,
+                            'pageNum' => $pageNum,
+                        ]);
+                    } else {
+                        $alarms = is_array($dataItem) ? $dataItem : [$dataItem];
+                        Log::info("Fetched alarms page (old structure)", ['count' => count($alarms)]);
+                    }
+                    
+                    return $alarms;
+                } else {
+                    Log::error('Failed to fetch alarms', ['status' => $data['status'] ?? null, 'message' => $data['msg'] ?? null]);
+                    return [];
+                }
+            } catch (\Exception $e) {
+                Log::error("Exception in fetchAlarmsPage attempt {$attempt}: " . $e->getMessage());
+                if ($attempt < $maxRetries) {
+                    usleep($retryDelay);
+                    continue;
+                }
+            }
         }
+        
+        return [];
     }
 
     /**
@@ -130,110 +129,59 @@ class HowenAlarmService
     }
 
     /**
-     * OPSI 1: Fetch multiple pages IN PARALLEL (faster)
-     * 
-     * Uses GuzzleHttp concurrent requests for 3-4x speed improvement
-     * 
-     * @param int $startPage Starting page number
-     * @param int $endPage Ending page number
-     * @param int $pageCount Records per page
-     * @param string|null $beginTime Start time
-     * @param string|null $endTime End time
-     * @param int $concurrency How many pages to fetch simultaneously (default: 3)
-     * @return array Combined array of all alarms from all pages
+     * Fetch multiple pages SEQUENTIALLY with delay to prevent rate limiting.
+     *
+     * Sebelumnya fungsi ini mengirim banyak request bersamaan (parallel) yang
+     * menyebabkan server Howen memblokir dengan status 10129 (rate limit).
+     * Sekarang diganti dengan sequential + delay 1 detik antar halaman.
+     *
+     * @param int $startPage  Halaman awal
+     * @param int $endPage    Halaman akhir
+     * @param int $pageCount  Record per halaman
+     * @param string|null $beginTime  Waktu mulai
+     * @param string|null $endTime    Waktu akhir
+     * @param int $concurrency  Parameter ini diabaikan (dulu = parallel, sekarang selalu sequential)
+     * @return array Gabungan semua alarm dari semua halaman
      */
     public function fetchAlarmsParallel($startPage = 1, $endPage = 7, $pageCount = 200, $beginTime = null, $endTime = null, $concurrency = 3)
     {
-        try {
-            $token = $this->authService->getToken();
-
-            if (!$beginTime) {
-                $beginTime = SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString());
-            }
-            if (!$endTime) {
-                $endTime = now()->toDateTimeString();
-            }
-
-            Log::info("⚡ Starting PARALLEL alarm fetch (Option 1)", [
-                'pages' => "{$startPage}-{$endPage}",
-                'concurrency' => $concurrency,
-                'total_pages' => ($endPage - $startPage + 1),
-                'date_range' => "{$beginTime} to {$endTime}",
-            ]);
-
-            // Build requests for all pages as CALLABLES that return Promises
-            // Guzzle Pool requires an array of closures (or RequestInterface)
-            $requests = [];
-            $pageNumbers = [];
-            
-            for ($pageNum = $startPage; $pageNum <= $endPage; $pageNum++) {
-                $pageNumbers[] = $pageNum;
-                
-                $requests[] = function() use ($pageNum, $token, $pageCount, $beginTime, $endTime) {
-                    return $this->client->postAsync("{$this->apiUrl}/alarm/apiFindAllByTime.action", [
-                        'form_params' => [
-                            'token' => $token,
-                            'pageNum' => $pageNum,
-                            'pageCount' => $pageCount,
-                            'beginTime' => $beginTime,
-                            'endTime' => $endTime,
-                            'alarmType' => '',
-                            'deviceID' => '',
-                        ],
-                        'timeout' => 10,
-                        'verify' => false,
-                        'connect_timeout' => 10,
-                    ]);
-                };
-            }
-
-            // Inisialisasi array kosong SEBELUM pool
-            $allAlarms = [];
-
-            // Execute all requests concurrently
-            $pool = new \GuzzleHttp\Pool($this->client, $requests, [
-                'concurrency' => $concurrency,
-                'fulfilled' => function($response, $index) use ($pageNumbers, &$allAlarms) {
-                    $pageNum = $pageNumbers[$index];
-                    $data = json_decode($response->getBody()->getContents(), true);
-                    
-                    if ($data['status'] == 10000 && isset($data['data'])) {
-                        $dataItem = $data['data'];
-                        $alarms = isset($dataItem['dataList']) 
-                            ? (is_array($dataItem['dataList']) ? $dataItem['dataList'] : [$dataItem['dataList']])
-                            : (is_array($dataItem) ? $dataItem : [$dataItem]);
-                        
-                        Log::info("✅ Page {$pageNum} fetched", ['count' => count($alarms)]);
-                        
-                        // PUSH ke reference array
-                        if (is_array($alarms) && !empty($alarms)) {
-                            $allAlarms = array_merge($allAlarms, $alarms);
-                        }
-                    }
-                },
-                'rejected' => function($reason, $index) use ($pageNumbers) {
-                    $pageNum = $pageNumbers[$index];
-                    Log::error("❌ Page {$pageNum} failed", ['error' => $reason->getMessage()]);
-                }
-            ]);
-
-            // Wait for all requests to complete
-            $promise = $pool->promise();
-            $promise->wait();
-
-            $totalCount = count($allAlarms);
-            Log::info("⚡ PARALLEL fetch completed", [
-                'pages_fetched' => ($endPage - $startPage + 1),
-                'total_records' => $totalCount,
-                'concurrency' => $concurrency,
-            ]);
-
-            return $allAlarms;
-
-        } catch (\Exception $e) {
-            Log::error('⚠️ Parallel fetch error', ['error' => $e->getMessage()]);
-            return [];
+        if (!$beginTime) {
+            $beginTime = SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString());
         }
+        if (!$endTime) {
+            $endTime = now()->toDateTimeString();
+        }
+
+        Log::info("[HowenAlarm] Memulai sequential fetch (anti rate-limit)", [
+            'pages' => "{$startPage} s/d {$endPage}",
+            'total_pages' => ($endPage - $startPage + 1),
+            'date_range' => "{$beginTime} to {$endTime}",
+        ]);
+
+        $allAlarms = [];
+
+        for ($pageNum = $startPage; $pageNum <= $endPage; $pageNum++) {
+            // Delay 1 detik SEBELUM setiap request (kecuali halaman pertama)
+            if ($pageNum > $startPage) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+            $alarms = $this->fetchAlarmsPage($pageNum, $pageCount, $beginTime, $endTime);
+
+            if (empty($alarms)) {
+                Log::info("[HowenAlarm] Halaman {$pageNum} kosong — berhenti.");
+                break; // Tidak ada data lagi, stop lebih awal
+            }
+
+            Log::info("[HowenAlarm] Halaman {$pageNum} selesai", ['count' => count($alarms)]);
+            $allAlarms = array_merge($allAlarms, $alarms);
+        }
+
+        Log::info("[HowenAlarm] Sequential fetch selesai", [
+            'total_records' => count($allAlarms),
+        ]);
+
+        return $allAlarms;
     }
 
     /**

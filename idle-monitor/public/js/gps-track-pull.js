@@ -62,6 +62,8 @@
         const deviceFilter = formData.get('device_filter') || 'all';
         const limitStr = formData.get('limit') || '0';
         const limit = parseInt(limitStr, 10);
+        const concurrencyStr = formData.get('concurrency') || '3';
+        const concurrencyLimit = parseInt(concurrencyStr, 10);
 
         // Log start
         addLog('info', 'GPS Track Pull dimulai...');
@@ -115,8 +117,7 @@
             if (devicesWithData) devicesWithData.textContent = 0;
             if (recordsSaved) recordsSaved.textContent = 0;
 
-            // Step 2: Loop devices in parallel batches (Concurrency: 20)
-            const concurrencyLimit = 20;
+            // Step 2: Loop devices in parallel batches (Concurrency from form, default 3)
             let currentIndex = 0;
 
             const processDevice = async (device, index) => {

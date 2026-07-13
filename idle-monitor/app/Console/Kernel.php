@@ -106,6 +106,17 @@ class Kernel extends ConsoleKernel
         })->cron($this->getCleanupCron())->description('Cleanup old raw data (based on system settings)');
 
         // ========================================
+        // ⚙️ AUTO QUEUE WORKER (FAILSAFE)
+        // ========================================
+        
+        // This ensures the queue worker is always running and clears jobs automatically
+        // even if the user forgets to start the queue worker manually.
+        $schedule->command('queue:work --stop-when-empty')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->description('Auto-run queue worker to prevent stuck background jobs');
+
+        // ========================================
         // 🗄️ HISTORICAL BACKFILL (MANUAL/OPTIONAL)
         // ========================================
         
@@ -134,6 +145,18 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping()
             ->description('Pre-warm dashboard & speed per-day caches');
+
+        // ========================================
+        // 🔄 AUTO DATA PULL (ALTERNATING IDLE & GPS)
+        // ========================================
+
+        // Run auto pull every minute (command will check if 30 min passed)
+        // System will alternate: Idle → wait 30min → GPS → wait 30min → loop
+        // This prevents rate limit by spacing requests far apart
+        $schedule->command('auto-pull:run')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->description('Auto pull data alternately (Idle & GPS every 30 min)');
     }
 
     /**
