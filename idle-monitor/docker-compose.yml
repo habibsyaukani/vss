@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # PHP Application Server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vss-idle-monitor-app
+    container_name: idle-monitor-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - idle-network
+
+  # Nginx Web Server
+  web:
+    image: nginx:alpine
+    container_name: idle-monitor-web
+    restart: unless-stopped
+    ports:
+      - "8082:80" # Maps server port 8082 to container port 80
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - idle-network
+    depends_on:
+      - app
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: idle-monitor-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-vss}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - idle-mysql-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - idle-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: idle-monitor-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - idle-redis-data:/data
+    networks:
+      - idle-network
+
+  # Laravel Queue Worker (If needed for background jobs)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vss-idle-monitor-app
+    container_name: idle-monitor-worker
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=90
+    volumes:
+      - ./:/var/www
+    networks:
+      - idle-network
+    depends_on:
+      - app
+      - redis
+      - mysql
+
+  # Laravel Scheduler (Cron)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vss-idle-monitor-app
+    container_name: idle-monitor-scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
+    volumes:
+      - ./:/var/www
+    networks:
+      - idle-network
+    depends_on:
+      - app
+      - redis
+      - mysql
+
+volumes:
+  idle-mysql-data:
+    driver: local
+  idle-redis-data:
+    driver: local
+
+networks:
+  idle-network:
+    driver: bridge
