@@ -64,7 +64,7 @@ services:
     container_name: idle-monitor-worker
     restart: unless-stopped
     working_dir: /var/www
-    command: php artisan queue:work --sleep=3 --tries=3 --timeout=90
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=600
     volumes:
       - ./:/var/www
     networks:

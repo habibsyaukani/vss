@@ -55,31 +55,23 @@ class DataPullController extends Controller
         $concurrency = $request->input('concurrency', 5);
 
         try {
+            $params = [
+                '--from' => $fromDate,
+                '--to' => $toDate,
+                '--pages' => $pages,
+                '--wait' => true
+            ];
+
             if ($concurrency > 1) {
-                // Parallel mode (synchronous fetch)
-                $command = sprintf(
-                    'howen:pull-alarms-date-range --from=%s --to=%s --pages=%d --parallel --concurrency=%d --wait',
-                    $fromDate,
-                    $toDate,
-                    $pages,
-                    $concurrency
-                );
-            } else {
-                // Sequential mode (synchronous with wait to avoid queue issues)
-                $command = sprintf(
-                    'howen:pull-alarms-date-range --from=%s --to=%s --pages=%d --wait',
-                    $fromDate,
-                    $toDate,
-                    $pages
-                );
+                $params['--parallel'] = true;
+                $params['--concurrency'] = $concurrency;
             }
 
-            Artisan::call($command);
-            $output = Artisan::output();
-
-            // Jangan panggil process-idle-alarms di sini karena raw data belum selesai ditarik (masih di antrean)
-            // ProcessIdleAlarmJob sudah dipanggil otomatis di dalam ImportAlarmPageJob setelah selesai narik per halaman.
-            $processOutput = "Proses idle alarm akan berjalan otomatis di background setelah setiap halaman selesai ditarik.";
+            // Gunakan antrean (queue) agar jalan di background dan tidak timeout di Nginx
+            Artisan::queue('howen:pull-alarms-date-range', $params);
+            
+            $output = "Memulai proses penarikan di latar belakang (Background Queue)...";
+            $processOutput = "Proses idle alarm akan berjalan otomatis di background.";
 
             $stats = [
                 'total_mei' => DB::table('idle_alarms')
@@ -93,7 +85,7 @@ class DataPullController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Penarikan data berhasil dimasukkan ke antrean! Data akan ditarik secara perlahan di latar belakang untuk menghindari blokir. Silakan pantau perubahan data (refresh) dalam 5-15 menit ke depan.',
+                'message' => 'Penarikan data berhasil dimasukkan ke antrean! Data sedang ditarik di latar belakang (Background). Silakan refresh halaman ini dalam 1-2 menit.',
                 'output' => $output,
                 'process_output' => $processOutput,
                 'stats' => $stats,
