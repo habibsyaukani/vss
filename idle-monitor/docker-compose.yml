@@ -22,7 +22,7 @@ services:
     container_name: idle-monitor-web
     restart: unless-stopped
     ports:
-      - "8082:80" # Maps server port 8082 to container port 80
+      - "8088:80" # Maps server port 8088 to container port 80
     volumes:
       - ./:/var/www
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
