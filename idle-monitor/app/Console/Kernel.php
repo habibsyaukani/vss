@@ -60,26 +60,23 @@ class Kernel extends ConsoleKernel
             ->description('Process idle alarms (analyze duration)');
 
         // ========================================
-        // 📍 GPS TRACK AUTO-PULL (ENABLED - REAL-TIME)
+        // 📍 GPS TRACK AUTO-PULL (TEMPORARILY DISABLED)
         // ========================================
         
+        // ⚠️ DISABLED: Conflicting with manual GPS pull
+        // Uncomment to re-enable automatic GPS pulling
+        
         // Import GPS tracks every 5 minutes (last 30 minutes)
-        // Configuration: 30 min lookback for optimal real-time with safety buffer
-        // - Execution time: ~1.5 min
-        // - Buffer time: ~3.5 min
-        // - Coverage: 6x overlap (excellent safety margin)
-        // - API load: 75% lower than 2-hour lookback
-        $schedule->job(new \App\Jobs\ImportGpsTrackJob(0.5, 500))  // 0.5 hours = 30 minutes
-            ->everyFiveMinutes()
-            ->withoutOverlapping()
-            ->description('Pull GPS track data (last 30 min, every 5 min)');
+        // $schedule->job(new \App\Jobs\ImportGpsTrackJob(0.5, 500))
+        //     ->everyFiveMinutes()
+        //     ->withoutOverlapping()
+        //     ->description('Pull GPS track data (last 30 min, every 5 min)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
-        // This processes any remaining raw data that wasn't auto-processed during sync
-        $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
-            ->everyThreeMinutes()
-            ->withoutOverlapping()
-            ->description('Process GPS tracks (raw to display)');
+        // $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
+        //     ->everyThreeMinutes()
+        //     ->withoutOverlapping()
+        //     ->description('Process GPS tracks (raw to display)');
 
         // ========================================
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
@@ -147,16 +144,17 @@ class Kernel extends ConsoleKernel
             ->description('Pre-warm dashboard & speed per-day caches');
 
         // ========================================
-        // 🔄 AUTO DATA PULL (ALTERNATING IDLE & GPS)
+        // 🔄 AUTO DATA PULL (TEMPORARILY DISABLED)
         // ========================================
 
+        // ⚠️ DISABLED: Conflicting with manual data pull
+        // Uncomment to re-enable alternating Idle & GPS auto-pull
+        
         // Run auto pull every minute (command will check if 30 min passed)
-        // System will alternate: Idle → wait 30min → GPS → wait 30min → loop
-        // This prevents rate limit by spacing requests far apart
-        $schedule->command('auto-pull:run')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->description('Auto pull data alternately (Idle & GPS every 30 min)');
+        // $schedule->command('auto-pull:run')
+        //     ->everyMinute()
+        //     ->withoutOverlapping()
+        //     ->description('Auto pull data alternately (Idle & GPS every 30 min)');
     }
 
     /**
