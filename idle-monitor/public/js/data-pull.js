@@ -54,6 +54,8 @@ $(document).ready(function() {
 
 let currentXhr = null;
 let isCancelled = false;
+let retryCount = 0;
+const MAX_RETRIES = 3;
 
 $(document).ready(function() {
     const cancelBtn = document.getElementById('cancelPullBtn');
@@ -200,6 +202,9 @@ function executePull() {
         success: function(response) {
             console.log('✅ AJAX Success!', response);
             
+            // Reset retry count on success
+            retryCount = 0;
+            
             // Hide cancel button
             if (cancelBtn) cancelBtn.style.display = 'none';
             currentXhr = null;
@@ -312,6 +317,7 @@ function executePull() {
 
             // If cancelled by user
             if (isCancelled || status === 'abort') {
+                retryCount = 0; // Reset retry count
                 progressBar.css('width', progressBar.css('width')).removeClass('bg-success').addClass('bg-warning');
                 progressStatusText.html('<i class="fas fa-ban"></i> Penarikan Dibatalkan');
                 progressDetails.text('Proses dibatalkan oleh pengguna.');
@@ -327,11 +333,12 @@ function executePull() {
                 return;
             }
 
-            console.error('❌ AJAX Error!', {xhr, status, error});
+            console.error('❌ AJAX Error!', {xhr, status, error, retryCount});
 
             // Handle CSRF Token mismatch (419) - refresh token dan coba lagi
             if (xhr.status === 419) {
                 console.warn('🔑 CSRF Token expired, refreshing...');
+                retryCount = 0; // Reset retry count for CSRF refresh
                 $.get('/csrf-refresh').done(function(data) {
                     if (data && data.token) {
                         $('meta[name="csrf-token"]').attr('content', data.token);
@@ -350,27 +357,71 @@ function executePull() {
                 return;
             }
             
+            // Retry logic for transient errors (network issues, timeouts, 5xx errors)
+            const shouldRetry = (status === 'timeout' || status === 'error' || xhr.status >= 500) && retryCount < MAX_RETRIES;
+            
+            if (shouldRetry) {
+                retryCount++;
+                const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff: 2s, 4s, 8s (max 10s)
+                
+                console.warn(`⚠️ Retrying... (${retryCount}/${MAX_RETRIES}) after ${retryDelay}ms`);
+                
+                // Show retry message
+                progressBar.css('width', '80%').removeClass('bg-danger').addClass('bg-warning');
+                progressPercentage.text('RETRY');
+                progressStatusText.html(`<i class="fas fa-sync fa-spin"></i> Mencoba ulang... (${retryCount}/${MAX_RETRIES})`);
+                progressDetails.text(`Koneksi terputus, mencoba lagi dalam ${retryDelay/1000} detik...`);
+                
+                logContainer.append(`
+                    <div class="alert alert-warning mb-2" style="border-left: 4px solid #ffc107;">
+                        <small>
+                            <i class="fas fa-sync fa-spin"></i> <strong>Retry ${retryCount}/${MAX_RETRIES}</strong><br>
+                            Status: ${status} | Error: ${error}<br>
+                            Mencoba ulang dalam ${retryDelay/1000} detik...
+                        </small>
+                    </div>
+                `);
+                
+                // Retry after delay
+                setTimeout(function() {
+                    console.log(`🔄 Retrying request (attempt ${retryCount}/${MAX_RETRIES})...`);
+                    executePull(); // Recursive retry
+                }, retryDelay);
+                
+                return; // Exit this error handler, wait for retry
+            }
+            
+            // Max retries reached or non-retryable error
+            retryCount = 0; // Reset for next attempt
+            
             // Set progress to error state
-            progressBar.css('width', '100%').removeClass('bg-success').addClass('bg-danger');
+            progressBar.css('width', '100%').removeClass('bg-success bg-warning').addClass('bg-danger');
             progressPercentage.text('ERROR');
             progressStatusText.html('<i class="fas fa-exclamation-circle"></i> Terjadi Kesalahan');
             
             let errorMsg = 'Unknown error';
+            let errorDetails = '';
+            
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 errorMsg = xhr.responseJSON.message;
             } else if (status === 'timeout') {
-                errorMsg = 'Request timeout. Proses mungkin masih berjalan di background. Cek database untuk memastikan.';
-                progressDetails.text('Timeout - cek database untuk konfirmasi');
+                errorMsg = 'Request timeout setelah beberapa kali percobaan.';
+                errorDetails = '<p class="mb-0 mt-2 small"><strong>⚠️ PENTING:</strong> Proses mungkin masih berjalan di background queue. Tunggu 8-10 menit, lalu refresh halaman dan cek database untuk memastikan data sudah masuk.</p>';
+                progressDetails.text('Timeout - proses mungkin masih berjalan di background');
+            } else if (xhr.status >= 500) {
+                errorMsg = `Server error (${xhr.status}). Proses mungkin masih berjalan di background.`;
+                errorDetails = '<p class="mb-0 mt-2 small"><strong>ℹ️ Catatan:</strong> Cek database setelah beberapa menit untuk memastikan data sudah masuk.</p>';
             } else {
-                errorMsg = error;
+                errorMsg = error || `HTTP ${xhr.status}: ${xhr.statusText}`;
             }
 
             progressDetails.text(errorMsg);
 
             logContainer.html(`
                 <div class="alert alert-danger" style="background: #f8d7da; border-left: 4px solid #dc3545;">
-                    <h6><i class="fas fa-exclamation-circle"></i> <strong>Error!</strong></h6>
+                    <h6><i class="fas fa-exclamation-circle"></i> <strong>Error setelah ${MAX_RETRIES} kali percobaan</strong></h6>
                     <p class="mb-2">${errorMsg}</p>
+                    ${errorDetails}
                     <hr>
                     <small><i class="fas fa-clock"></i> ${new Date().toLocaleString('id-ID')}</small>
                 </div>
