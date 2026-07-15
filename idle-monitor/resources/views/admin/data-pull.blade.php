@@ -38,30 +38,27 @@
 
                         <div class="mb-3">
                             <label for="pages" class="form-label">Jumlah Pages</label>
-                            <input type="number" class="form-control" id="pages" name="pages" value="50" min="1" max="200">
-                            <small class="text-muted">Default: 50 (1 page = 200 records, 50 pages = ~10.000 records per hari)</small>
+                            <input type="number" class="form-control" id="pages" name="pages" value="200" min="1" max="500">
+                            <small class="text-muted">Default: 200 (1 page = 200 records, 200 pages = ~40.000 records = full 24 jam data per hari)</small>
                         </div>
 
                         <div class="mb-3">
-                            <label for="concurrency" class="form-label">Concurrency (Paralel)</label>
+                            <label for="concurrency" class="form-label">Mode Penarikan Data</label>
                             <select class="form-select" id="concurrency" name="concurrency">
-                                <option value="1">1 - Sequential (Aman tapi Lambat ~5-10 menit)</option>
-                                <option value="3">3 - Balanced (Cukup Cepat ~2-3 menit)</option>
-                                <option value="5" selected>5 - Paralel Cepat ✅ (Direkomendasikan ~1 menit)</option>
+                                <option value="1" selected>1 - Sequential (Aman dari Rate Limit, ~8-10 menit per hari)</option>
                             </select>
-                            <small class="text-muted">Pilihan 5 (Paralel) lebih cepat dan sudah terbukti aman untuk server Howen.</small>
+                            <small class="text-danger"><i class="fas fa-exclamation-triangle"></i> <strong>PENTING:</strong> Mode paralel menyebabkan rate limit error (10129). Gunakan sequential mode saja.</small>
                         </div>
 
-                        <div class="alert alert-info">
+                        <div class="alert alert-warning">
                             <i class="fas fa-info-circle"></i> <strong>Perhatian:</strong>
                             <ul class="mb-0 mt-2">
-                                <li>Proses penarikan data memakan waktu tergantung jumlah hari</li>
-                                <li><strong>1 hari (Paralel 5) = ~1 menit ⚡</strong></li>
-                                <li><strong>1 hari (Sequential 1) = ~5-10 menit 🐌</strong></li>
-                                <li><strong>Rentang besar (7+ hari, Paralel) bisa mencapai 5-10 menit</strong></li>
+                                <li>Proses berjalan di <strong>background queue</strong> (tidak memblokir browser)</li>
+                                <li><strong>1 hari (Sequential) = ~8-10 menit</strong> untuk 200 pages (full 24 jam data)</li>
+                                <li><strong>Rentang 7 hari = ~60-70 menit</strong> total waktu proses</li>
                                 <li>Data akan diproses otomatis setelah pull selesai</li>
-                                <li>Tunggu hingga proses selesai, jangan tutup halaman ini</li>
-                                <li><span class="badge bg-warning text-dark">PENTING</span> Jangan refresh atau close browser saat proses berjalan!</li>
+                                <li><span class="badge bg-success">✓</span> Anda bisa menutup halaman ini, proses tetap berjalan di background</li>
+                                <li><span class="badge bg-info">ℹ</span> Cek progress dengan refresh halaman setelah beberapa menit</li>
                             </ul>
                         </div>
 
