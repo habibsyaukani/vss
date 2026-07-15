@@ -55,11 +55,13 @@ class DataPullController extends Controller
         $concurrency = $request->input('concurrency', 5);
 
         try {
+            // CATATAN: Jangan gunakan '--wait' => true karena akan memblokir HTTP request
+            // dan menyebabkan 504 Gateway Timeout dari Nginx.
+            // Artisan::queue() sudah cukup untuk menjalankan job di background.
             $params = [
                 '--from' => $fromDate,
                 '--to' => $toDate,
                 '--pages' => $pages,
-                '--wait' => true
             ];
 
             if ($concurrency > 1) {
@@ -69,29 +71,15 @@ class DataPullController extends Controller
 
             // Gunakan antrean (queue) agar jalan di background dan tidak timeout di Nginx
             Artisan::queue('howen:pull-alarms-date-range', $params);
-            
-            $output = "Memulai proses penarikan di latar belakang (Background Queue)...";
-            $processOutput = "Proses idle alarm akan berjalan otomatis di background.";
 
-            // Cache stat calculations to prevent Gateway Time-out on large tables
-            $stats = Cache::remember('datapull_stats', 300, function () {
-                return [
-                    'total_mei' => DB::table('idle_alarms')
-                        ->whereBetween('starting_time', ['2026-05-01 00:00:00', '2026-05-31 23:59:59'])
-                        ->count(),
-                    'total_juni' => DB::table('idle_alarms')
-                        ->whereBetween('starting_time', ['2026-06-01 00:00:00', '2026-06-30 23:59:59'])
-                        ->count(),
-                    'total_all' => $this->getApproximateCount('idle_alarms'),
-                ];
-            });
-
+            // Langsung return response tanpa query DB lagi (agar tidak timeout)
+            // Stats akan direfresh via polling AJAX terpisah
             return response()->json([
                 'success' => true,
                 'message' => 'Penarikan data berhasil dimasukkan ke antrean! Data sedang ditarik di latar belakang (Background). Silakan refresh halaman ini dalam 1-2 menit.',
-                'output' => $output,
-                'process_output' => $processOutput,
-                'stats' => $stats,
+                'output' => 'Memulai proses penarikan di latar belakang (Background Queue)...',
+                'process_output' => 'Proses idle alarm akan berjalan otomatis di background.',
+                'stats' => null,
             ]);
 
         } catch (\Exception $e) {
