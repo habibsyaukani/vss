@@ -65,23 +65,19 @@ class AutoDataPullController extends Controller
 
     public function runNow(Request $request)
     {
-        set_time_limit(0); // Prevent timeout since it runs synchronously
-        ini_set('max_execution_time', 0);
-        
         try {
-            // Run the command manually
-            Artisan::call('auto-pull:run');
-            $output = Artisan::output();
-
+            // Run the command in background queue (non-blocking)
+            Artisan::queue('auto-pull:run');
+            
             return response()->json([
                 'success' => true,
-                'message' => 'Auto pull executed successfully',
-                'output' => $output
+                'message' => 'Auto pull started in background. Check status below for progress.',
+                'output' => 'Manual auto-pull process queued successfully. Refresh page to see progress.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to run auto pull: ' . $e->getMessage()
+                'message' => 'Failed to queue auto pull: ' . $e->getMessage()
             ], 500);
         }
     }

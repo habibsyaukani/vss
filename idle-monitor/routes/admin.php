@@ -75,6 +75,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/data-pull', [DataPullController::class, 'index'])->name('data-pull.index');
     Route::post('/data-pull/execute', [DataPullController::class, 'execute'])->name('data-pull.execute');
     Route::get('/data-pull/statistics', [DataPullController::class, 'statistics'])->name('data-pull.statistics');
+    Route::get('/data-pull/progress/{sessionId}', [DataPullController::class, 'progress'])->name('data-pull.progress');
 
     // GPS Track Pull Management
     Route::get('/gps-track-pull', [DataPullController::class, 'gpsTrackIndex'])->name('gps-track-pull.index');
@@ -102,4 +103,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/system-health/migrate', [SystemHealthController::class, 'runMigration'])->name('system-health.migrate');
     Route::post('/system-health/heal', [SystemHealthController::class, 'manualHeal'])->name('system-health.heal');
     Route::get('/system-health/logs', [SystemHealthController::class, 'getHealingLogs'])->name('system-health.logs');
+
+    // Batch Pull Migration (One-time setup)
+    Route::get('/run-migration-batch-pull', [\App\Http\Controllers\MigrationController::class, 'index'])->name('run-migration.index');
+    Route::post('/run-migration-batch-pull', [\App\Http\Controllers\MigrationController::class, 'runMigration'])->name('run-migration.execute');
 });

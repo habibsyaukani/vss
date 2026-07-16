@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DataPullController extends Controller
@@ -35,58 +36,111 @@ class DataPullController extends Controller
     }
 
     /**
-     * Execute data pull
+     * Execute data pull - NEW VERSION with auto-batch splitting
      */
     public function execute(Request $request)
     {
-        set_time_limit(600); // 10 minutes
-        ini_set('max_execution_time', 600);
-        
         $request->validate([
-            'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
-            'pages' => 'nullable|integer|min:1|max:200',
-            'concurrency' => 'nullable|integer|min:1|max:10',
+            'date' => 'required|date',
+            'batch_interval' => 'nullable|integer|min:1|max:6',
         ]);
 
-        $fromDate = $request->input('from_date');
-        $toDate = $request->input('to_date');
-        $pages = $request->input('pages', 100);
-        $concurrency = $request->input('concurrency', 5);
+        $date = $request->input('date');
+        $batchInterval = $request->input('batch_interval', 3); // Default: 3 hours per batch
 
         try {
-            // CATATAN: Jangan gunakan '--wait' => true karena akan memblokir HTTP request
-            // dan menyebabkan 504 Gateway Timeout dari Nginx.
-            // Artisan::queue() sudah cukup untuk menjalankan job di background.
-            $params = [
-                '--from' => $fromDate,
-                '--to' => $toDate,
-                '--pages' => $pages,
-            ];
+            // Generate unique session ID
+            $sessionId = 'pull_' . uniqid() . '_' . time();
 
-            if ($concurrency > 1) {
-                $params['--parallel'] = true;
-                $params['--concurrency'] = $concurrency;
-            }
+            Log::info("New data pull session initiated", [
+                'session_id' => $sessionId,
+                'date' => $date,
+                'batch_interval' => $batchInterval,
+            ]);
 
-            // Gunakan antrean (queue) agar jalan di background dan tidak timeout di Nginx
-            Artisan::queue('howen:pull-alarms-date-range', $params);
+            // Dispatch orchestrator job to split & execute batches
+            \App\Jobs\DataPullOrchestratorJob::dispatch($sessionId, $date, $batchInterval);
 
-            // Langsung return response tanpa query DB lagi (agar tidak timeout)
-            // Stats akan direfresh via polling AJAX terpisah
             return response()->json([
                 'success' => true,
-                'message' => 'Penarikan data berhasil dimasukkan ke antrean! Data sedang ditarik di latar belakang (Background). Silakan refresh halaman ini dalam 1-2 menit.',
-                'output' => 'Memulai proses penarikan di latar belakang (Background Queue)...',
-                'process_output' => 'Proses idle alarm akan berjalan otomatis di background.',
-                'stats' => null,
+                'session_id' => $sessionId,
+                'message' => 'Proses penarikan data dimulai di background. Data akan ditarik dalam beberapa batch.',
+                'date' => $date,
+                'estimated_batches' => ceil(24 / $batchInterval),
             ]);
+
+        } catch (\Exception $e) {
+            Log::error("Failed to initiate data pull", [
+                'error' => $e->getMessage(),
+                'date' => $date,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get progress for a data pull session
+     */
+    public function progress(Request $request, string $sessionId)
+    {
+        try {
+            $progress = \App\Models\DataPullBatch::getSessionProgress($sessionId);
+
+            // Add completion status
+            $progress['is_completed'] = \App\Models\DataPullBatch::isSessionCompleted($sessionId);
+
+            // Calculate overall progress percentage
+            $progress['progress_percentage'] = $progress['total_batches'] > 0
+                ? round(($progress['completed'] / $progress['total_batches']) * 100, 1)
+                : 0;
+
+            // Calculate ETA (estimated time remaining)
+            $completedBatches = \App\Models\DataPullBatch::where('session_id', $sessionId)
+                ->where('status', 'completed')
+                ->get();
+
+            if ($completedBatches->count() > 0) {
+                $avgDuration = $completedBatches->avg(function ($batch) {
+                    return $batch->started_at && $batch->completed_at
+                        ? $batch->started_at->diffInSeconds($batch->completed_at)
+                        : 0;
+                });
+
+                $remainingBatches = $progress['pending'] + $progress['processing'];
+                $etaSeconds = $avgDuration * $remainingBatches;
+
+                $progress['eta_seconds'] = round($etaSeconds);
+                $progress['eta_formatted'] = $this->formatDuration($etaSeconds);
+            } else {
+                $progress['eta_seconds'] = null;
+                $progress['eta_formatted'] = 'Calculating...';
+            }
+
+            return response()->json($progress);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Format duration in human readable format
+     */
+    private function formatDuration(float $seconds): string
+    {
+        if ($seconds < 60) {
+            return round($seconds) . 's';
+        } elseif ($seconds < 3600) {
+            return floor($seconds / 60) . 'm ' . round($seconds % 60) . 's';
+        } else {
+            return floor($seconds / 3600) . 'h ' . floor(($seconds % 3600) / 60) . 'm';
         }
     }
 

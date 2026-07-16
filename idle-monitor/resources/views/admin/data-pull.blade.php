@@ -22,43 +22,22 @@
                     <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Form Penarikan Data</h5>
                 </div>
                 <div class="card-body">
-                    <form id="dataPullForm" data-execute-url="{{ route('admin.data-pull.execute') }}" data-stats-url="{{ route('admin.data-pull.statistics') }}">
+                    <form id="dataPullForm" data-execute-url="{{ route('admin.data-pull.execute') }}" data-stats-url="{{ route('admin.data-pull.statistics') }}" data-progress-url="{{ route('admin.data-pull.progress', ':sessionId') }}">
                         @csrf
                         <div class="mb-3">
-                            <label for="from_date" class="form-label">Dari Tanggal <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="from_date" name="from_date" required>
-                            <small class="text-muted">Format: YYYY-MM-DD (contoh: 2026-06-01)</small>
+                            <label for="date" class="form-label">Pilih Tanggal <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="date" name="date" required>
+                            <small class="text-muted">Pilih 1 tanggal untuk ditarik. Backend akan otomatis membagi menjadi 8 batch (3 jam per batch).</small>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="to_date" class="form-label">Sampai Tanggal <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="to_date" name="to_date" required>
-                            <small class="text-muted">Format: YYYY-MM-DD (contoh: 2026-06-08)</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="pages" class="form-label">Jumlah Pages</label>
-                            <input type="number" class="form-control" id="pages" name="pages" value="200" min="1" max="500">
-                            <small class="text-muted">Default: 200 (1 page = 200 records, 200 pages = ~40.000 records = full 24 jam data per hari)</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="concurrency" class="form-label">Mode Penarikan Data</label>
-                            <select class="form-select" id="concurrency" name="concurrency">
-                                <option value="1" selected>1 - Sequential (Aman dari Rate Limit, ~8-10 menit per hari)</option>
-                            </select>
-                            <small class="text-danger"><i class="fas fa-exclamation-triangle"></i> <strong>PENTING:</strong> Mode paralel menyebabkan rate limit error (10129). Gunakan sequential mode saja.</small>
-                        </div>
-
-                        <div class="alert alert-warning">
-                            <i class="fas fa-info-circle"></i> <strong>Perhatian:</strong>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> <strong>Sistem Batch Otomatis:</strong>
                             <ul class="mb-0 mt-2">
-                                <li>Proses berjalan di <strong>background queue</strong> (tidak memblokir browser)</li>
-                                <li><strong>1 hari (Sequential) = ~8-10 menit</strong> untuk 200 pages (full 24 jam data)</li>
-                                <li><strong>Rentang 7 hari = ~60-70 menit</strong> total waktu proses</li>
-                                <li>Data akan diproses otomatis setelah pull selesai</li>
-                                <li><span class="badge bg-success">✓</span> Anda bisa menutup halaman ini, proses tetap berjalan di background</li>
-                                <li><span class="badge bg-info">ℹ</span> Cek progress dengan refresh halaman setelah beberapa menit</li>
+                                <li>1 hari = <strong>8 batch</strong> (00:00-02:59, 03:00-05:59, ... 21:00-23:59)</li>
+                                <li>Setiap batch berjalan <strong>sekuensial</strong> (tidak parallel)</li>
+                                <li>Browser <strong>tidak timeout</strong> - proses di background queue</li>
+                                <li><strong>Progress real-time</strong> ditampilkan di sebelah kanan</li>
+                                <li>Anda bisa <strong>tutup tab</strong>, proses tetap jalan</li>
                             </ul>
                         </div>
 
@@ -77,58 +56,88 @@
             <!-- Progress & Log -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-list-alt"></i> Progress & Log</h5>
+                    <h5 class="mb-0"><i class="fas fa-tasks"></i> Progress & Log</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Progress Container -->
-                    <div id="progressContainer" style="display: none;">
-                        <div class="mb-4">
-                            <h6 class="mb-2">
-                                <i class="fas fa-spinner fa-spin"></i> 
-                                <span id="progressStatusText">Memulai penarikan data...</span>
-                            </h6>
-                            <div class="progress" style="height: 30px; border-radius: 10px;">
-                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
-                                     role="progressbar" style="width: 0%">
-                                    <span id="progressPercentage" class="fw-bold">0%</span>
-                                </div>
-                            </div>
-                            <div class="mt-2 text-center">
-                                <small id="progressDetails" class="text-muted">Menghubungi API Howen...</small>
-                            </div>
-                            <div class="mt-3 text-center">
-                                <button type="button" id="cancelPullBtn" class="btn btn-danger btn-sm">
-                                    <i class="fas fa-times-circle"></i> Batal Tarik Data
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Real-time Stats -->
-                        <div class="row mb-3" id="realtimeStats" style="display: none;">
-                            <div class="col-6">
-                                <div class="card bg-light border-0">
-                                    <div class="card-body p-2 text-center">
-                                        <small class="text-muted d-block">Records Fetched</small>
-                                        <h5 class="mb-0" id="recordsFetched">0</h5>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="card bg-light border-0">
-                                    <div class="card-body p-2 text-center">
-                                        <small class="text-muted d-block">Idle Alarms</small>
-                                        <h5 class="mb-0" id="idleAlarmsProcessed">0</h5>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Initial State -->
+                    <div id="initialState">
+                        <div class="alert alert-info mb-0" style="background: white;">
+                            <i class="fas fa-info-circle"></i> <strong>Siap untuk menarik data</strong>
+                            <p class="mb-0 mt-2 small">Pilih tanggal dan klik tombol "Tarik Data Sekarang" untuk memulai.</p>
                         </div>
                     </div>
 
-                    <!-- Log Container -->
-                    <div id="logContainer" style="max-height: 450px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                        <div class="alert alert-info mb-0" style="background: white;">
-                            <i class="fas fa-info-circle"></i> <strong>Siap untuk menarik data</strong>
-                            <p class="mb-0 mt-2 small">Isi form dan klik tombol "Tarik Data Sekarang" untuk memulai.</p>
+                    <!-- Progress Container (hidden initially) -->
+                    <div id="progressContainer" style="display: none;">
+                        <!-- Session Info -->
+                        <div class="alert alert-primary mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-calendar-day"></i> 
+                                    <strong>Tanggal:</strong> <span id="sessionDate">-</span>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">Session: <span id="sessionIdDisplay">-</span></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Overall Progress Bar -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold">Progress Keseluruhan</span>
+                                <span id="overallProgress" class="text-muted">0 / 8 batch</span>
+                            </div>
+                            <div class="progress" style="height: 30px; border-radius: 10px;">
+                                <div id="overallProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                     role="progressbar" style="width: 0%">
+                                    <span id="overallPercentage" class="fw-bold">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Row -->
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block">Total Records</small>
+                                        <h5 class="mb-0" id="totalRecords">0</h5>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block">Elapsed</small>
+                                        <h6 class="mb-0" id="elapsedTime">-</h6>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block">ETA</small>
+                                        <h6 class="mb-0" id="etaTime">-</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Batch List -->
+                        <div id="batchList" style="max-height: 400px; overflow-y: auto;">
+                            <h6 class="mb-2 text-muted">Rincian Batch:</h6>
+                            <div id="batchItems">
+                                <!-- Batch items will be inserted here by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Auto Refresh Notice -->
+                        <div class="alert alert-info mt-3 mb-0">
+                            <small>
+                                <i class="fas fa-sync-alt fa-spin"></i> 
+                                Auto-refresh setiap 3 detik. Anda bisa tutup tab ini, proses tetap berjalan.
+                            </small>
                         </div>
                     </div>
                 </div>

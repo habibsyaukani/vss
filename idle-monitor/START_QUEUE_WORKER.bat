@@ -1,27 +1,13 @@
 @echo off
-REM =====================================================================
-REM          IDLE MONITOR - START QUEUE WORKER (Terminal 3)
-REM =====================================================================
-REM This starts the queue worker that processes jobs
-REM Keep this window open!
-
+echo ========================================
+echo STARTING QUEUE WORKER
+echo ========================================
 echo.
-echo =====================================================================
-echo                 IDLE MONITOR - QUEUE WORKER
-echo =====================================================================
+echo Queue Connection: database
+echo Tries: 2
+echo Timeout: 600 seconds (10 minutes)
 echo.
-echo This terminal processes background jobs
-echo It will handle queued tasks from the scheduler
-echo.
-echo Keep this window OPEN!
-echo Press Ctrl+C to stop
-echo.
-echo =====================================================================
+echo Press CTRL+C to stop
 echo.
 
-cd /d g:\project\vss\idle-monitor
-
-REM Start queue worker
-C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe artisan queue:work
-
-pause
+php artisan queue:work --tries=2 --timeout=600
