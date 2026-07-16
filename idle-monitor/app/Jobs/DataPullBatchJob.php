@@ -60,22 +60,20 @@ class DataPullBatchJob implements ShouldQueue
         $batch->markAsProcessing();
 
         try {
-            // Build datetime range
-            $fromDateTime = $batch->date->format('Y-m-d') . ' ' . $batch->time_start;
-            $toDateTime = $batch->date->format('Y-m-d') . ' ' . $batch->time_end;
+            // Pull FULL DAY (command only accepts YYYY-MM-DD format)
+            $dateOnly = $batch->date->format('Y-m-d');
 
             Log::info("Calling Artisan command", [
-                'from' => $fromDateTime,
-                'to' => $toDateTime,
+                'from' => $dateOnly,
+                'to' => $dateOnly,
             ]);
 
-            // Call the existing pull command with specific time range
-            // Using --wait flag to make it synchronous (wait for completion)
+            // Call the existing pull command for FULL DAY
+            // Note: Command doesn't support time filtering, pulls entire day
             $exitCode = Artisan::call('howen:pull-alarms-date-range', [
-                '--from' => $fromDateTime,
-                '--to' => $toDateTime,
-                '--pages' => 25, // 25 pages per batch (25 * 200 = 5000 records max per 3 jam)
-                '--wait' => true, // Wait for completion
+                '--from' => $dateOnly,
+                '--to' => $dateOnly,
+                '--pages' => 200, // Pull all pages for the day
             ]);
 
             $output = Artisan::output();
