@@ -72,11 +72,37 @@ docker exec idle-monitor-app php artisan vss:pull-gps-tracks \
 
 ---
 
+## ⚠️ RATE LIMITING WARNING
+
+**CRITICAL**: API Howen has rate limiting protection. If you pull too many dates sequentially or in parallel without delay, you will get:
+
+```
+VSS login gagal: Login too frequently
+```
+
+**Best Practices to Avoid Rate Limiting**:
+- ✅ Add 60-second delay between parallel process starts
+- ✅ Limit to 3-5 parallel processes maximum
+- ✅ Use helper scripts with built-in delays (recommended)
+- ✅ If you see rate limit error, STOP and wait 5-10 minutes
+- ✅ Reduce pages to 50 instead of 100 for safer execution
+
+**Example Rate Limit Error**:
+```
+📥 Page 10/100...
+ERROR: VSS login gagal: Login too frequently
+Process stopped at page 10
+```
+
+**Solution**: Use the provided helper scripts with `DELAY=60` parameter.
+
+---
+
 ## 🚀 PARALLEL EXECUTION
 
-### **Strategy: 3-5 Parallel Processes**
+### **Strategy: 3-5 Parallel Processes with Rate Limiting Protection**
 
-**Method 1: Multiple SSH Windows**
+**Method 1: Multiple SSH Windows (Manual - Use with Caution)**
 
 ```bash
 # Terminal 1
@@ -96,25 +122,54 @@ docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=202
 
 ---
 
-**Method 2: Background Jobs (Recommended for Many Dates)**
+**Method 2: Use Helper Scripts (RECOMMENDED - Has Rate Limiting Protection)**
 
+The project includes helper scripts with built-in rate limiting protection:
+
+**For Idle Alarms**:
 ```bash
-# Run in background
-nohup docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=2026-07-01 --to=2026-07-01 --pages=100 > pull_07-01.log 2>&1 &
-nohup docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=2026-07-02 --to=2026-07-02 --pages=100 > pull_07-02.log 2>&1 &
-nohup docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=2026-07-03 --to=2026-07-03 --pages=100 > pull_07-03.log 2>&1 &
+# Navigate to project directory
+cd /home/khabib/vss/idle-monitor-new/idle-monitor/
 
-# Monitor progress
+# Make executable
+chmod +x pull_idle_alarms_parallel.sh
+
+# Edit dates and run
+./pull_idle_alarms_parallel.sh
+```
+
+**For GPS Tracks**:
+```bash
+# Navigate to project directory
+cd /home/khabib/vss/idle-monitor-new/idle-monitor/
+
+# Make executable
+chmod +x pull_gps_tracks_parallel.sh
+
+# Edit dates and run
+./pull_gps_tracks_parallel.sh
+```
+
+**Keuntungan**:
+- ✅ Built-in 60-second delay between starts
+- ✅ Rate limiting protection
+- ✅ Reduced pages (50 instead of 100)
+- ✅ Process tetap jalan setelah logout SSH
+- ✅ Log tersimpan untuk audit
+- ✅ Warning messages tentang rate limiting
+
+**Monitor Progress**:
+```bash
+# Monitor all logs
 tail -f pull_*.log
 
 # Check running processes
 ps aux | grep "howen:pull"
-```
+ps aux | grep "vss:pull-gps"
 
-**Keuntungan**:
-- ✅ Bisa logout SSH, process tetap jalan
-- ✅ Bisa jalankan 10+ tanggal sekaligus
-- ✅ Log tersimpan untuk audit
+# Kill process if needed
+kill -9 <PID>
+```
 
 ---
 
@@ -217,52 +272,107 @@ echo '02/07: ' . DB::table('gps_tracks_raw')->whereDate('gps_time', '2026-07-02'
 
 ## 📋 BEST PRACTICES
 
-### **1. Start Small**
+### **1. Use Helper Scripts (STRONGLY RECOMMENDED)**
+```bash
+# Helper scripts have built-in rate limiting protection
+cd /home/khabib/vss/idle-monitor-new/idle-monitor/
+chmod +x pull_idle_alarms_parallel.sh pull_gps_tracks_parallel.sh
+
+# Edit dates in script, then run
+./pull_idle_alarms_parallel.sh
+```
+
+**Why helper scripts?**
+- ✅ Built-in 60-second delay between starts
+- ✅ Reduced pages (50 instead of 100)
+- ✅ Warning messages about rate limiting
+- ✅ Prevents "Login too frequently" error
+
+### **2. Start Small & Test**
 ```bash
 # Test dengan 1 hari dulu
 docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=2026-07-01 --to=2026-07-01 --pages=10
 
-# Jika OK, scale up
+# Jika OK, gunakan helper script untuk scale up
 ```
 
-### **2. Parallel Limit**
+### **3. Parallel Limit (CRITICAL)**
 ```bash
 # Max 3-5 parallel processes
-# Lebih dari itu bisa overload API Howen
+# Lebih dari itu akan trigger rate limiting
+# Helper scripts automatically handle this
 ```
 
-### **3. Monitor Logs**
+### **4. Monitor Logs & Watch for Rate Limiting**
 ```bash
 # Selalu monitor logs untuk detect error
 tail -f pull_*.log
-docker logs -f idle-monitor-app
+
+# Watch for this error:
+# "VSS login gagal: Login too frequently"
+
+# If you see it:
+# - STOP all processes immediately (kill -9 <PID>)
+# - Wait 5-10 minutes
+# - Increase DELAY in helper script (60s → 90s)
+# - Reduce parallel processes (5 → 3)
 ```
 
-### **4. Off-Peak Hours**
+### **5. Off-Peak Hours**
 ```bash
 # Jalankan di jam sepi (malam/weekend)
 # Untuk minimize impact ke production
+# Dan mengurangi risiko rate limiting
+```
+
+### **6. If Rate Limited**
+```bash
+# STOP semua proses
+ps aux | grep "howen:pull"
+kill -9 <PID>
+
+# WAIT 5-10 menit
+
+# RE-RUN dengan parameter lebih aman:
+# - Increase DELAY dari 60s → 90s
+# - Reduce parallel processes
+# - Gunakan helper script
 ```
 
 ---
 
 ## 🎯 COMMON USE CASES
 
-### **Use Case 1: Pull Data Bulan Lalu**
+### **Use Case 1: Pull Data Bulan Lalu (USING HELPER SCRIPT - RECOMMENDED)**
 
+```bash
+# Edit pull_idle_alarms_parallel.sh
+# Update DATES array dengan seluruh bulan July:
+
+DATES=(
+  "2026-07-01" "2026-07-02" "2026-07-03" ... "2026-07-31"
+)
+
+# Run script
+./pull_idle_alarms_parallel.sh
+```
+
+**Estimasi**: 31 hari selesai dalam ~35-40 menit (with 60s delays for rate limiting protection)
+
+**Alternative (Manual - NOT RECOMMENDED due to rate limiting risk)**:
 ```bash
 # July 2026 (1-31)
 for day in {01..31}; do
   nohup docker exec idle-monitor-app php artisan howen:pull-alarms-date-range \
     --from=2026-07-$day \
     --to=2026-07-$day \
-    --pages=100 \
+    --pages=50 \
     > pull_07-$day.log 2>&1 &
-  sleep 2  # Delay 2 detik antar start
+  sleep 60  # MUST use 60s delay (not 2s) to prevent rate limiting
 done
 ```
 
-**Estimasi**: 31 hari selesai dalam ~5-10 menit (parallel)
+**⚠️ WARNING**: Manual method requires proper delay. Too short delay = rate limiting error!
 
 ---
 
@@ -293,7 +403,7 @@ docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=202
 
 ```bash
 # Pull seluruh tahun 2025 (365 hari)
-# Gunakan background job + loop
+# MUST use rate limiting protection!
 
 for month in {01..12}; do
   for day in {01..31}; do
@@ -304,19 +414,30 @@ for month in {01..12}; do
       nohup docker exec idle-monitor-app php artisan howen:pull-alarms-date-range \
         --from=$date \
         --to=$date \
-        --pages=100 \
+        --pages=50 \
         > "pull_$date.log" 2>&1 &
       
-      # Limit concurrent processes (max 5)
-      while [ $(ps aux | grep -c "howen:pull") -gt 5 ]; do
-        sleep 5
+      # Limit concurrent processes (max 3 for safety)
+      while [ $(ps aux | grep -c "howen:pull") -gt 3 ]; do
+        sleep 10
       done
+      
+      # CRITICAL: Add delay between starts
+      sleep 60
     fi
   done
 done
 ```
 
-**Estimasi**: 365 hari selesai dalam ~2-3 jam (parallel 5 processes)
+**Estimasi**: 365 hari selesai dalam ~6-8 jam (parallel 3 processes with 60s delays)
+
+**⚠️ IMPORTANT**: 
+- Reduced from 5 → 3 parallel processes for rate limiting safety
+- Reduced pages from 100 → 50 for safety
+- Added 60s delay between starts
+- Better to take longer than to hit rate limit!
+
+**RECOMMENDED**: Split by month and use helper scripts for better control
 
 ---
 
@@ -346,7 +467,32 @@ docker exec idle-monitor-app php artisan howen:test-auth
 docker exec idle-monitor-app php artisan howen:pull-alarms-date-range --from=2026-07-15 --to=2026-07-15 --pages=1
 ```
 
-### **Issue 3: Process Stuck**
+### **Issue 3: Rate Limiting Error ("Login too frequently")**
+
+```bash
+# Symptoms:
+# - Error message: "VSS login gagal: Login too frequently"
+# - Process stops at page 10-16
+# - Multiple failed login attempts
+
+# Solution:
+# 1. STOP all running processes
+ps aux | grep "howen:pull"
+kill -9 <PID>
+
+# 2. WAIT 5-10 minutes
+sleep 600
+
+# 3. Use helper scripts with built-in delays
+cd /home/khabib/vss/idle-monitor-new/idle-monitor/
+./pull_idle_alarms_parallel.sh
+
+# 4. If still happens, increase delay:
+# Edit script: DELAY=90 (instead of 60)
+# Reduce parallel processes: 3 instead of 5
+```
+
+### **Issue 4: Process Stuck**
 
 ```bash
 # Check running processes

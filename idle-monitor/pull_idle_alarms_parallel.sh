@@ -33,12 +33,20 @@ DATES=(
   "2026-07-10"
 )
 
-PAGES=100  # Pages per pull (100 = ~20k records max)
+PAGES=50   # Pages per pull (50 = ~10k records, safer for rate limiting)
+DELAY=60   # Delay between parallel starts (seconds) - PREVENT RATE LIMITING!
 
 echo -e "${YELLOW}📋 Configuration:${NC}"
 echo "   Total dates: ${#DATES[@]}"
 echo "   Pages per date: $PAGES"
-echo "   Estimated time: 5-10 minutes (parallel)"
+echo "   Delay between starts: ${DELAY}s (prevent rate limiting)"
+echo "   Estimated time: 10-15 minutes (parallel with delays)"
+echo ""
+echo -e "${YELLOW}⚠️  IMPORTANT:${NC}"
+echo "   - API Howen has rate limiting"
+echo "   - Each process starts with ${DELAY}s delay"
+echo "   - Max 3-5 parallel processes recommended"
+echo "   - If you see 'Login too frequently', increase DELAY or reduce PAGES"
 echo ""
 
 # Start pulling
@@ -54,8 +62,9 @@ for date in "${DATES[@]}"; do
     --pages=$PAGES \
     > "pull_idle_${date}.log" 2>&1 &
   
-  # Small delay to prevent overwhelming
-  sleep 1
+  echo "   Process started (PID: $!)"
+  echo "   Waiting ${DELAY}s before next dispatch (prevent rate limiting)..."
+  sleep $DELAY
 done
 
 echo ""
