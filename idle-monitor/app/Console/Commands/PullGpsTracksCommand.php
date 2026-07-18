@@ -49,8 +49,7 @@ class PullGpsTracksCommand extends Command
 
             // Get devices
             $this->info("🚗 Loading devices...");
-            $devicesQuery = \App\Models\Device::where('status', 'active')
-                ->whereNotNull('device_id')
+            $devicesQuery = \App\Models\Device::whereNotNull('device_id')
                 ->orderBy('device_name');
             
             if ($deviceFilter !== 'all') {
