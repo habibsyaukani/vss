@@ -60,23 +60,20 @@ class Kernel extends ConsoleKernel
             ->description('Process idle alarms (analyze duration)');
 
         // ========================================
-        // 📍 GPS TRACK AUTO-PULL (TEMPORARILY DISABLED)
+        // 📍 GPS TRACK AUTO-PULL
         // ========================================
         
-        // ⚠️ DISABLED: Conflicting with manual GPS pull
-        // Uncomment to re-enable automatic GPS pulling
-        
-        // Import GPS tracks every 5 minutes (last 30 minutes)
-        // $schedule->job(new \App\Jobs\ImportGpsTrackJob(0.5, 500))
-        //     ->everyFiveMinutes()
-        //     ->withoutOverlapping()
-        //     ->description('Pull GPS track data (last 30 min, every 5 min)');
+        // Import GPS tracks every 5 minutes (last 1 hour to ensure coverage, with 500ms delay to prevent rate limit)
+        $schedule->job(new \App\Jobs\ImportGpsTrackJob(1, 500))
+             ->everyFiveMinutes()
+             ->withoutOverlapping()
+             ->description('Pull GPS track data (last 1 hour, every 5 min)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
-        // $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
-        //     ->everyThreeMinutes()
-        //     ->withoutOverlapping()
-        //     ->description('Process GPS tracks (raw to display)');
+        $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
+             ->everyThreeMinutes()
+             ->withoutOverlapping()
+             ->description('Process GPS tracks (raw to display)');
 
         // ========================================
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
