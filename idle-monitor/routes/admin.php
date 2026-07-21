@@ -9,8 +9,6 @@ use App\Http\Controllers\AlarmTypeController;
 use App\Http\Controllers\IdleAlarmController;
 use App\Http\Controllers\ImportLogController;
 use App\Http\Controllers\SystemSettingController;
-use App\Http\Controllers\DataPullController;
-use App\Http\Controllers\AutoDataPullController;
 use App\Http\Controllers\Admin\SystemHealthController;
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -71,24 +69,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // System Settings
     Route::get('/system-setting', [SystemSettingController::class, 'index'])->name('system-setting.index');
 
-    // Data Pull Management (Idle Alarm)
-    Route::get('/data-pull', [DataPullController::class, 'index'])->name('data-pull.index');
-    Route::post('/data-pull/execute', [DataPullController::class, 'execute'])->name('data-pull.execute');
-    Route::get('/data-pull/statistics', [DataPullController::class, 'statistics'])->name('data-pull.statistics');
-    Route::get('/data-pull/progress/{sessionId}', [DataPullController::class, 'progress'])->name('data-pull.progress');
-
-    // GPS Track Pull Management
-    Route::get('/gps-track-pull', [DataPullController::class, 'gpsTrackIndex'])->name('gps-track-pull.index');
-    Route::post('/gps-track-pull/execute', [DataPullController::class, 'gpsTrackExecute'])->name('gps-track-pull.execute');
-    Route::get('/gps-track-pull/statistics', [DataPullController::class, 'gpsTrackStatistics'])->name('gps-track-pull.statistics');
-    Route::get('/gps-track-pull/devices', [DataPullController::class, 'getActiveDevices'])->name('gps-track-pull.devices');
-
-    // Auto Data Pull (Alternating Idle & GPS every 30 minutes)
-    Route::get('/auto-data-pull', [AutoDataPullController::class, 'index'])->name('auto-data-pull.index');
-    Route::post('/auto-data-pull/toggle', [AutoDataPullController::class, 'toggle'])->name('auto-data-pull.toggle');
-    Route::post('/auto-data-pull/run-now', [AutoDataPullController::class, 'runNow'])->name('auto-data-pull.run-now');
-    Route::get('/auto-data-pull/status', [AutoDataPullController::class, 'getStatus'])->name('auto-data-pull.status');
-    Route::post('/auto-data-pull/update-interval', [AutoDataPullController::class, 'updateInterval'])->name('auto-data-pull.update-interval');
 
     // System Control - REMOVED (UI only, background services still run via scheduler/CLI)
     // Background services remain functional:

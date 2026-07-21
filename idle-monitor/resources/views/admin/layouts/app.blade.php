@@ -229,15 +229,7 @@
         <a href="{{ route('admin.import-log.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.import-log.index' ? 'active' : '' }}">
             <i class="fas fa-history"></i> Import Logs
         </a>
-        <a href="{{ route('admin.data-pull.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.data-pull.index' ? 'active' : '' }}">
-            <i class="fas fa-download"></i> Data Pull (Idle)
-        </a>
-        <a href="{{ route('admin.gps-track-pull.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.gps-track-pull.index' ? 'active' : '' }}">
-            <i class="fas fa-map-marked-alt"></i> GPS Track Pull
-        </a>
-        <a href="{{ route('admin.auto-data-pull.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.auto-data-pull.index' ? 'active' : '' }}">
-            <i class="fas fa-sync-alt"></i> Auto Data Pull
-        </a>
+
         
         <div class="sidebar-section mt-3">SYSTEM</div>
         <a href="{{ route('admin.system-health.index') }}" class="nav-link {{ Route::currentRouteName() === 'admin.system-health.index' ? 'active' : '' }}">
