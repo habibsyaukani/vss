@@ -23,7 +23,7 @@ class Kernel extends ConsoleKernel
         // ========================================
         
         // Refresh Howen API token every 25 minutes (to prevent expiration)
-        $schedule->command('app:test-howen-auth')
+        $schedule->command('howen:test-auth')
             ->cron('*/25 * * * *')
             ->withoutOverlapping()
             ->description('Refresh Howen API authentication token');

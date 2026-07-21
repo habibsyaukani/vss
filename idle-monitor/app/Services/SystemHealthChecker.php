@@ -128,7 +128,7 @@ class SystemHealthChecker
                     'message' => 'Howen API token has never been refreshed',
                     'troubleshooting' => [
                         '1. Check HOWEN_USERNAME and HOWEN_PASSWORD in .env file',
-                        '2. Run manually: php artisan app:test-howen-auth',
+                        '2. Run manually: php artisan howen:test-auth',
                         '3. Check if scheduler is running (it should refresh token every 25 minutes)',
                         '4. Verify internet connection',
                     ],
@@ -167,7 +167,7 @@ class SystemHealthChecker
                     'message' => "Last token refresh: {$minutesAgo} minutes ago (should be < 30 min)",
                     'troubleshooting' => [
                         '1. Scheduler might not be running → Run START_SCHEDULER.bat',
-                        '2. Or refresh token manually: php artisan app:test-howen-auth',
+                        '2. Or refresh token manually: php artisan howen:test-auth',
                         '3. Check storage/logs/laravel.log for authentication errors',
                     ],
                     'severity' => 'high',

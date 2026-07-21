@@ -147,7 +147,7 @@ class SystemLogger
     public static function hints(): array
     {
         return [
-            'auth_failed' => 'Check HOWEN_USERNAME and HOWEN_PASSWORD in .env file. Run: php artisan app:test-howen-auth',
+            'auth_failed' => 'Check HOWEN_USERNAME and HOWEN_PASSWORD in .env file. Run: php artisan howen:test-auth',
             'api_timeout' => 'API server might be slow or down. Check internet connection. Try again later.',
             'api_rate_limit' => 'Too many requests to API. Wait a few minutes. Reduce concurrency in scheduler.',
             'database_connection' => 'Check DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD in .env. Ensure MySQL is running.',

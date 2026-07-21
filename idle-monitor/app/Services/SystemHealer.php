@@ -38,7 +38,7 @@ class SystemHealer
 
         try {
             // Call the authentication command
-            Artisan::call('app:test-howen-auth');
+            Artisan::call('howen:test-auth');
             $output = Artisan::output();
 
             // Update system setting
