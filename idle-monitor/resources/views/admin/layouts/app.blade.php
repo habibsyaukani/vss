@@ -284,7 +284,7 @@
             console.log('[Logout] Refreshing CSRF token before logout...');
             
             // First, refresh CSRF token
-            fetch('/admin/refresh-csrf', {
+            fetch('/refresh-csrf', {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
@@ -322,7 +322,7 @@
         // ═══════════════════════════════════════════════════════════════
         // Refresh CSRF token every 50 minutes (before 60 min session expires)
         setInterval(function() {
-            fetch('/admin/refresh-csrf', {
+            fetch('/refresh-csrf', {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'

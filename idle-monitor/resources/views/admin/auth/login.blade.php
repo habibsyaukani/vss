@@ -638,7 +638,7 @@
             // Auto-refresh CSRF token every 30 minutes
             setInterval(function() {
                 $.ajax({
-                    url: '/admin/refresh-csrf',
+                    url: '/refresh-csrf',
                     method: 'GET',
                     success: function(data) {
                         if (data.token) {
@@ -663,7 +663,7 @@
                 console.log('[Login] Refreshing CSRF token before submit...');
                 
                 $.ajax({
-                    url: '/admin/refresh-csrf',
+                    url: '/refresh-csrf',
                     method: 'GET',
                     success: function(data) {
                         if (data.token) {

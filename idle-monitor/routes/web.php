@@ -40,10 +40,6 @@ Route::prefix('/admin')->name('admin.')->group(function () {
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
         
-        // CSRF Refresh — auto-called every 50 minutes from admin layout
-        Route::get('/refresh-csrf', function () {
-            return response()->json(['token' => csrf_token()]);
-        })->name('csrf.refresh');
     });
 });
 
@@ -58,8 +54,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [FrontendAuthController::class, 'login'])->name('frontend.login');
 });
 
-// CSRF Refresh — dipanggil otomatis setiap 30 menit dari frontend
-Route::get('/csrf-refresh', function () {
+// CSRF Refresh — dipanggil otomatis oleh layout frontend & admin
+Route::get('/refresh-csrf', function () {
     return response()->json(['token' => csrf_token()]);
 })->name('csrf.refresh');
 
