@@ -130,29 +130,47 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             width: 100%;
             max-width: 420px;
-            padding: 45px 40px;
+            padding: 25px 40px 35px 40px;
             color: #0f172a;
         }
         .login-logo {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
-        .login-logo-icon {
-            display: inline-flex;
+        .login-logo-header {
+            display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 15px;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            padding: 0;
+            gap: 16px;
+            margin-bottom: 8px;
         }
-        .login-logo-icon img {
-            max-width: 200px;
-            max-height: 70px;
+        .login-logo-header img.logo-mapan {
+            max-height: 48px;
             width: auto;
-            height: auto;
             object-fit: contain;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+            transition: transform 0.2s;
+        }
+        .login-logo-header img.logo-gpe {
+            max-height: 44px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+            transition: transform 0.2s;
+        }
+        .logo-divider {
+            height: 28px;
+            width: 1.5px;
+            background: #e2e8f0;
+            border-radius: 1px;
+        }
+        .brand-co-text {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #64748b;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
         }
         .login-title {
             font-size: 1.25rem;
@@ -425,10 +443,12 @@
             <div class="login-box-wrapper">
                 <div class="login-container">
                     <div class="login-logo">
-                        <div class="login-logo-icon d-flex flex-column align-items-center gap-2 mb-3">
-                            <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" style="max-height: 58px; width: auto; object-fit: contain;">
-                            <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" style="max-height: 42px; width: auto; object-fit: contain; opacity: 0.9;">
+                        <div class="login-logo-header">
+                            <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
+                            <div class="logo-divider"></div>
+                            <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
                         </div>
+                        <div class="brand-co-text">PT GPE × MAPAN</div>
                         <h2 class="login-title">Fleet Monitoring System</h2>
                         <p class="login-subtitle">Fleet Dashboard</p>
                     </div>

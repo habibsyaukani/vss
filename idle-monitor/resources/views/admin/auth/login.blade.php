@@ -195,10 +195,45 @@
         .login-card {
             background: white;
             border-radius: 25px;
-            padding: 50px 45px;
+            padding: 30px 45px 45px 45px;
             width: 450px;
             box-shadow: 0 30px 90px rgba(0, 0, 0, 0.3);
             position: relative;
+        }
+
+        .login-logo-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+        .login-logo-header img.logo-mapan {
+            max-height: 48px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+        }
+        .login-logo-header img.logo-gpe {
+            max-height: 44px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+        }
+        .logo-divider {
+            height: 28px;
+            width: 1.5px;
+            background: #e2e8f0;
+            border-radius: 1px;
+        }
+        .brand-co-text {
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #64748b;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
         }
 
         .lock-icon {
@@ -503,10 +538,12 @@
 
         <!-- CENTER - LOGIN CARD -->
         <div class="login-card">
-            <div class="lock-icon" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 20px;">
-                <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" style="max-height: 58px; width: auto; object-fit: contain;">
-                <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" style="max-height: 42px; width: auto; object-fit: contain; opacity: 0.9;">
+            <div class="login-logo-header">
+                <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
+                <div class="logo-divider"></div>
+                <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
             </div>
+            <div class="brand-co-text">PT GPE × MAPAN</div>
             
             <h1>Admin Portal</h1>
 
