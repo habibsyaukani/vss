@@ -18,7 +18,8 @@
 
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #16213e 100%);
+            background: linear-gradient(135deg, rgba(10, 14, 39, 0.82) 0%, rgba(22, 33, 62, 0.82) 100%), url('{{ asset('images/bglogin.jpg') }}') no-repeat center center fixed;
+            background-size: cover;
             min-height: 100vh;
             display: flex;
             align-items: center;
