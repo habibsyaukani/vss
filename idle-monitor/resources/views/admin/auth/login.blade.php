@@ -36,7 +36,7 @@
             left: 0;
             width: 100%;
             height: 300px;
-            background: linear-gradient(90deg, rgba(124, 58, 237, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            background: linear-gradient(90deg, rgba(29, 78, 216, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
             border-radius: 50% 50% 0 0;
             transform: translateY(50%);
         }
@@ -48,7 +48,7 @@
             right: -100px;
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(29, 78, 216, 0.15) 0%, transparent 70%);
             border-radius: 50%;
         }
 
@@ -72,12 +72,12 @@
         }
 
         .dashboard-preview {
-            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
             border-radius: 20px;
             padding: 40px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(124, 58, 237, 0.4);
+            box-shadow: 0 20px 60px rgba(29, 78, 216, 0.4);
         }
 
         .dashboard-preview::before {
@@ -124,7 +124,7 @@
 
         .chart-bar {
             flex: 1;
-            background: linear-gradient(to top, #8b5cf6, #a78bfa);
+            background: linear-gradient(to top, #3b82f6, #60a5fa);
             border-radius: 5px;
             min-height: 40px;
             animation: pulse 2s infinite;
@@ -148,7 +148,7 @@
         }
 
         .icon-box {
-            background: rgba(124, 58, 237, 0.3);
+            background: rgba(29, 78, 216, 0.3);
             width: 45px;
             height: 45px;
             border-radius: 10px;
@@ -164,7 +164,7 @@
         }
 
         .secure-access-icon {
-            background: rgba(124, 58, 237, 0.2);
+            background: rgba(29, 78, 216, 0.2);
             width: 60px;
             height: 60px;
             border-radius: 15px;
@@ -172,12 +172,12 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto 15px;
-            border: 1px solid rgba(124, 58, 237, 0.3);
+            border: 1px solid rgba(29, 78, 216, 0.3);
         }
 
         .secure-access-icon i {
             font-size: 24px;
-            color: #a78bfa;
+            color: #60a5fa;
         }
 
         .secure-access h3 {
@@ -270,7 +270,7 @@
             display: block;
             width: 60px;
             height: 4px;
-            background: linear-gradient(90deg, #7c3aed, #3b82f6);
+            background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
             margin: 15px auto;
             border-radius: 2px;
         }
@@ -290,7 +290,7 @@
         }
 
         .form-label i {
-            color: #7c3aed;
+            color: #1d4ed8;
         }
 
         .input-wrapper {
@@ -309,9 +309,9 @@
 
         .form-control:focus {
             outline: none;
-            border-color: #7c3aed;
+            border-color: #1d4ed8;
             background: white;
-            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+            box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.1);
         }
 
         .toggle-password {
@@ -325,7 +325,7 @@
         }
 
         .toggle-password:hover {
-            color: #7c3aed;
+            color: #1d4ed8;
         }
 
         .form-footer {
@@ -351,20 +351,20 @@
 
         .forgot-password {
             font-size: 14px;
-            color: #7c3aed;
+            color: #1d4ed8;
             text-decoration: none;
             font-weight: 600;
             transition: color 0.3s;
         }
 
         .forgot-password:hover {
-            color: #6d28d9;
+            color: #1e40af;
         }
 
         .btn-signin {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
             color: white;
             border: none;
             border-radius: 12px;
@@ -376,12 +376,12 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+            box-shadow: 0 10px 25px rgba(29, 78, 216, 0.3);
         }
 
         .btn-signin:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(124, 58, 237, 0.4);
+            box-shadow: 0 15px 35px rgba(29, 78, 216, 0.4);
         }
 
         /* RIGHT SIDE - Features */
@@ -407,14 +407,14 @@
 
         .feature-card:hover {
             background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(124, 58, 237, 0.3);
+            border-color: rgba(29, 78, 216, 0.3);
             transform: translateX(10px);
         }
 
         .feature-icon {
             width: 55px;
             height: 55px;
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
             border-radius: 12px;
             display: flex;
             align-items: center;
