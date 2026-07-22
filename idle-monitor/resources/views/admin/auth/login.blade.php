@@ -209,13 +209,15 @@
             margin-bottom: 8px;
         }
         .login-logo-header img.logo-mapan {
-            max-height: 48px;
+            height: 46px;
+            max-height: 46px;
             width: auto;
             object-fit: contain;
             filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
         }
         .login-logo-header img.logo-gpe {
-            max-height: 44px;
+            height: 46px;
+            max-height: 46px;
             width: auto;
             object-fit: contain;
             filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
