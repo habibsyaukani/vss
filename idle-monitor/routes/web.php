@@ -58,6 +58,9 @@ Route::middleware('guest')->group(function () {
 Route::get('/refresh-csrf', function () {
     return response()->json(['token' => csrf_token()]);
 })->name('csrf.refresh');
+Route::get('/csrf-refresh', function () {
+    return response()->json(['token' => csrf_token()]);
+});
 
 // Include frontend routes
 require __DIR__ . '/frontend.php';

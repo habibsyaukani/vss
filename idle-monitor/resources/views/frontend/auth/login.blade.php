@@ -511,10 +511,10 @@
         // AUTO-REFRESH CSRF TOKEN ON LOGIN PAGE (prevent Page Expired)
         // ═══════════════════════════════════════════════════════════════
         $(document).ready(function() {
-            // Auto-refresh CSRF token every 30 minutes
+            // Auto-refresh CSRF token every 15 minutes
             setInterval(function() {
                 $.ajax({
-                    url: '/csrf-refresh',
+                    url: '{{ route("csrf.refresh") }}',
                     method: 'GET',
                     success: function(data) {
                         if (data.token) {
@@ -529,7 +529,7 @@
                         console.warn('[Login] CSRF token refresh failed');
                     }
                 });
-            }, 30 * 60 * 1000); // 30 minutes
+            }, 15 * 60 * 1000); // 15 minutes
             
             // Also refresh before form submit to ensure token is fresh
             $('form').on('submit', function(e) {
@@ -539,7 +539,7 @@
                 console.log('[Login] Refreshing CSRF token before submit...');
                 
                 $.ajax({
-                    url: '/csrf-refresh',
+                    url: '{{ route("csrf.refresh") }}',
                     method: 'GET',
                     success: function(data) {
                         if (data.token) {
