@@ -67,7 +67,6 @@ class Kernel extends ConsoleKernel
         // Import GPS tracks every 5 minutes (last 1 hour to ensure coverage, with 500ms delay to prevent rate limit)
         $schedule->job(new \App\Jobs\ImportGpsTrackJob(1, 500))
              ->everyFiveMinutes()
-             ->runInBackground()
              ->withoutOverlapping()
              ->description('Pull GPS track data (last 1 hour, every 5 min)');
 
