@@ -444,9 +444,9 @@
                 <div class="login-container">
                     <div class="login-logo">
                         <div class="login-logo-header">
-                            <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
-                            <div class="logo-divider"></div>
                             <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
+                            <div class="logo-divider"></div>
+                            <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
                         </div>
                         <h2 class="login-title">Fleet Monitoring System</h2>
                         <p class="login-subtitle">Fleet Dashboard</p>

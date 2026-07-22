@@ -539,9 +539,9 @@
         <!-- CENTER - LOGIN CARD -->
         <div class="login-card">
             <div class="login-logo-header">
-                <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
-                <div class="logo-divider"></div>
                 <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
+                <div class="logo-divider"></div>
+                <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
             </div>
             
             <h1>Admin Portal</h1>
