@@ -204,18 +204,21 @@
         .lock-icon {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            background: #0f172a;
             border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 25px;
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            padding: 12px;
         }
 
-        .lock-icon i {
-            font-size: 36px;
-            color: white;
+        .lock-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .login-card h1 {
@@ -502,7 +505,7 @@
         <!-- CENTER - LOGIN CARD -->
         <div class="login-card">
             <div class="lock-icon">
-                <i class="fas fa-lock"></i>
+                <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo">
             </div>
             
             <h1>Admin Portal</h1>

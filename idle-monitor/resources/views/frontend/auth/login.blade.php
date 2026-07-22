@@ -138,17 +138,22 @@
             margin-bottom: 25px;
         }
         .login-logo-icon {
-            width: 60px;
-            height: 60px;
-            background: #eff6ff;
-            border-radius: 12px;
+            width: 75px;
+            height: 75px;
+            background: #0f172a;
+            border-radius: 18px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            color: #1d4ed8;
             margin-bottom: 15px;
-            border: 1px solid #bfdbfe;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+            padding: 10px;
+        }
+        .login-logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
         .login-title {
             font-size: 1.25rem;
@@ -422,7 +427,7 @@
                 <div class="login-container">
                     <div class="login-logo">
                         <div class="login-logo-icon">
-                            <i class="fas fa-truck-moving"></i>
+                            <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo">
                         </div>
                         <h2 class="login-title">Fleet Monitoring System</h2>
                         <p class="login-subtitle">Fleet Dashboard</p>
