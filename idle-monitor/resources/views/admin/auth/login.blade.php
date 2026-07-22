@@ -202,22 +202,21 @@
         }
 
         .lock-icon {
-            width: 80px;
-            height: 80px;
-            background: #0f172a;
-            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 25px;
-            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
-            border: 1px solid rgba(124, 58, 237, 0.3);
-            padding: 12px;
+            margin: 0 auto 20px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
         }
 
         .lock-icon img {
-            width: 100%;
-            height: 100%;
+            max-width: 200px;
+            max-height: 75px;
+            width: auto;
+            height: auto;
             object-fit: contain;
         }
 

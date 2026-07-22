@@ -138,21 +138,20 @@
             margin-bottom: 25px;
         }
         .login-logo-icon {
-            width: 75px;
-            height: 75px;
-            background: #0f172a;
-            border-radius: 18px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 15px;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
-            padding: 10px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
         }
         .login-logo-icon img {
-            width: 100%;
-            height: 100%;
+            max-width: 200px;
+            max-height: 70px;
+            width: auto;
+            height: auto;
             object-fit: contain;
         }
         .login-title {
