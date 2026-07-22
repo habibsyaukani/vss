@@ -543,7 +543,6 @@
                 <div class="logo-divider"></div>
                 <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
             </div>
-            <div class="brand-co-text">PT GPE × MAPAN</div>
             
             <h1>Admin Portal</h1>
 
