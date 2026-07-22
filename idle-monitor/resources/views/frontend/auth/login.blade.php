@@ -425,8 +425,9 @@
             <div class="login-box-wrapper">
                 <div class="login-container">
                     <div class="login-logo">
-                        <div class="login-logo-icon">
-                            <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo">
+                        <div class="login-logo-icon d-flex flex-column align-items-center gap-2 mb-3">
+                            <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" style="max-height: 58px; width: auto; object-fit: contain;">
+                            <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" style="max-height: 42px; width: auto; object-fit: contain; opacity: 0.9;">
                         </div>
                         <h2 class="login-title">Fleet Monitoring System</h2>
                         <p class="login-subtitle">Fleet Dashboard</p>

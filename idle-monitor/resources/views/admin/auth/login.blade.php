@@ -503,8 +503,9 @@
 
         <!-- CENTER - LOGIN CARD -->
         <div class="login-card">
-            <div class="lock-icon">
-                <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo">
+            <div class="lock-icon" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 20px;">
+                <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" style="max-height: 58px; width: auto; object-fit: contain;">
+                <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" style="max-height: 42px; width: auto; object-fit: contain; opacity: 0.9;">
             </div>
             
             <h1>Admin Portal</h1>
