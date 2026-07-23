@@ -245,7 +245,7 @@ class SpeedPerformanceController extends Controller
         ];
 
         return ExcelExportService::streamXls(
-            'export-speed-performance-' . date('Y-m-d_H-i-s') . '.csv',
+            'export-speed-performance-' . date('Y-m-d_H-i-s') . '.xls',
             'SPEED PERFORMANCE REPORT',
             $headers,
             function ($out) use ($query, $date, $timeLabel) {

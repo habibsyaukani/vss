@@ -210,7 +210,7 @@ class SpeedController extends Controller
         ];
 
         return ExcelExportService::streamXls(
-            'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.csv',
+            'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.xls',
             'GPS SPEED MONITORING REPORT',
             $headers,
             function ($out) use ($query) {

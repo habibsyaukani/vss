@@ -140,7 +140,7 @@ class IdleAlarmController extends Controller
         ];
 
         return ExcelExportService::streamXls(
-            'idle-alarms-' . date('Y-m-d-H-i-s') . '.csv',
+            'idle-alarms-' . date('Y-m-d-H-i-s') . '.xls',
             'ADMIN IDLE ALARMS REPORT',
             $headers,
             function ($out) use ($query) {
