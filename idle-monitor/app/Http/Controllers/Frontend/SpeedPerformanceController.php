@@ -9,6 +9,7 @@ use App\Models\GpsTrack;
 use App\Http\Controllers\Frontend\Traits\HasDeviceGroups;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
+use App\Services\ExcelExportService;
 
 class SpeedPerformanceController extends Controller
 {
@@ -136,7 +137,7 @@ class SpeedPerformanceController extends Controller
     }
 
     /**
-     * Export to CSV
+     * Export to Excel (.xls)
      */
     public function export(Request $request)
     {
@@ -150,10 +151,12 @@ class SpeedPerformanceController extends Controller
             ->where('gps_tracks.speed', '>', 0)
             ->groupBy('gps_tracks.device_id', 'devices.device_name');
 
+        $isExportSelected = false;
         if ($request->filled('export_type') && $request->export_type === 'selected' && $request->filled('row_ids')) {
             $rowIds = explode(',', $request->row_ids);
             if (!empty($rowIds)) {
                 $query->whereIn('gps_tracks.device_id', $rowIds);
+                $isExportSelected = true;
             }
         } else {
             if ($request->filled('device_ids')) {
@@ -224,26 +227,45 @@ class SpeedPerformanceController extends Controller
             return response()->json(['use_queue' => false]);
         }
 
-        return response()->streamDownload(function () use ($query, $date, $timeLabel) {
-            $out = fopen('php://output', 'w');
-            
-            fputcsv($out, [
-                '#', 'DEVICE NAME', 'WAKTU', 'AVG SPEED (Km/h)', 'MAX SPEED (Km/h)'
-            ], ';');
+        $metadata = [
+            'Mode Export' => $isExportSelected ? 'Selected Rows' : 'All Filtered Rows',
+            'Tanggal' => $date,
+            'Shift / Periode' => $timeLabel,
+            'Location' => $request->location ?? 'Semua',
+            'Series' => $request->series ?? 'Semua',
+        ];
 
-            $serial = 1;
-            foreach ($query->cursor() as $row) {
-                $deviceName = ($row->device_name ?? '-') . "\n" . $row->device_id;
-                
-                fputcsv($out, [
-                    $serial++,
-                    $deviceName,
-                    $date . " " . $timeLabel,
-                    round($row->avg_speed, 1),
-                    round($row->max_speed, 1)
-                ], ';');
-            }
-            fclose($out);
-        }, 'export-speed-performance-' . date('Y-m-d_H-i-s') . '.csv');
+        $headers = [
+            ['label' => 'NO', 'align' => 'center'],
+            ['label' => 'DEVICE ID', 'align' => 'center'],
+            ['label' => 'DEVICE NAME', 'align' => 'left'],
+            ['label' => 'PERIODE / WAKTU', 'align' => 'center'],
+            ['label' => 'AVG SPEED (KM/H)', 'align' => 'right'],
+            ['label' => 'MAX SPEED (KM/H)', 'align' => 'right'],
+        ];
+
+        return ExcelExportService::streamXls(
+            'export-speed-performance-' . date('Y-m-d_H-i-s') . '.xls',
+            'SPEED PERFORMANCE REPORT',
+            $headers,
+            function ($out) use ($query, $date, $timeLabel) {
+                $serial = 1;
+                foreach ($query->cursor() as $row) {
+                    $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
+                    $avgSpd = round($row->avg_speed, 1);
+                    $maxSpd = round($row->max_speed, 1);
+
+                    fwrite($out, '    <tr class="' . $rowClass . '">' . "\n");
+                    fwrite($out, '      <td class="text-center">' . $serial++ . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($row->device_id ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($row->device_name ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($date . ' ' . $timeLabel) . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-right">' . number_format($avgSpd, 1) . ' Km/h</td>' . "\n");
+                    fwrite($out, '      <td class="text-right">' . number_format($maxSpd, 1) . ' Km/h</td>' . "\n");
+                    fwrite($out, '    </tr>' . "\n");
+                }
+            },
+            $metadata
+        );
     }
 }

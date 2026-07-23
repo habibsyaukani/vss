@@ -7,7 +7,7 @@ use App\Models\Device;
 use App\Models\DeviceGroup;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Services\ExcelExportService;
 
 class IdleAlarmController extends Controller
 {
@@ -92,7 +92,7 @@ class IdleAlarmController extends Controller
     }
 
     /**
-     * Export idle alarms to Excel
+     * Export idle alarms to Excel (.xls)
      */
     public function export(Request $request)
     {
@@ -115,46 +115,56 @@ class IdleAlarmController extends Controller
             $query->where('duration_minutes', '>=', $request->min_duration);
         }
 
-        $alarms = $query->get();
-
-        // Create array for export
-        $data = [];
-        $data[] = [
-            'Serial No',
-            'Device Name',
-            'Group',
-            'Status',
-            'Start Time',
-            'End Time',
-            'Duration (min)',
-            'Speed (km/h)',
-            'Start Location',
-            'End Location',
-            'Report Time',
+        $metadata = [
+            'Status' => $request->status ?? 'Semua',
+            'Device ID' => $request->device_id ?? 'Semua',
+            'Start Date' => $request->start_date ?? '-',
+            'End Date' => $request->end_date ?? '-',
+            'Min Duration' => $request->min_duration ? $request->min_duration . ' min' : 'Semua',
         ];
 
-        foreach ($alarms as $alarm) {
-            $data[] = [
-                $alarm->serial_no ?? '-',
-                $alarm->device_name,
-                $alarm->device->group_name ?? '-',
-                $alarm->alarm_status,
-                $alarm->starting_time ? date('Y-m-d H:i', strtotime($alarm->starting_time)) : '-',
-                $alarm->ending_time ? date('Y-m-d H:i', strtotime($alarm->ending_time)) : '-',
-                $alarm->duration_minutes,
-                $alarm->start_speed . ' → ' . $alarm->end_speed,
-                $alarm->starting_location ?? '-',
-                $alarm->ending_location ?? '-',
-                $alarm->report_time ? date('Y-m-d H:i', strtotime($alarm->report_time)) : '-',
-            ];
-        }
+        $headers = [
+            ['label' => 'SERIAL NO', 'align' => 'center'],
+            ['label' => 'DEVICE ID', 'align' => 'center'],
+            ['label' => 'DEVICE NAME', 'align' => 'left'],
+            ['label' => 'GROUP', 'align' => 'left'],
+            ['label' => 'STATUS', 'align' => 'center'],
+            ['label' => 'START TIME', 'align' => 'center'],
+            ['label' => 'END TIME', 'align' => 'center'],
+            ['label' => 'DURATION (MIN)', 'align' => 'center'],
+            ['label' => 'SPEED (KM/H)', 'align' => 'center'],
+            ['label' => 'START LOCATION', 'align' => 'center'],
+            ['label' => 'END LOCATION', 'align' => 'center'],
+            ['label' => 'REPORT TIME', 'align' => 'center'],
+        ];
 
-        return response()->streamDownload(function () use ($data) {
-            $out = fopen('php://output', 'w');
-            foreach ($data as $row) {
-                fputcsv($out, $row);
-            }
-            fclose($out);
-        }, 'idle-alarms-' . date('Y-m-d-H-i-s') . '.csv');
+        return ExcelExportService::streamXls(
+            'idle-alarms-' . date('Y-m-d-H-i-s') . '.xls',
+            'ADMIN IDLE ALARMS REPORT',
+            $headers,
+            function ($out) use ($query) {
+                $serial = 1;
+                foreach ($query->cursor() as $alarm) {
+                    $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
+                    $statusClass = $alarm->alarm_status === 'ALARM_END' ? 'badge-success' : 'badge-warning';
+
+                    fwrite($out, '    <tr class="' . $rowClass . '">' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->serial_no ?? $serial++) . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->device_id ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($alarm->device_name ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($alarm->device->group_name ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="' . $statusClass . '">' . htmlspecialchars($alarm->alarm_status ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . ($alarm->starting_time ? date('Y-m-d H:i', strtotime($alarm->starting_time)) : '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . ($alarm->ending_time ? date('Y-m-d H:i', strtotime($alarm->ending_time)) : '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->duration_minutes ?? '0') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars(($alarm->start_speed ?? 0) . ' → ' . ($alarm->end_speed ?? 0)) . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->starting_location ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->ending_location ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . ($alarm->report_time ? date('Y-m-d H:i', strtotime($alarm->report_time)) : '-') . '</td>' . "\n");
+                    fwrite($out, '    </tr>' . "\n");
+                }
+            },
+            $metadata
+        );
     }
 }
