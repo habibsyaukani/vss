@@ -83,48 +83,89 @@ class ExportIdleAlarmsJob implements ShouldQueue
                 }
             }
 
-            // Prepare CSV file
+            // Prepare Excel (.xls) file
             $directory = 'public/exports';
             if (!Storage::exists($directory)) {
                 Storage::makeDirectory($directory);
             }
             
-            $fileName = 'idle-alarms-' . date('Y-m-d-H-i-s') . '-' . uniqid() . '.csv';
+            $fileName = 'idle-alarms-' . date('Y-m-d-H-i-s') . '-' . uniqid() . '.xls';
             $filePath = storage_path('app/' . $directory . '/' . $fileName);
             
             $out = fopen($filePath, 'w');
             
-            // Write UTF-8 BOM for Excel compatibility
-            fwrite($out, "\xEF\xBB\xBF");
+            $metadata = [
+                'Mode Export' => 'Background Job',
+                'Start Date' => $this->filters['start_date'] ?? '-',
+                'End Date' => $this->filters['end_date'] ?? '-',
+                'Location' => $this->filters['location'] ?? 'Semua',
+                'Series' => $this->filters['series'] ?? 'Semua',
+            ];
 
-            // CSV Headers
-            fputcsv($out, [
-                'Device ID', 'Device Name', 'Alarm Type', 'Alarm Status',
-                'Start Time', 'Start Location', 'End Time', 'End Location',
-                'Start Detail', 'End Detail', 'Start Speed', 'End Speed',
-                'Report Time', 'Duration'
-            ], ';');
+            $headers = [
+                ['label' => 'NO', 'align' => 'center'],
+                ['label' => 'DEVICE ID', 'align' => 'center'],
+                ['label' => 'DEVICE NAME', 'align' => 'left'],
+                ['label' => 'ALARM TYPE', 'align' => 'center'],
+                ['label' => 'STATUS', 'align' => 'center'],
+                ['label' => 'START TIME', 'align' => 'center'],
+                ['label' => 'START LOCATION', 'align' => 'center'],
+                ['label' => 'END TIME', 'align' => 'center'],
+                ['label' => 'END LOCATION', 'align' => 'center'],
+                ['label' => 'START DETAIL', 'align' => 'left'],
+                ['label' => 'END DETAIL', 'align' => 'left'],
+                ['label' => 'START SPEED', 'align' => 'right'],
+                ['label' => 'END SPEED', 'align' => 'right'],
+                ['label' => 'REPORT TIME', 'align' => 'center'],
+                ['label' => 'DURATION', 'align' => 'center'],
+            ];
 
-            $query->chunk(500, function ($alarms) use ($out) {
-                foreach ($alarms as $alarm) {
-                    fputcsv($out, [
-                        $alarm->device_id ?? '-',
-                        $alarm->device_name ?? '-',
-                        'Idle',
-                        $alarm->alarm_status ?? '-',
-                        $alarm->starting_time ? date('Y-m-d H:i:s', strtotime($alarm->starting_time)) : '-',
-                        $alarm->starting_location ?? '-',
-                        $alarm->ending_time ? date('Y-m-d H:i:s', strtotime($alarm->ending_time)) : '-',
-                        $alarm->ending_location ?? '-',
-                        $alarm->start_detail ?? '-',
-                        $alarm->end_detail ?? '-',
-                        ($alarm->start_speed ?? 0) . ' km/h',
-                        ($alarm->end_speed ?? 0) . ' km/h',
-                        $alarm->report_time ? date('Y-m-d H:i:s', strtotime($alarm->report_time)) : '-',
-                        $alarm->duration_formatted ?? '-'
-                    ], ';');
-                }
-            });
+            \App\Services\ExcelExportService::writeExcelDocument(
+                $out,
+                'IDLE ALARM MONITORING REPORT',
+                $headers,
+                function ($outStream) use ($query) {
+                    $serial = 1;
+                    $query->chunk(500, function ($alarms) use ($outStream, &$serial) {
+                        foreach ($alarms as $alarm) {
+                            $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
+
+                            $durationSecs = $alarm->duration_seconds_calculated ?? 0;
+                            $durBadgeClass = 'text-center';
+                            if ($durationSecs > 0 && $durationSecs < 300) {
+                                $durBadgeClass = 'badge-success';
+                            } elseif ($durationSecs < 900) {
+                                $durBadgeClass = 'badge-warning';
+                            } elseif ($durationSecs < 1800) {
+                                $durBadgeClass = 'badge-orange';
+                            } elseif ($durationSecs >= 1800) {
+                                $durBadgeClass = 'badge-danger';
+                            }
+
+                            $statusClass = $alarm->alarm_status === 'ALARM_END' ? 'badge-success' : 'badge-warning';
+
+                            fwrite($outStream, '    <tr class="' . $rowClass . '">' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . $serial++ . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . htmlspecialchars($alarm->device_id ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-left">' . htmlspecialchars($alarm->device_name ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">Idle</td>' . "\n");
+                            fwrite($outStream, '      <td class="' . $statusClass . '">' . htmlspecialchars($alarm->alarm_status ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . ($alarm->starting_time ? date('Y-m-d H:i:s', strtotime($alarm->starting_time)) : '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . htmlspecialchars($alarm->starting_location ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . ($alarm->ending_time ? date('Y-m-d H:i:s', strtotime($alarm->ending_time)) : '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . htmlspecialchars($alarm->ending_location ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-left">' . htmlspecialchars($alarm->start_detail ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-left">' . htmlspecialchars($alarm->end_detail ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-right">' . htmlspecialchars(($alarm->start_speed ?? 0) . ' km/h') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-right">' . htmlspecialchars(($alarm->end_speed ?? 0) . ' km/h') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="text-center">' . ($alarm->report_time ? date('Y-m-d H:i:s', strtotime($alarm->report_time)) : '-') . '</td>' . "\n");
+                            fwrite($outStream, '      <td class="' . $durBadgeClass . '">' . htmlspecialchars($alarm->duration_formatted ?? '-') . '</td>' . "\n");
+                            fwrite($outStream, '    </tr>' . "\n");
+                        }
+                    });
+                },
+                $metadata
+            );
 
             fclose($out);
 
