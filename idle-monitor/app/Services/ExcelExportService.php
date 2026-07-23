@@ -23,11 +23,6 @@ class ExcelExportService
         \Closure $dataCallback,
         array $metadata = []
     ): StreamedResponse {
-        // Ensure .xls extension
-        if (!str_ends_with(strtolower($filename), '.xls')) {
-            $filename = pathinfo($filename, PATHINFO_FILENAME) . '.xls';
-        }
-
         $responseHeaders = [
             'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',

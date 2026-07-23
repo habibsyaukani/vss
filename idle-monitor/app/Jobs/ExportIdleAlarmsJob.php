@@ -89,7 +89,7 @@ class ExportIdleAlarmsJob implements ShouldQueue
                 Storage::makeDirectory($directory);
             }
             
-            $fileName = 'idle-alarms-' . date('Y-m-d-H-i-s') . '-' . uniqid() . '.xls';
+            $fileName = 'idle-alarms-' . date('Y-m-d-H-i-s') . '-' . uniqid() . '.csv';
             $filePath = storage_path('app/' . $directory . '/' . $fileName);
             
             $out = fopen($filePath, 'w');
