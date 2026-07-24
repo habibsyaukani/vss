@@ -629,7 +629,7 @@
             const options = { day: '2-digit', month: 'short', year: 'numeric' };
             const dateStr = now.toLocaleDateString('id-ID', options);
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('systemTime').textContent = dateStr + ' - ' + timeStr + ' WIB';
+            document.getElementById('systemTime').textContent = dateStr + ' - ' + timeStr + ' WITA';
         }
         setInterval(updateClock, 1000);
         updateClock();
