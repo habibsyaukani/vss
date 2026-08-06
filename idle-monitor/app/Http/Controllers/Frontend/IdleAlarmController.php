@@ -70,10 +70,12 @@ class IdleAlarmController extends Controller
 
         // Filter by date range
         if ($request->start_date) {
-            $query->whereDate('idle_alarms.starting_time', '>=', $request->start_date);
+            $start = $request->start_date . ' 00:00:00';
+            $query->where('idle_alarms.starting_time', '>=', $start);
         }
         if ($request->end_date) {
-            $query->whereDate('idle_alarms.starting_time', '<=', $request->end_date);
+            $end = $request->end_date . ' 23:59:59';
+            $query->where('idle_alarms.starting_time', '<=', $end);
         }
 
         // Filter by duration range — pakai kalkulasi real dari starting_time → ending_time
@@ -186,10 +188,12 @@ class IdleAlarmController extends Controller
                 }
             }
             if ($request->start_date) {
-                $query->whereDate('starting_time', '>=', $request->start_date);
+                $start = $request->start_date . ' 00:00:00';
+                $query->where('starting_time', '>=', $start);
             }
             if ($request->end_date) {
-                $query->whereDate('starting_time', '<=', $request->end_date);
+                $end = $request->end_date . ' 23:59:59';
+                $query->where('starting_time', '<=', $end);
             }
             if ($request->duration_range) {
                 switch ($request->duration_range) {
