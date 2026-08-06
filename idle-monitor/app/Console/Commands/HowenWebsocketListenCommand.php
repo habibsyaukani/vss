@@ -229,7 +229,7 @@ class HowenWebsocketListenCommand extends Command
             'updated_at' => now()
         ]);
         
-        // $this->line("📍 GPS Updated: Device {$deviceId} at {$dtu} (Speed: {$speed})");
+        $this->line("📍 GPS Updated: Device {$deviceId} at {$dtu} (Speed: {$speed})");
     }
 
     private function handleAlarmPush($payload)
