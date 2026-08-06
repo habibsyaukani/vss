@@ -675,7 +675,7 @@ $(function() {
                 }
             }
         ],
-        order: [[5, 'desc']],
+        order: [[6, 'desc']],
         lengthMenu: [[50, 100, 200, 300, 500], [50, 100, 200, 300, 500]],
         pageLength: 50,
         drawCallback: function(settings) {

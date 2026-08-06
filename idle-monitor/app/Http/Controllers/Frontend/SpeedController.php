@@ -31,10 +31,9 @@ class SpeedController extends Controller
     public function getData(Request $request)
     {
         $query = GpsTrack::select('gps_tracks.*')
-            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks.gps_time');
 
-        // Filter by specific device IDs (from tree view) - Optimized to skip when all devices are selected
+        // Filter by specific device IDs (from tree view)
         if ($request->device_ids && is_array($request->device_ids)) {
             $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
                 return Device::count();
@@ -44,17 +43,19 @@ class SpeedController extends Controller
             }
         }
 
-        // Filter by location (via JOIN)
-        if ($request->filled('location')) {
-            $query->where('devices.location', $request->location);
-        }
-
-        // Filter by series (via JOIN)
-        if ($request->filled('series')) {
-            if (strtoupper($request->series) === 'VOLVO') {
-                $query->where('devices.series', 'LIKE', '%FMX%');
-            } else {
-                $query->where('devices.series', $request->series);
+        // Filter by location or series (requires JOIN)
+        if ($request->filled('location') || $request->filled('series')) {
+            $query->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id');
+            
+            if ($request->filled('location')) {
+                $query->where('devices.location', $request->location);
+            }
+            if ($request->filled('series')) {
+                if (strtoupper($request->series) === 'VOLVO') {
+                    $query->where('devices.series', 'LIKE', '%FMX%');
+                } else {
+                    $query->where('devices.series', $request->series);
+                }
             }
         }
 
@@ -125,7 +126,6 @@ class SpeedController extends Controller
     public function export(Request $request)
     {
         $query = GpsTrack::select('gps_tracks.*')
-            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks.gps_time');
 
         // Export Selected Rows
@@ -142,17 +142,19 @@ class SpeedController extends Controller
                 }
             }
 
-            // Filter by location
-            if ($request->filled('location')) {
-                $query->where('devices.location', $request->location);
-            }
-
-            // Filter by series
-            if ($request->filled('series')) {
-                if (strtoupper($request->series) === 'VOLVO') {
-                    $query->where('devices.series', 'LIKE', '%FMX%');
-                } else {
-                    $query->where('devices.series', $request->series);
+            // Filter by location or series (requires JOIN)
+            if ($request->filled('location') || $request->filled('series')) {
+                $query->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id');
+                
+                if ($request->filled('location')) {
+                    $query->where('devices.location', $request->location);
+                }
+                if ($request->filled('series')) {
+                    if (strtoupper($request->series) === 'VOLVO') {
+                        $query->where('devices.series', 'LIKE', '%FMX%');
+                    } else {
+                        $query->where('devices.series', $request->series);
+                    }
                 }
             }
 
