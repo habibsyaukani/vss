@@ -35,13 +35,14 @@ class HowenWebsocketListenCommand extends Command
         Log::info('[HowenWS] Starting WebSocket Listener');
 
         $loop = Loop::get();
-        $connector = new Connector($loop, [
+        $reactConnector = new \React\Socket\Connector([
             'timeout' => 15,
             'tls' => [
                 'verify_peer' => false,
                 'verify_peer_name' => false
             ]
         ]);
+        $connector = new Connector($loop, $reactConnector);
 
         $this->connect($connector, $loop);
         
