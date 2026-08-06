@@ -30,6 +30,10 @@ class SpeedController extends Controller
      */
     public function getData(Request $request)
     {
+        // ✅ RELEASE SESSION LOCK EARLY!
+        // This prevents the slow database query below from blocking other requests (like login)
+        session()->save();
+
         $query = GpsTrack::select('gps_tracks.*')
             ->latest('gps_tracks.gps_time');
 

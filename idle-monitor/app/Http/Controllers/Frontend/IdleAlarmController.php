@@ -30,6 +30,9 @@ class IdleAlarmController extends Controller
      */
     public function data(Request $request)
     {
+        // ✅ RELEASE SESSION LOCK EARLY!
+        session()->save();
+
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
         $query = IdleAlarm::select('idle_alarms.*')
             ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id');
