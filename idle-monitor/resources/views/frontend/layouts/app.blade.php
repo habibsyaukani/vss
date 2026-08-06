@@ -393,37 +393,8 @@
             }
         });
         
-        // ═══════════════════════════════════════════════════════════════
-        // FRONTEND LOGOUT HANDLER (prevent Page Expired)
-        // ═══════════════════════════════════════════════════════════════
         function handleFrontendLogout() {
-            console.log('[Logout] Refreshing CSRF token before logout...');
-            
-            // Refresh CSRF token first
-            $.get('{{ route("csrf.refresh") }}')
-                .done(function(data) {
-                    if (data.token) {
-                        console.log('[Logout] Got fresh token, submitting logout...');
-                        // Update token in hidden form
-                        $('#frontendLogoutForm input[name="_token"]').val(data.token);
-                        // Update meta tag
-                        $('meta[name="csrf-token"]').attr('content', data.token);
-                        
-                        // Submit logout form with fresh token
-                        setTimeout(() => {
-                            document.getElementById('frontendLogoutForm').submit();
-                        }, 100);
-                    } else {
-                        console.warn('[Logout] No token received, trying direct logout');
-                        document.getElementById('frontendLogoutForm').submit();
-                    }
-                })
-                .fail(function(error) {
-                    console.error('[Logout] Token refresh failed:', error);
-                    // Fallback: redirect to login
-                    alert('Session may have expired. Redirecting to login...');
-                    window.location.href = '{{ route("login") }}';
-                });
+            document.getElementById('frontendLogoutForm').submit();
         }
 
         $(document).ajaxError(function(event, xhr, settings, error) {
