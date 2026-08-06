@@ -102,8 +102,6 @@ class IdleAlarmController extends Controller
             }
         }
 
-        // ✅ OPTIMIZATION: Get matching device IDs for sidebar sync (simplified)
-        $matchingDeviceIds = (clone $query)->distinct()->pluck('idle_alarms.device_id')->toArray();
 
         return DataTables::of($query)
             ->editColumn('starting_time', function ($alarm) {
@@ -142,7 +140,6 @@ class IdleAlarmController extends Controller
                 return '<a href="' . route('frontend.idle-alarm.show', $alarm->id) . '" class="btn btn-sm btn-info" title="View Details"><i class="fas fa-eye"></i></a>';
             })
             ->rawColumns(['actions'])
-            ->with('matching_device_ids', $matchingDeviceIds)
             ->make(true);
     }
 
