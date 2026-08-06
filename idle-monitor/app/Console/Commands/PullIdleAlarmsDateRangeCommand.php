@@ -10,7 +10,7 @@ use Carbon\Carbon;
 class PullIdleAlarmsDateRangeCommand extends Command
 {
     protected $signature = 'howen:pull-alarms-date-range 
-                            {--from= : Start date (YYYY-MM-DD). Default: 30 days ago}
+                            {--from= : Start date (YYYY-MM-DD). Default: 1 days ago}
                             {--to= : End date (YYYY-MM-DD). Default: today}
                             {--wait : Wait for jobs to complete (blocking)}
                             {--pages=7 : Number of pages to fetch (default: 7)}
@@ -78,7 +78,7 @@ class PullIdleAlarmsDateRangeCommand extends Command
                 throw new \Exception("Invalid 'from' date format. Use YYYY-MM-DD");
             }
         } else {
-            $this->startDate = now()->subDays(30)->startOfDay();
+            $this->startDate = now()->subDays(1)->startOfDay();
         }
 
         if ($to) {

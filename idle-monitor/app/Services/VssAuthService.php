@@ -24,7 +24,15 @@ class VssAuthService
      */
     public function getToken(): string
     {
-        return Cache::remember('vss_token', now()->addMinutes(25), function () {
+        return $this->getAuthData()['token'] ?? '';
+    }
+
+    /**
+     * Ambil data auth lengkap (token & pid) untuk WebSocket.
+     */
+    public function getAuthData(): array
+    {
+        return Cache::remember('vss_auth_data', now()->addMinutes(25), function () {
             return $this->login();
         });
     }
@@ -34,11 +42,11 @@ class VssAuthService
      */
     public function refreshToken(): string
     {
-        Cache::forget('vss_token');
+        Cache::forget('vss_auth_data');
         return $this->getToken();
     }
 
-    private function login(): string
+    private function login(): array
     {
         // MD5 hash password before sending (VSS API requirement)
         $hashedPassword = md5($this->password);
@@ -58,6 +66,9 @@ class VssAuthService
 
         Log::info('[VSS Auth] Login berhasil, token baru di-cache.');
 
-        return $body['data']['token'];
+        return [
+            'token' => $body['data']['token'],
+            'pid' => $body['data']['pid'] ?? '',
+        ];
     }
 }

@@ -65,13 +65,17 @@ class HowenAuthService
                         if (isset($data['data']['token']) && !empty($data['data']['token'])) {
                             $token = $data['data']['token'];
                             
-                            $expiresAt = now()->addMinutes(30);
-                            ApiToken::updateOrCreate(
-                                ['token' => $token],
-                                ['expires_at' => $expiresAt]
-                            );
+                            $expiresAt = now()->addMinutes(25);
+                            try {
+                                ApiToken::updateOrCreate(
+                                    ['token' => $token],
+                                    ['expires_at' => $expiresAt]
+                                );
+                            } catch (\Exception $e) {
+                                // Ignore DB error for token, rely on cache
+                            }
 
-                            Cache::put('howen_token', $token, now()->addMinutes(28));
+                            Cache::put('howen_token', $token, now()->addMinutes(25));
                             Log::info("Howen authentication SUCCESS with {$method}", ['token' => substr($token, 0, 10) . '...']);
 
                             return $token;
@@ -107,14 +111,6 @@ class HowenAuthService
         
         if (!$token) {
             Log::info('Token not in cache, authenticating...');
-            return $this->authenticate();
-        }
-
-        // Check if token in database is still valid
-        $apiToken = ApiToken::where('token', $token)->first();
-        
-        if (!$apiToken || ($apiToken->expires_at && $apiToken->expires_at->isPast())) {
-            Log::info('Token expired, refreshing...');
             return $this->authenticate();
         }
 
