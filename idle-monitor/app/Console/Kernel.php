@@ -43,15 +43,14 @@ class Kernel extends ConsoleKernel
         // ========================================
         
         // ✅ PRIMARY: Pull alarms every 3 minutes (last 2 hours)
-        // This ensures real-time monitoring without overwhelming the API
-        // NOTE: howen:pull-alarms-realtime only accepts --hours option
-        $schedule->command('howen:pull-alarms-realtime', [
-            '--hours' => 2,
-        ])
-            ->everyThreeMinutes()
-            ->runInBackground()
-            ->withoutOverlapping()
-            ->description('Pull alarm data (real-time, last 2 hours)');
+        // [DISABLED] - Now handled by WebSocket (howen:websocket-listen)
+        // $schedule->command('howen:pull-alarms-realtime', [
+        //     '--hours' => 2,
+        // ])
+        //     ->everyThreeMinutes()
+        //     ->runInBackground()
+        //     ->withoutOverlapping()
+        //     ->description('Pull alarm data (real-time, last 2 hours)');
 
         // ✅ SECONDARY: Process idle alarms every 5 minutes
         // Analyze alarm data and calculate idle duration
@@ -65,10 +64,11 @@ class Kernel extends ConsoleKernel
         // ========================================
         
         // Import GPS tracks every 5 minutes (last 1 hour to ensure coverage, with 500ms delay to prevent rate limit)
-        $schedule->job(new \App\Jobs\ImportGpsTrackJob(1, 500))
-             ->everyFiveMinutes()
-             ->withoutOverlapping()
-             ->description('Pull GPS track data (last 1 hour, every 5 min)');
+        // [DISABLED] - Now handled by WebSocket (howen:websocket-listen)
+        // $schedule->job(new \App\Jobs\ImportGpsTrackJob(1, 500))
+        //      ->everyFiveMinutes()
+        //      ->withoutOverlapping()
+        //      ->description('Pull GPS track data (last 1 hour, every 5 min)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
         $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
