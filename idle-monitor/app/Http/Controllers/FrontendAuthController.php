@@ -81,6 +81,16 @@ class FrontendAuthController extends Controller
         $request->session()->regenerate();
         session(['session_token' => $sessionToken]);
 
+        // DEBUG: log session state after login
+        \Log::info('[LOGIN-DEBUG] Login success', [
+            'user'          => $user->username,
+            'role'          => $user->role,
+            'status'        => $user->status,
+            'session_id'    => session()->getId(),
+            'auth_check'    => Auth::check(),
+            'session_token' => substr($sessionToken, 0, 10) . '...',
+        ]);
+
         return redirect('/dashboard')->with('success', 'Selamat datang, ' . $user->name . '!');
     }
 

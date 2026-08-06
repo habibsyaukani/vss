@@ -16,6 +16,11 @@ class SingleSessionMiddleware
     public function handle(Request $request, Closure $next)
     {
         if (!Auth::check()) {
+            \Log::warning('[SINGLE-SESSION] Auth::check() = false, redirecting to login', [
+                'url'        => $request->url(),
+                'session_id' => session()->getId(),
+                'has_session'=> !empty(session()->all()),
+            ]);
             return $next($request);
         }
 
