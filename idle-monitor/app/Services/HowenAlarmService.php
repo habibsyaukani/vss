@@ -55,7 +55,7 @@ class HowenAlarmService
                         'pageCount' => $pageCount,
                         'beginTime' => $beginTime,
                         'endTime' => $endTime,
-                        'alarmType' => $alarmType ?? 32, // Type 32 is Idle Alarm
+                        'alarmType' => $alarmType ?? '', // Reverted to empty string to fetch all alarms (Howen API might not filter sub-types correctly)
                         'deviceID' => $deviceId ?? '',
                     ],
                     'timeout' => 20,
