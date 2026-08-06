@@ -559,60 +559,8 @@
                 });
             }, 15 * 60 * 1000); // 15 minutes
             
-            // Also refresh before form submit to ensure token is fresh
-            $('form').on('submit', function(e) {
-                e.preventDefault();
-                const form = this;
-                
-                console.log('[Login] Refreshing CSRF token before submit...');
-                
-                $.ajax({
-                    url: '{{ route("csrf.refresh") }}',
-                    method: 'GET',
-                    success: function(data) {
-                        if (data.token) {
-                            // Update form token with fresh one
-                            $(form).find('input[name="_token"]').val(data.token);
-                            console.log('[Login] Fresh token obtained, submitting form...');
-                            
-                            // Submit form with fresh token
-                            setTimeout(() => {
-                                form.submit();
-                            }, 100);
-                        } else {
-                            // No token received, submit anyway
-                            form.submit();
-                        }
-                    },
-                    error: function() {
-                        console.warn('[Login] Token refresh failed, submitting anyway...');
-                        // Submit anyway
-                        form.submit();
-                    }
-                });
-            });
         });
-        
-        // Fix "Page Expired" error after logout by reloading page once
-        window.addEventListener('DOMContentLoaded', function() {
-            // Check if we just came from logout (has success message)
-            const hasSuccessMessage = document.querySelector('.alert-success');
-            const hasReloaded = sessionStorage.getItem('login_page_reloaded');
-            
-            // If coming from logout and haven't reloaded yet, reload once to get fresh CSRF token
-            if (hasSuccessMessage && !hasReloaded) {
-                sessionStorage.setItem('login_page_reloaded', '1');
-                location.reload();
-            }
-            
-            // Clear the reload flag when user starts typing (fresh login attempt)
-            const usernameInput = document.querySelector('input[name="username"]');
-            if (usernameInput) {
-                usernameInput.addEventListener('focus', function() {
-                    sessionStorage.removeItem('login_page_reloaded');
-                });
-            }
-        });
+
 
         // Toggle password visibility
         document.getElementById('togglePassword').addEventListener('click', function() {
