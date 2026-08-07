@@ -13,11 +13,19 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('gps_tracks', function (Blueprint $table) {
+        // Cek apakah index sudah ada (karena user mungkin membuatnya manual lewat tinker)
+        $sm = Schema::getConnection()->getDoctrineSchemaManager();
+        $indexesFound = $sm->listTableIndexes('gps_tracks');
+
+        Schema::table('gps_tracks', function (Blueprint $table) use ($indexesFound) {
             // Composite index for fast filtering by device and time
-            $table->index(['device_id', 'gps_time'], 'idx_device_time');
+            if (!array_key_exists('idx_device_time', $indexesFound)) {
+                $table->index(['device_id', 'gps_time'], 'idx_device_time');
+            }
             // Composite index for fast filtering by time and speed
-            $table->index(['gps_time', 'speed'], 'idx_time_speed');
+            if (!array_key_exists('idx_time_speed', $indexesFound)) {
+                $table->index(['gps_time', 'speed'], 'idx_time_speed');
+            }
         });
     }
 
