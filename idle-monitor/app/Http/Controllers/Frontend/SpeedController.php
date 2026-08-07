@@ -44,7 +44,10 @@ class SpeedController extends Controller
                 return Device::count();
             });
             if (count($request->device_ids) < $totalDevices) {
-                $query->whereIn('gps_tracks.device_id', $request->device_ids);
+                $cleanIds = array_map(function($id) {
+                    return ltrim((string)$id, '0');
+                }, $request->device_ids);
+                $query->whereIn('gps_tracks.device_id', $cleanIds);
             }
         }
 
@@ -153,7 +156,10 @@ class SpeedController extends Controller
                     return Device::count();
                 });
                 if (count($request->device_ids) < $totalDevices) {
-                    $query->whereIn('gps_tracks.device_id', $request->device_ids);
+                    $cleanIds = array_map(function($id) {
+                        return ltrim((string)$id, '0');
+                    }, $request->device_ids);
+                    $query->whereIn('gps_tracks.device_id', $cleanIds);
                 }
             }
 
