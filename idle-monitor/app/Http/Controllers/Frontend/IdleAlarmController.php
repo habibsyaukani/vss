@@ -35,7 +35,7 @@ class IdleAlarmController extends Controller
 
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
         $query = IdleAlarm::select('idle_alarms.*')
-            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id');
+            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(idle_alarms.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'));
 
         // Filter by status
         if ($request->status) {
@@ -62,7 +62,8 @@ class IdleAlarmController extends Controller
                 return \App\Models\Device::count();
             });
             if (count($request->device_ids) < $totalDevices) {
-                $query->whereIn('idle_alarms.device_id', $request->device_ids);
+                $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                $query->whereIn('idle_alarms.device_id', $cleanIds);
             }
         }
 
@@ -187,7 +188,8 @@ class IdleAlarmController extends Controller
                     return \App\Models\Device::count();
                 });
                 if (count($request->device_ids) < $totalDevices) {
-                    $query->whereIn('device_id', $request->device_ids);
+                    $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                    $query->whereIn('device_id', $cleanIds);
                 }
             }
             if ($request->start_date) {

@@ -37,7 +37,7 @@ class SpeedPerformanceController extends Controller
                 DB::raw('AVG(gps_tracks.speed) as avg_speed'),
                 DB::raw('MAX(gps_tracks.speed) as max_speed')
             )
-            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
+            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
             ->where('gps_tracks.speed', '>', 0)
             ->groupBy('gps_tracks.device_id', 'devices.device_name');
 
@@ -47,7 +47,8 @@ class SpeedPerformanceController extends Controller
                 return Device::count();
             });
             if (count($request->device_ids) < $totalDevices) {
-                $query->whereIn('gps_tracks.device_id', $request->device_ids);
+                $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                $query->whereIn('gps_tracks.device_id', $cleanIds);
             }
         }
 
@@ -161,13 +162,12 @@ class SpeedPerformanceController extends Controller
         } else {
             if ($request->filled('device_ids')) {
                 $deviceIds = explode(',', $request->device_ids);
-                if (!empty($deviceIds)) {
-                    $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
-                        return Device::count();
-                    });
-                    if (count($deviceIds) < $totalDevices) {
-                        $query->whereIn('gps_tracks.device_id', $deviceIds);
-                    }
+                $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                    return Device::count();
+                });
+                if (count($deviceIds) < $totalDevices) {
+                    $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $deviceIds);
+                    $query->whereIn('gps_tracks.device_id', $cleanIds);
                 }
             }
         }
