@@ -34,7 +34,8 @@ class SpeedController extends Controller
         // This prevents the slow database query below from blocking other requests (like login)
         session()->save();
 
-        $query = GpsTrack::select('gps_tracks.*')
+        $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
+            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks.gps_time');
 
         // Filter by specific device IDs (from tree view)
@@ -49,7 +50,7 @@ class SpeedController extends Controller
 
         // Filter by location or series (requires JOIN)
         if ($request->filled('location') || $request->filled('series')) {
-            $query->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id');
+            // leftJoin sudah dilakukan di atas secara permanen
             
             if ($request->filled('location')) {
                 $query->where('devices.location', $request->location);
@@ -117,6 +118,15 @@ class SpeedController extends Controller
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
             })
+            ->editColumn('device_name', function($row) {
+                return $row->device_name ?: $row->master_device_name;
+            })
+            ->addColumn('fleet_name', function($row) {
+                $name = $row->device_name ?: $row->master_device_name;
+                if (!$name) return '-';
+                $parts = explode('-', $name);
+                return isset($parts[1]) ? $parts[1] : 'Unknown';
+            })
             ->editColumn('gps_time', function($row) {
                 return $row->gps_time ? date('Y-m-d H:i:s', strtotime($row->gps_time)) : '-';
             })
@@ -129,7 +139,8 @@ class SpeedController extends Controller
      */
     public function export(Request $request)
     {
-        $query = GpsTrack::select('gps_tracks.*')
+        $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
+            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks.gps_time');
 
         // Export Selected Rows
@@ -148,7 +159,7 @@ class SpeedController extends Controller
 
             // Filter by location or series (requires JOIN)
             if ($request->filled('location') || $request->filled('series')) {
-                $query->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id');
+                // leftJoin sudah dilakukan di atas secara permanen
                 
                 if ($request->filled('location')) {
                     $query->where('devices.location', $request->location);
@@ -223,7 +234,16 @@ class SpeedController extends Controller
                 $serial = 1;
                 foreach ($query->cursor() as $track) {
                     $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
-                    $deviceName = ($track->device_name ?? '-') . ' (' . $track->device_id . ')';
+                    
+                    $realDevName = $track->device_name ?: $track->master_device_name;
+                    $deviceName = ($realDevName ?? '-') . ' (' . $track->device_id . ')';
+                    
+                    $fleetName = '-';
+                    if ($realDevName) {
+                        $parts = explode('-', $realDevName);
+                        $fleetName = isset($parts[1]) ? $parts[1] : 'Unknown';
+                    }
+
                     $location = ($track->latitude && $track->longitude) ? $track->latitude . ',' . $track->longitude : '-';
                     $time = $track->gps_time ? date('Y-m-d H:i:s', strtotime($track->gps_time)) : '-';
                     $speed = $track->speed . ' Km/h';
@@ -246,7 +266,7 @@ class SpeedController extends Controller
                     fwrite($out, '    <tr class="' . $rowClass . '">' . "\n");
                     fwrite($out, '      <td class="text-center">' . $serial++ . '</td>' . "\n");
                     fwrite($out, '      <td class="text-left">' . htmlspecialchars($deviceName) . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($track->fleet_name ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($fleetName) . '</td>' . "\n");
                     fwrite($out, '      <td class="' . $spdBadgeClass . '">' . htmlspecialchars($speed) . '</td>' . "\n");
                     fwrite($out, '      <td class="text-right">' . htmlspecialchars($track->altitude ?? '0') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-center">' . htmlspecialchars($time) . '</td>' . "\n");

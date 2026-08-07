@@ -79,16 +79,36 @@ class DashboardController extends Controller
                 ->get();
 
             // ── 6. Speed per fleet hari ini ────────────────────────────────
+            // COALESCE agar data GPS tanpa device_name tetap masuk grafik
             $speedFleetRaw = GpsTrack::selectRaw(
-                    "SUBSTRING_INDEX(SUBSTRING_INDEX(device_name, '-', 2), '-', -1) as fleet,
+                    "COALESCE(
+                        NULLIF(SUBSTRING_INDEX(SUBSTRING_INDEX(device_name, '-', 2), '-', -1), ''),
+                        'Unknown'
+                     ) as fleet,
                      MAX(speed) as max_speed"
                 )
                 ->whereBetween('gps_time', [$start, $end])
                 ->where('speed', '>', 0)
-                ->whereNotNull('device_name')
                 ->groupBy('fleet')
                 ->orderByDesc('max_speed')
                 ->get();
+
+            // Jika masih kosong, coba ambil dari alarm_raw sebagai fallback
+            if ($speedFleetRaw->isEmpty()) {
+                $speedFleetRaw = \App\Models\AlarmRaw::selectRaw(
+                        "COALESCE(
+                            NULLIF(SUBSTRING_INDEX(SUBSTRING_INDEX(device_name, '-', 2), '-', -1), ''),
+                            'Unknown'
+                         ) as fleet,
+                         MAX(end_speed) as max_speed"
+                    )
+                    ->whereBetween('start_time', [$start, $end])
+                    ->where('end_speed', '>', 0)
+                    ->whereNotNull('device_name')
+                    ->groupBy('fleet')
+                    ->orderByDesc('max_speed')
+                    ->get();
+            }
 
             $speedPerFleet = [
                 'labels' => $speedFleetRaw->map(fn($r) => $r->fleet . ' - GPE')->toArray(),

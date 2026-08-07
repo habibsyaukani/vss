@@ -44,13 +44,14 @@ class Kernel extends ConsoleKernel
         
         // ✅ PRIMARY: Pull alarms every 3 minutes (last 2 hours)
         // [DISABLED] - Now handled by WebSocket (howen:websocket-listen)
-        // $schedule->command('howen:pull-alarms-realtime', [
-        //     '--hours' => 2,
-        // ])
-        //     ->everyThreeMinutes()
-        //     ->runInBackground()
-        //     ->withoutOverlapping()
-        //     ->description('Pull alarm data (real-time, last 2 hours)');
+        // Re-enabled as fallback since websocket might not be running
+        $schedule->command('howen:pull-alarms-realtime', [
+            '--hours' => 2,
+        ])
+            ->everyThreeMinutes()
+            ->runInBackground()
+            ->withoutOverlapping()
+            ->description('Pull alarm data (real-time, last 2 hours)');
 
         // ✅ SECONDARY: Process idle alarms every 5 minutes
         // Analyze alarm data and calculate idle duration
