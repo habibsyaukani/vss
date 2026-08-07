@@ -45,8 +45,13 @@ class SpeedPerformanceController extends Controller
                 return Device::count();
             });
             if (count($request->device_ids) < $totalDevices) {
-                $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
-                $query->whereIn('gps_tracks.device_id', $cleanIds);
+                $searchIds = [];
+                foreach ($request->device_ids as $id) {
+                    $searchIds[] = (string)$id;
+                    $searchIds[] = ltrim((string)$id, '0');
+                    $searchIds[] = '0' . ltrim((string)$id, '0');
+                }
+                $query->whereIn('gps_tracks.device_id', array_unique($searchIds));
             }
         }
 
@@ -67,12 +72,20 @@ class SpeedPerformanceController extends Controller
             }
             
             $matchedIds = $deviceQuery->pluck('device_id')->toArray();
-            $cleanMatchedIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $matchedIds);
+            
+            $searchIds = [];
+            foreach ($matchedIds as $id) {
+                $searchIds[] = (string)$id;
+                $searchIds[] = ltrim((string)$id, '0');
+                $searchIds[] = '0' . ltrim((string)$id, '0');
+            }
+            $searchIds = array_unique($searchIds);
+            
             // If no devices match the filter, force an empty result safely
-            if (empty($cleanMatchedIds)) {
+            if (empty($searchIds)) {
                 $query->whereRaw('1 = 0');
             } else {
-                $query->whereIn('gps_tracks.device_id', $cleanMatchedIds);
+                $query->whereIn('gps_tracks.device_id', $searchIds);
             }
         }
 
@@ -186,8 +199,13 @@ class SpeedPerformanceController extends Controller
                     return Device::count();
                 });
                 if (count($deviceIds) < $totalDevices) {
-                    $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $deviceIds);
-                    $query->whereIn('gps_tracks.device_id', $cleanIds);
+                    $searchIds = [];
+                    foreach ($deviceIds as $id) {
+                        $searchIds[] = (string)$id;
+                        $searchIds[] = ltrim((string)$id, '0');
+                        $searchIds[] = '0' . ltrim((string)$id, '0');
+                    }
+                    $query->whereIn('gps_tracks.device_id', array_unique($searchIds));
                 }
             }
 
@@ -208,11 +226,19 @@ class SpeedPerformanceController extends Controller
                 }
                 
                 $matchedIds = $deviceQuery->pluck('device_id')->toArray();
-                $cleanMatchedIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $matchedIds);
-                if (empty($cleanMatchedIds)) {
+                
+                $searchIds = [];
+                foreach ($matchedIds as $id) {
+                    $searchIds[] = (string)$id;
+                    $searchIds[] = ltrim((string)$id, '0');
+                    $searchIds[] = '0' . ltrim((string)$id, '0');
+                }
+                $searchIds = array_unique($searchIds);
+                
+                if (empty($searchIds)) {
                     $query->whereRaw('1 = 0');
                 } else {
-                    $query->whereIn('gps_tracks.device_id', $cleanMatchedIds);
+                    $query->whereIn('gps_tracks.device_id', $searchIds);
                 }
             }
         }
