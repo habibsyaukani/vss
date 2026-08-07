@@ -47,9 +47,9 @@ class ProcessGpsTrackJob implements ShouldQueue
             $processed = 0;
             $skipped = 0;
 
-            // Find gps_tracks_raw yang belum ada di gps_tracks
+            // Find gps_tracks_raw yang belum diproses (jauh lebih cepat daripada whereDoesntHave)
             // Proses dalam chunk untuk efisiensi memory
-            GpsTrackRaw::whereDoesntHave('track')
+            GpsTrackRaw::where('is_processed', 0)
                 ->orderBy('id', 'asc')
                 ->chunk(1000, function ($rawTracks) use (&$processed, &$skipped, $processLog) {
                     Log::info("Processing chunk of GPS raw tracks", ['count' => $rawTracks->count()]);
@@ -63,6 +63,9 @@ class ProcessGpsTrackJob implements ShouldQueue
                                 ['raw_id' => $rawTrack->id],
                                 $displayData
                             );
+                            
+                            // Tandai sebagai sudah diproses
+                            $rawTrack->update(['is_processed' => 1]);
 
                             $processed++;
 

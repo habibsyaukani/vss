@@ -47,11 +47,7 @@ class ProcessIdleAlarmJob implements ShouldQueue
             // Count pending alarms to process
             $pendingCount = \App\Models\AlarmRaw::where('alarm_type', 32)
                 ->where('alarm_state', 0)
-                ->whereNotExists(function ($query) {
-                    $query->select(\Illuminate\Support\Facades\DB::raw(1))
-                          ->from('idle_alarms')
-                          ->whereRaw('idle_alarms.guid = alarm_raw.guid');
-                })
+                ->where('is_processed', 0)
                 ->count();
 
             if ($pendingCount === 0) {
@@ -74,13 +70,10 @@ class ProcessIdleAlarmJob implements ShouldQueue
 
             // ✅ OPTIMASI: Filter di level database agar tidak meload seluruh data ke RAM
             // Hanya proses tipe 32 (Idle) dan state 0 (Alarm End) yang belum ada di idle_alarms
+            // Hanya proses tipe 32 (Idle) dan state 0 (Alarm End) yang belum diproses
             \App\Models\AlarmRaw::where('alarm_type', 32)
                 ->where('alarm_state', 0)
-                ->whereNotExists(function ($query) {
-                    $query->select(\Illuminate\Support\Facades\DB::raw(1))
-                          ->from('idle_alarms')
-                          ->whereRaw('idle_alarms.guid = alarm_raw.guid');
-                })
+                ->where('is_processed', 0)
                 ->orderBy('id', 'asc')
                 ->chunk(1000, function ($alarms) use (&$processed, &$skipped, $processLog) {
                     SystemLogger::success('PROCESSING', "Processing chunk of alarms", ['count' => $alarms->count()]);
@@ -204,6 +197,9 @@ class ProcessIdleAlarmJob implements ShouldQueue
                                 ['guid' => $alarmRaw->guid],
                                 $idleData
                             );
+                            
+                            // Tandai sebagai sudah diproses
+                            $alarmRaw->update(['is_processed' => 1]);
 
                             $processed++;
                             
