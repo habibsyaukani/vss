@@ -89,6 +89,8 @@ class DashboardController extends Controller
                 )
                 ->whereBetween('gps_time', [$start, $end])
                 ->where('speed', '>', 0)
+                ->whereNotNull('device_name')
+                ->where('device_name', '!=', '')
                 ->groupBy('fleet')
                 ->orderByDesc('max_speed')
                 ->get();
