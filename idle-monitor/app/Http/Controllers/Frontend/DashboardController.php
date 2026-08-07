@@ -68,12 +68,16 @@ class DashboardController extends Controller
                 'counts' => $idleFleetRaw->pluck('total')->map(fn($v) => (int) $v)->toArray(),
             ];
 
-            // ── 5. Top 5 speed units hari ini ─────────────────────────────
-            $topSpeedUnits = GpsTrack::select('device_name', 'device_id', DB::raw('MAX(speed) as max_speed'))
-                ->whereBetween('gps_time', [$start, $end])
-                ->where('speed', '>', 0)
-                ->whereNotNull('device_name')
-                ->groupBy('device_name', 'device_id')
+            // 🚀 5. Top 5 speed units hari ini 
+            $topSpeedUnits = GpsTrack::select(
+                    'gps_tracks.device_id',
+                    DB::raw('COALESCE(devices.device_name, gps_tracks.device_name) as device_name'),
+                    DB::raw('MAX(gps_tracks.speed) as max_speed')
+                )
+                ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
+                ->whereBetween('gps_tracks.gps_time', [$start, $end])
+                ->where('gps_tracks.speed', '>', 0)
+                ->groupBy('gps_tracks.device_id', 'devices.device_name', 'gps_tracks.device_name')
                 ->orderByDesc('max_speed')
                 ->limit(5)
                 ->get();
