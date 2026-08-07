@@ -43,6 +43,7 @@ class GpsTrackRaw extends Model
         'state_json',
         'tempe_humidity',
         'is_later',
+        'is_processed',
     ];
 
     protected $casts = [

@@ -14,7 +14,7 @@ class AlarmRaw extends Model
     protected $fillable = [
         'guid', 'device_id', 'device_name', 'alarm_type', 'alarm_value', 'alarm_state',
         'start_time', 'end_time', 'start_gps', 'end_gps', 'start_speed', 'end_speed',
-        'report_time', 'duration_seconds', 'start_detail', 'end_detail', 'raw_json'
+        'report_time', 'duration_seconds', 'start_detail', 'end_detail', 'raw_json', 'is_processed'
     ];
 
     protected $casts = [
