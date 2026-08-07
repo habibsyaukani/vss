@@ -62,13 +62,8 @@ class IdleAlarmController extends Controller
                 return \App\Models\Device::count();
             });
             if (count($request->device_ids) < $totalDevices) {
-                $searchIds = [];
-                foreach ($request->device_ids as $id) {
-                    $searchIds[] = (string)$id;
-                    $searchIds[] = ltrim((string)$id, '0');
-                    $searchIds[] = '0' . ltrim((string)$id, '0');
-                }
-                $query->whereIn('idle_alarms.device_id', array_unique($searchIds));
+                $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                $query->whereIn('idle_alarms.device_id', $cleanIds);
             }
         }
 
@@ -193,13 +188,8 @@ class IdleAlarmController extends Controller
                     return \App\Models\Device::count();
                 });
                 if (count($request->device_ids) < $totalDevices) {
-                    $searchIds = [];
-                    foreach ($request->device_ids as $id) {
-                        $searchIds[] = (string)$id;
-                        $searchIds[] = ltrim((string)$id, '0');
-                        $searchIds[] = '0' . ltrim((string)$id, '0');
-                    }
-                    $query->whereIn('device_id', array_unique($searchIds));
+                    $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                    $query->whereIn('device_id', $cleanIds);
                 }
             }
             if ($request->start_date) {
