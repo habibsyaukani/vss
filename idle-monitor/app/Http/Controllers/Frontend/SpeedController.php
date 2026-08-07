@@ -31,39 +31,59 @@ class SpeedController extends Controller
     public function getData(Request $request)
     {
         // ✅ RELEASE SESSION LOCK EARLY!
-        // This prevents the slow database query below from blocking other requests (like login)
         session()->save();
 
-        $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
-            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
+        $query = GpsTrack::select('gps_tracks.*')
+            ->from(\Illuminate\Support\Facades\DB::raw('gps_tracks FORCE INDEX (idx_time_speed)'))
             ->latest('gps_tracks.gps_time');
 
-        // Filter by specific device IDs (from tree view)
+        // Filter by specific device IDs
         if ($request->device_ids && is_array($request->device_ids)) {
             $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
                 return Device::count();
             });
             if (count($request->device_ids) < $totalDevices) {
-                $cleanIds = array_map(function($id) {
-                    return ltrim((string)$id, '0');
-                }, $request->device_ids);
-                $query->whereIn('gps_tracks.device_id', $cleanIds);
+                $searchIds = [];
+                foreach ($request->device_ids as $id) {
+                    $searchIds[] = (string)$id;
+                    $searchIds[] = ltrim((string)$id, '0');
+                    $searchIds[] = '0' . ltrim((string)$id, '0');
+                }
+                $query->whereIn('gps_tracks.device_id', array_unique($searchIds));
             }
         }
 
-        // Filter by location or series (requires JOIN)
+        // Filter by location or series (Without heavy JOIN)
         if ($request->filled('location') || $request->filled('series')) {
-            // leftJoin sudah dilakukan di atas secara permanen
+            $deviceQuery = \App\Models\Device::query();
             
             if ($request->filled('location')) {
-                $query->where('devices.location', $request->location);
+                $deviceQuery->where('location', $request->location);
             }
             if ($request->filled('series')) {
-                if (strtoupper($request->series) === 'VOLVO') {
-                    $query->where('devices.series', 'LIKE', '%FMX%');
+                $seriesParam = strtoupper($request->series);
+                if ($seriesParam === 'VOLVO') {
+                    $deviceQuery->where('series', 'like', '%FMX%');
                 } else {
-                    $query->where('devices.series', $request->series);
+                    $deviceQuery->where('series', $request->series);
                 }
+            }
+            
+            $matchedIds = $deviceQuery->pluck('device_id')->toArray();
+            
+            $searchIds = [];
+            foreach ($matchedIds as $id) {
+                $searchIds[] = (string)$id;
+                $searchIds[] = ltrim((string)$id, '0');
+                $searchIds[] = '0' . ltrim((string)$id, '0');
+            }
+            $searchIds = array_unique($searchIds);
+            
+            // If no devices match the filter, force an empty result safely
+            if (empty($searchIds)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn('gps_tracks.device_id', $searchIds);
             }
         }
 
@@ -117,18 +137,35 @@ class SpeedController extends Controller
             $query->where('gps_tracks.speed', '>', 0);
         }
 
+        $devicesMap = cache()->remember('devices_map_fast', 300, function() {
+            $all = \App\Models\Device::all();
+            $map = [];
+            foreach ($all as $d) {
+                $map[ltrim($d->device_id, '0')] = $d;
+            }
+            return $map;
+        });
+
         return DataTables::of($query)
             ->addColumn('checkbox', function($row){
-                return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
+                return '<input type="checkbox" class="row-checkbox" value="' . $row->device_id . '">';
             })
-            ->editColumn('device_name', function($row) {
-                return $row->device_name ?: $row->master_device_name;
+            ->addColumn('master_device_name', function ($track) use ($devicesMap) {
+                return isset($devicesMap[$track->device_id]) ? $devicesMap[$track->device_id]->device_name : null;
             })
-            ->addColumn('fleet_name', function($row) {
-                $name = $row->device_name ?: $row->master_device_name;
+            ->editColumn('device_name', function ($track) use ($devicesMap) {
+                $masterName = isset($devicesMap[$track->device_id]) ? $devicesMap[$track->device_id]->device_name : null;
+                return htmlspecialchars($masterName ?? $track->device_name ?? '-');
+            })
+            ->addColumn('fleet_name', function($row) use ($devicesMap) {
+                $masterName = isset($devicesMap[$row->device_id]) ? $devicesMap[$row->device_id]->device_name : null;
+                $name = $masterName ?? $row->device_name;
                 if (!$name) return '-';
                 $parts = explode('-', $name);
-                return isset($parts[1]) ? $parts[1] : 'Unknown';
+                return htmlspecialchars($parts[1] ?? 'Unknown');
+            })
+            ->editColumn('location', function ($track) use ($devicesMap) {
+                return htmlspecialchars(isset($devicesMap[$track->device_id]) ? $devicesMap[$track->device_id]->location : '-');
             })
             ->editColumn('gps_time', function($row) {
                 return $row->gps_time ? date('Y-m-d H:i:s', strtotime($row->gps_time)) : '-';
@@ -142,40 +179,61 @@ class SpeedController extends Controller
      */
     public function export(Request $request)
     {
-        $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
-            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
+        $query = GpsTrack::select('gps_tracks.*')
             ->latest('gps_tracks.gps_time');
 
-        // Export Selected Rows
-        if ($request->selected_ids && is_array($request->selected_ids)) {
-            $query->whereIn('gps_tracks.id', $request->selected_ids);
+        $isExportSelected = false;
+        if ($request->filled('export_type') && $request->export_type === 'selected' && $request->filled('row_ids')) {
+            $rowIds = explode(',', $request->row_ids);
+            if (!empty($rowIds)) {
+                $query->whereIn('gps_tracks.device_id', $rowIds);
+                $isExportSelected = true;
+            }
         } else {
-            // Filter by specific device IDs (from tree view) - Optimized to skip when all devices are selected
+            // Apply sidebar and top filters
             if ($request->device_ids && is_array($request->device_ids)) {
                 $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
                     return Device::count();
                 });
                 if (count($request->device_ids) < $totalDevices) {
-                    $cleanIds = array_map(function($id) {
-                        return ltrim((string)$id, '0');
-                    }, $request->device_ids);
-                    $query->whereIn('gps_tracks.device_id', $cleanIds);
+                    $searchIds = [];
+                    foreach ($request->device_ids as $id) {
+                        $searchIds[] = (string)$id;
+                        $searchIds[] = ltrim((string)$id, '0');
+                        $searchIds[] = '0' . ltrim((string)$id, '0');
+                    }
+                    $query->whereIn('gps_tracks.device_id', array_unique($searchIds));
                 }
             }
 
-            // Filter by location or series (requires JOIN)
+            // Filter by location or series
             if ($request->filled('location') || $request->filled('series')) {
-                // leftJoin sudah dilakukan di atas secara permanen
-                
+                $deviceQuery = \App\Models\Device::query();
                 if ($request->filled('location')) {
-                    $query->where('devices.location', $request->location);
+                    $deviceQuery->where('location', $request->location);
                 }
                 if ($request->filled('series')) {
-                    if (strtoupper($request->series) === 'VOLVO') {
-                        $query->where('devices.series', 'LIKE', '%FMX%');
+                    $seriesParam = strtoupper($request->series);
+                    if ($seriesParam === 'VOLVO') {
+                        $deviceQuery->where('series', 'like', '%FMX%');
                     } else {
-                        $query->where('devices.series', $request->series);
+                        $deviceQuery->where('series', $request->series);
                     }
+                }
+                $matchedIds = $deviceQuery->pluck('device_id')->toArray();
+                
+                $searchIds = [];
+                foreach ($matchedIds as $id) {
+                    $searchIds[] = (string)$id;
+                    $searchIds[] = ltrim((string)$id, '0');
+                    $searchIds[] = '0' . ltrim((string)$id, '0');
+                }
+                $searchIds = array_unique($searchIds);
+                
+                if (empty($searchIds)) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('gps_tracks.device_id', $searchIds);
                 }
             }
 
@@ -232,17 +290,27 @@ class SpeedController extends Controller
             ['label' => 'IGNITION (ACC)', 'align' => 'center'],
         ];
 
+        $devicesMap = cache()->remember('devices_map_fast', 300, function() {
+            $all = \App\Models\Device::all();
+            $map = [];
+            foreach ($all as $d) {
+                $map[ltrim($d->device_id, '0')] = $d;
+            }
+            return $map;
+        });
+
         return ExcelExportService::streamXls(
-            'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.xls',
-            'GPS SPEED MONITORING REPORT',
+            'export-speed-data-' . date('Y-m-d_H-i-s') . '.xls',
+            'SPEED DATA REPORT',
             $headers,
-            function ($out) use ($query) {
+            function ($out) use ($query, $devicesMap) {
                 $serial = 1;
                 foreach ($query->cursor() as $track) {
                     $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
+                    $deviceInfo = $devicesMap[$track->device_id] ?? null;
                     
-                    $realDevName = $track->device_name ?: $track->master_device_name;
-                    $deviceName = ($realDevName ?? '-') . ' (' . $track->device_id . ')';
+                    $realDevName = $deviceInfo->device_name ?? $track->device_name ?? '-';
+                    $deviceName = $realDevName . ' (' . $track->device_id . ')';
                     
                     $fleetName = '-';
                     if ($realDevName) {
