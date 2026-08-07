@@ -575,8 +575,13 @@ $(function() {
     // ---- Speed Filter State — default: Low Speed aktif ----
     let activeSpeedFilter = 'low';
 
+    // Disable annoying DataTables alert popup (e.g., when AJAX is aborted by clicking another filter quickly)
+    $.fn.dataTable.ext.errMode = 'none';
+
     // ---- DataTables Init ----
-    let table = $('#speedTable').DataTable({
+    let table = $('#speedTable').on('error.dt', function(e, settings, techNote, message) {
+        console.log('DataTables error:', message);
+    }).DataTable({
         processing: true,
         serverSide: true,
         bFilter: false, // Hapus fitur search default DataTables
