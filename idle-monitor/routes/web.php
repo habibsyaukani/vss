@@ -65,3 +65,5 @@ Route::get('/csrf-refresh', function () {
 // Include frontend routes
 require __DIR__ . '/frontend.php';
 
+
+Route::get('/test-index', function() { return \Illuminate\Support\Facades\DB::select('SHOW INDEXES FROM gps_tracks'); });
