@@ -13,9 +13,10 @@ use Illuminate\Support\Facades\Log;
 class PullGpsTracksCommand extends Command
 {
     protected $signature = 'vss:pull-gps-tracks 
-                            {--date= : Specific date (Y-m-d), default: yesterday}
+                            {--date= : Specific date to pull (YYYY-MM-DD), defaults to today}
                             {--devices= : Comma-separated device IDs, or "all" for all active devices}
-                            {--limit=0 : Limit number of devices (0 = no limit)}';
+                            {--limit=0 : Limit number of devices (0 = no limit)}
+                            {--hours= : Look back X hours from now (overrides --date)}';
     
     protected $description = 'Pull GPS track data efficiently from VSS API (loops devices but shows better progress)';
 
@@ -28,12 +29,21 @@ class PullGpsTracksCommand extends Command
             $this->baseUrl = config('vss.base_url', 'http://vss.ptdigital.co.id');
             
             // Get date
-            $date = $this->option('date') ?: now()->subDay()->format('Y-m-d');
+            $date = $this->option('date') ?: date('Y-m-d');
             $deviceFilter = $this->option('devices') ?: 'all';
             $limit = (int)$this->option('limit') ?: 0;
+            $hours = (int)$this->option('hours') ?: 0;
             
-            $beginTime = Carbon::parse("{$date} 00:00:00");
-            $endTime = Carbon::parse("{$date} 23:59:59");
+            if ($hours > 0) {
+                // Tarik data sekian jam terakhir saja
+                $beginTime = now()->subHours($hours);
+                $endTime = now();
+                $date = now()->format('Y-m-d');
+            } else {
+                // Tarik data 1 hari penuh
+                $beginTime = Carbon::parse("{$date} 00:00:00");
+                $endTime = Carbon::parse("{$date} 23:59:59");
+            }
 
             $this->info("🗺️  Pull GPS Tracks - Efficient Method");
             $this->info("   Date: {$date}");
