@@ -221,8 +221,8 @@ class ProcessIdleAlarmJob implements ShouldQueue
                             SystemLogger::error(
                                 'PROCESSING',
                                 "Failed to process alarm: {$alarmRaw->guid}",
-                                SystemLogger::hints()['database_query'],
                                 ['guid' => $alarmRaw->guid],
+                                SystemLogger::hints()['database_query'],
                                 $e
                             );
                         }
@@ -260,8 +260,8 @@ class ProcessIdleAlarmJob implements ShouldQueue
             SystemLogger::error(
                 'PROCESSING',
                 'ProcessIdleAlarmJob failed',
-                $troubleshooting,
                 [],
+                $troubleshooting,
                 $e
             );
             

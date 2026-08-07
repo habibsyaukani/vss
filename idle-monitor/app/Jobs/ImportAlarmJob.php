@@ -140,8 +140,8 @@ class ImportAlarmJob implements ShouldQueue
             SystemLogger::error(
                 'DATA_PULL',
                 'ImportAlarmJob failed completely',
-                $troubleshooting,
                 [],
+                $troubleshooting,
                 $e
             );
             
