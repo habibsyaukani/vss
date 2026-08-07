@@ -20,8 +20,8 @@ return new class extends Migration
                 $table->boolean('is_processed')->default(false)->after('raw_json');
                 $table->index('is_processed', 'idx_alarm_raw_processed');
             });
-            // Update data lama agar dianggap sudah diproses (mencegah load ulang data jutaan baris)
-            DB::table('alarm_raw')->update(['is_processed' => true]);
+            // Update data yang SUDAH ADA di idle_alarms agar tidak diproses ulang
+            DB::statement("UPDATE alarm_raw INNER JOIN idle_alarms ON alarm_raw.guid = idle_alarms.guid SET alarm_raw.is_processed = 1");
         }
 
         // 2. Tambahkan kolom ke gps_tracks_raw
@@ -30,10 +30,8 @@ return new class extends Migration
                 $table->boolean('is_processed')->default(false)->after('state_json');
                 $table->index('is_processed', 'idx_gps_tracks_raw_processed');
             });
-            // Update data lama agar dianggap sudah diproses (mencegah load ulang data jutaan baris)
-            // Karena ini berpotensi berat jika tabelnya sangat besar, kita gunakan chunking (namun DML sederhana di MySQL modern biasanya cepat untuk update boolean)
-            // Sebagai pengamanan agar tidak terkunci lama, jalankan update langsung:
-            DB::table('gps_tracks_raw')->update(['is_processed' => true]);
+            // Update data yang SUDAH ADA di gps_tracks agar tidak diproses ulang
+            DB::statement("UPDATE gps_tracks_raw INNER JOIN gps_tracks ON gps_tracks_raw.id = gps_tracks.raw_id SET gps_tracks_raw.is_processed = 1");
         }
     }
 
