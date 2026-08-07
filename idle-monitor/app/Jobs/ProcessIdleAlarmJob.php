@@ -77,8 +77,11 @@ class ProcessIdleAlarmJob implements ShouldQueue
                 ->orderBy('id', 'asc')
                 ->chunk(1000, function ($alarms) use (&$processed, &$skipped, $processLog) {
                     SystemLogger::success('PROCESSING', "Processing chunk of alarms", ['count' => $alarms->count()]);
+                    $chunkRawIds = [];
 
                     foreach ($alarms as $alarmRaw) {
+                        $chunkRawIds[] = $alarmRaw->id;
+
                         try {
                             // Extract fields
                             $startSpeed = (float)($alarmRaw->start_speed ?? 0);
@@ -197,9 +200,6 @@ class ProcessIdleAlarmJob implements ShouldQueue
                                 ['guid' => $alarmRaw->guid],
                                 $idleData
                             );
-                            
-                            // Tandai sebagai sudah diproses
-                            $alarmRaw->update(['is_processed' => 1]);
 
                             $processed++;
                             
@@ -226,6 +226,11 @@ class ProcessIdleAlarmJob implements ShouldQueue
                                 $e
                             );
                         }
+                    }
+
+                    // Bulk update is_processed for all examined raw IDs in chunk
+                    if (!empty($chunkRawIds)) {
+                        \App\Models\AlarmRaw::whereIn('id', $chunkRawIds)->update(['is_processed' => 1]);
                     }
                 });
 

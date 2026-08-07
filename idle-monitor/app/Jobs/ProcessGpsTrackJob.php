@@ -53,8 +53,11 @@ class ProcessGpsTrackJob implements ShouldQueue
                 ->orderBy('id', 'asc')
                 ->chunk(1000, function ($rawTracks) use (&$processed, &$skipped, $processLog) {
                     Log::info("Processing chunk of GPS raw tracks", ['count' => $rawTracks->count()]);
+                    $chunkTrackIds = [];
 
                     foreach ($rawTracks as $rawTrack) {
+                        $chunkTrackIds[] = $rawTrack->id;
+
                         try {
                             // Map dan create display record
                             $displayData = $this->mapToDisplay($rawTrack);
@@ -63,9 +66,6 @@ class ProcessGpsTrackJob implements ShouldQueue
                                 ['raw_id' => $rawTrack->id],
                                 $displayData
                             );
-                            
-                            // Tandai sebagai sudah diproses
-                            $rawTrack->update(['is_processed' => 1]);
 
                             $processed++;
 
@@ -90,6 +90,11 @@ class ProcessGpsTrackJob implements ShouldQueue
                                 'gps_time' => $rawTrack->gps_time,
                             ]);
                         }
+                    }
+
+                    // Bulk update is_processed for all examined track IDs in chunk
+                    if (!empty($chunkTrackIds)) {
+                        GpsTrackRaw::whereIn('id', $chunkTrackIds)->update(['is_processed' => 1]);
                     }
                 });
 
