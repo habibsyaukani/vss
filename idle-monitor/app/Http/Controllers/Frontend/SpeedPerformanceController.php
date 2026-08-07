@@ -33,13 +33,15 @@ class SpeedPerformanceController extends Controller
     {
         $query = GpsTrack::select(
                 'gps_tracks.device_id',
+                'devices.device_name',
                 DB::raw('AVG(gps_tracks.speed) as avg_speed'),
                 DB::raw('MAX(gps_tracks.speed) as max_speed')
             )
+            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
             ->where('gps_tracks.speed', '>', 0)
-            ->groupBy('gps_tracks.device_id');
+            ->groupBy('gps_tracks.device_id', 'devices.device_name');
 
-        // Filter by specific device IDs
+        // Filter by specific device IDs (from tree view) - Optimized to skip when all devices are selected
         if ($request->device_ids && is_array($request->device_ids)) {
             $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
                 return Device::count();
@@ -50,29 +52,18 @@ class SpeedPerformanceController extends Controller
             }
         }
 
-        // Filter by location or series (Without heavy JOIN)
-        if ($request->filled('location') || $request->filled('series')) {
-            $deviceQuery = \App\Models\Device::query();
-            
-            if ($request->filled('location')) {
-                $deviceQuery->where('location', $request->location);
-            }
-            if ($request->filled('series')) {
-                $seriesParam = strtoupper($request->series);
-                if ($seriesParam === 'VOLVO') {
-                    $deviceQuery->where('series', 'like', '%FMX%');
-                } else {
-                    $deviceQuery->where('series', $request->series);
-                }
-            }
-            
-            $matchedIds = $deviceQuery->pluck('device_id')->toArray();
-            $cleanMatchedIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $matchedIds);
-            // If no devices match the filter, force an empty result safely
-            if (empty($cleanMatchedIds)) {
-                $query->whereRaw('1 = 0');
+        // Filter by location (via JOIN)
+        if ($request->filled('location')) {
+            $query->where('devices.location', $request->location);
+        }
+
+        // Filter by series (via JOIN)
+        if ($request->filled('series')) {
+            $seriesParam = strtoupper($request->series);
+            if ($seriesParam === 'VOLVO') {
+                $query->where('devices.series', 'like', '%FMX%');
             } else {
-                $query->whereIn('gps_tracks.device_id', $cleanMatchedIds);
+                $query->where('devices.series', $request->series);
             }
         }
 
@@ -124,25 +115,12 @@ class SpeedPerformanceController extends Controller
         $overallAvg = $summary->avg('avg_speed') ?? 0;
         $overallMax = $summary->max('max_speed') ?? 0;
 
-        $devicesMap = cache()->remember('devices_map_fast', 300, function() {
-            $all = \App\Models\Device::all();
-            $map = [];
-            foreach ($all as $d) {
-                $map[ltrim($d->device_id, '0')] = $d;
-            }
-            return $map;
-        });
-
         return DataTables::of($query)
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->device_id . '">';
             })
             ->addColumn('time_label', function() use ($timeLabel) {
                 return $timeLabel;
-            })
-            ->addColumn('device_name', function ($track) use ($devicesMap) {
-                $deviceInfo = $devicesMap[$track->device_id] ?? null;
-                return htmlspecialchars($deviceInfo->device_name ?? '-');
             })
             ->editColumn('avg_speed', function($row) {
                 return round($row->avg_speed, 1);
@@ -166,11 +144,13 @@ class SpeedPerformanceController extends Controller
     {
         $query = GpsTrack::select(
                 'gps_tracks.device_id',
+                'devices.device_name',
                 DB::raw('AVG(gps_tracks.speed) as avg_speed'),
                 DB::raw('MAX(gps_tracks.speed) as max_speed')
             )
+            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->where('gps_tracks.speed', '>', 0)
-            ->groupBy('gps_tracks.device_id');
+            ->groupBy('gps_tracks.device_id', 'devices.device_name');
 
         $isExportSelected = false;
         if ($request->filled('export_type') && $request->export_type === 'selected' && $request->filled('row_ids')) {
@@ -190,30 +170,18 @@ class SpeedPerformanceController extends Controller
                     $query->whereIn('gps_tracks.device_id', $cleanIds);
                 }
             }
+        }
 
-            // Filter by location or series (Without heavy JOIN)
-            if ($request->filled('location') || $request->filled('series')) {
-                $deviceQuery = \App\Models\Device::query();
-                
-                if ($request->filled('location')) {
-                    $deviceQuery->where('location', $request->location);
-                }
-                if ($request->filled('series')) {
-                    $seriesParam = strtoupper($request->series);
-                    if ($seriesParam === 'VOLVO') {
-                        $deviceQuery->where('series', 'like', '%FMX%');
-                    } else {
-                        $deviceQuery->where('series', $request->series);
-                    }
-                }
-                
-                $matchedIds = $deviceQuery->pluck('device_id')->toArray();
-                $cleanMatchedIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $matchedIds);
-                if (empty($cleanMatchedIds)) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('gps_tracks.device_id', $cleanMatchedIds);
-                }
+        if ($request->filled('location')) {
+            $query->where('devices.location', $request->location);
+        }
+
+        if ($request->filled('series')) {
+            $seriesParam = strtoupper($request->series);
+            if ($seriesParam === 'VOLVO') {
+                $query->where('devices.series', 'like', '%FMX%');
+            } else {
+                $query->where('devices.series', $request->series);
             }
         }
 
@@ -276,33 +244,21 @@ class SpeedPerformanceController extends Controller
             ['label' => 'MAX SPEED (KM/H)', 'align' => 'right'],
         ];
 
-        $devicesMap = cache()->remember('devices_map_fast', 300, function() {
-            $all = \App\Models\Device::all();
-            $map = [];
-            foreach ($all as $d) {
-                $map[ltrim($d->device_id, '0')] = $d;
-            }
-            return $map;
-        });
-
         return ExcelExportService::streamXls(
             'export-speed-performance-' . date('Y-m-d_H-i-s') . '.xls',
             'SPEED PERFORMANCE REPORT',
             $headers,
-            function ($out) use ($query, $date, $timeLabel, $devicesMap) {
+            function ($out) use ($query, $date, $timeLabel) {
                 $serial = 1;
                 foreach ($query->cursor() as $row) {
                     $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
                     $avgSpd = round($row->avg_speed, 1);
                     $maxSpd = round($row->max_speed, 1);
-                    
-                    $deviceInfo = $devicesMap[$row->device_id] ?? null;
-                    $deviceName = $deviceInfo->device_name ?? '-';
 
                     fwrite($out, '    <tr class="' . $rowClass . '">' . "\n");
                     fwrite($out, '      <td class="text-center">' . $serial++ . '</td>' . "\n");
                     fwrite($out, '      <td class="text-center">' . htmlspecialchars($row->device_id ?? '-') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($deviceName) . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($row->device_name ?? '-') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-center">' . htmlspecialchars($date . ' ' . $timeLabel) . '</td>' . "\n");
                     fwrite($out, '      <td class="text-right">' . number_format($avgSpd, 1) . ' Km/h</td>' . "\n");
                     fwrite($out, '      <td class="text-right">' . number_format($maxSpd, 1) . ' Km/h</td>' . "\n");
