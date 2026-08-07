@@ -145,6 +145,13 @@ class SpeedController extends Controller
                 $masterName = isset($devicesMap[$track->device_id]) ? $devicesMap[$track->device_id]->device_name : null;
                 return htmlspecialchars($masterName ?? $track->device_name ?? '-');
             })
+            ->addColumn('fleet_name', function($row) use ($devicesMap) {
+                $masterName = isset($devicesMap[$row->device_id]) ? $devicesMap[$row->device_id]->device_name : null;
+                $name = $masterName ?? $row->device_name;
+                if (!$name) return '-';
+                $parts = explode('-', $name);
+                return htmlspecialchars($parts[1] ?? 'Unknown');
+            })
             ->editColumn('location', function ($track) use ($devicesMap) {
                 return htmlspecialchars(isset($devicesMap[$track->device_id]) ? $devicesMap[$track->device_id]->location : '-');
             })
