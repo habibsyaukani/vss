@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\GpsTrack;
+use App\Models\GpsTrackRaw;
 use App\Models\IdleAlarm;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -37,7 +37,7 @@ class WarmDashboardCache extends Command
             $end   = $date . ' 23:59:59';
 
             Cache::remember("speed_max_day_{$date}", $ttl, function () use ($start, $end) {
-                return GpsTrack::whereBetween('gps_time', [$start, $end])
+                return GpsTrackRaw::whereBetween('gps_time', [$start, $end])
                     ->where('speed', '>', 0)
                     ->max('speed') ?? 0;
             });
