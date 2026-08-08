@@ -35,24 +35,34 @@ class SpeedController extends Controller
         // ✅ RELEASE SESSION LOCK EARLY!
         session()->save();
 
-        // ⚡ [MODE RAW] Sementara baca langsung dari gps_tracks_raw
-        // karena gps_tracks sedang terkunci oleh rollback migrasi MySQL.
-        // Setelah rollback selesai (cek processlist ID 1167), kembalikan ke GpsTrack.
+        // ⚡ Cache devices map to avoid SQL joins on 9 million raw tracks table
+        $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
+            return Device::all()->keyBy(function($item) {
+                return (string) $item->device_id;
+            });
+        });
+
+        // ⚡ Query purely on gps_tracks_raw table using indexes directly
         $query = GpsTrackRaw::select(
-                'gps_tracks_raw.*',
-                'devices.device_name as master_device_name',
-                DB::raw('acc_state as is_acc_on'),
-                DB::raw('over_speed as is_overspeed'),
-                DB::raw('urgency as is_emergency')
+                'id',
+                'device_id',
+                'device_name',
+                'longitude',
+                'latitude',
+                'altitude',
+                'speed',
+                'direction',
+                'satellites',
+                'gps_time',
+                'acc_state as is_acc_on',
+                'over_speed as is_overspeed',
+                'urgency as is_emergency'
             )
-            ->leftJoin('devices', 'gps_tracks_raw.device_id', '=', 'devices.device_id')
-            ->latest('gps_tracks_raw.gps_time');
+            ->latest('gps_time');
 
         // Filter by specific device IDs (from tree view)
         if ($request->device_ids && is_array($request->device_ids)) {
-            $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
-                return Device::count();
-            });
+            $totalDevices = count($deviceMap);
             if (count($request->device_ids) < $totalDevices) {
                 $cleanIds = array_map(function($id) {
                     return ltrim((string)$id, '0');
@@ -61,18 +71,22 @@ class SpeedController extends Controller
             }
         }
 
-        // Filter by location or series
+        // Filter by location or series (in-memory lookup)
         if ($request->filled('location') || $request->filled('series')) {
+            $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $query->where('devices.location', $request->location);
+                $filteredDevices = $filteredDevices->where('location', $request->location);
             }
             if ($request->filled('series')) {
                 if (strtoupper($request->series) === 'VOLVO') {
-                    $query->where('devices.series', 'LIKE', '%FMX%');
+                    $filteredDevices = $filteredDevices->filter(function($d) {
+                        return stripos($d->series, 'FMX') !== false;
+                    });
                 } else {
-                    $query->where('devices.series', $request->series);
+                    $filteredDevices = $filteredDevices->where('series', $request->series);
                 }
             }
+            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
         // Filter by speed range
@@ -93,10 +107,10 @@ class SpeedController extends Controller
             $query->where('gps_tracks_raw.acc_state', 1);
         }
 
+        // Filter by date
         if ($request->filled('start_date')) {
             $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
         } else {
-            // Default: hanya hari ini agar query cepat (gps_tracks_raw punya 9 juta baris)
             $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
         }
         if ($request->filled('end_date')) {
@@ -122,11 +136,13 @@ class SpeedController extends Controller
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
             })
-            ->editColumn('device_name', function($row) {
-                return $row->device_name ?: $row->master_device_name;
+            ->editColumn('device_name', function($row) use ($deviceMap) {
+                $master = $deviceMap->get((string)$row->device_id);
+                return $row->device_name ?: ($master ? $master->device_name : null);
             })
-            ->addColumn('fleet_name', function($row) {
-                $name = $row->device_name ?: $row->master_device_name;
+            ->addColumn('fleet_name', function($row) use ($deviceMap) {
+                $master = $deviceMap->get((string)$row->device_id);
+                $name = $row->device_name ?: ($master ? $master->device_name : null);
                 if (!$name) return '-';
                 $parts = explode('-', $name);
                 return isset($parts[1]) ? $parts[1] : 'Unknown';
@@ -143,14 +159,27 @@ class SpeedController extends Controller
      */
     public function export(Request $request)
     {
+        $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
+            return Device::all()->keyBy(function($item) {
+                return (string) $item->device_id;
+            });
+        });
+
         $query = GpsTrackRaw::select(
-                'gps_tracks_raw.*',
-                'devices.device_name as master_device_name',
-                DB::raw('acc_state as is_acc_on'),
-                DB::raw('over_speed as is_overspeed'),
-                DB::raw('urgency as is_emergency')
+                'id',
+                'device_id',
+                'device_name',
+                'longitude',
+                'latitude',
+                'altitude',
+                'speed',
+                'direction',
+                'satellites',
+                'gps_time',
+                'acc_state as is_acc_on',
+                'over_speed as is_overspeed',
+                'urgency as is_emergency'
             )
-            ->leftJoin('devices', 'gps_tracks_raw.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks_raw.gps_time');
 
         // Export Selected Rows
@@ -159,9 +188,7 @@ class SpeedController extends Controller
         } else {
             // Filter by specific device IDs
             if ($request->device_ids && is_array($request->device_ids)) {
-                $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
-                    return Device::count();
-                });
+                $totalDevices = count($deviceMap);
                 if (count($request->device_ids) < $totalDevices) {
                     $cleanIds = array_map(function($id) {
                         return ltrim((string)$id, '0');
@@ -172,16 +199,20 @@ class SpeedController extends Controller
 
             // Filter by location or series
             if ($request->filled('location') || $request->filled('series')) {
+                $filteredDevices = $deviceMap;
                 if ($request->filled('location')) {
-                    $query->where('devices.location', $request->location);
+                    $filteredDevices = $filteredDevices->where('location', $request->location);
                 }
                 if ($request->filled('series')) {
                     if (strtoupper($request->series) === 'VOLVO') {
-                        $query->where('devices.series', 'LIKE', '%FMX%');
+                        $filteredDevices = $filteredDevices->filter(function($d) {
+                            return stripos($d->series, 'FMX') !== false;
+                        });
                     } else {
-                        $query->where('devices.series', $request->series);
+                        $filteredDevices = $filteredDevices->where('series', $request->series);
                     }
                 }
+                $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
             }
 
             // Filter by date range
@@ -243,12 +274,13 @@ class SpeedController extends Controller
             'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.xls',
             'GPS SPEED MONITORING REPORT',
             $headers,
-            function ($out) use ($query) {
+            function ($out) use ($query, $deviceMap) {
                 $serial = 1;
                 foreach ($query->cursor() as $track) {
                     $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
                     
-                    $realDevName = $track->device_name ?: $track->master_device_name;
+                    $master = $deviceMap->get((string)$track->device_id);
+                    $realDevName = $track->device_name ?: ($master ? $master->device_name : null);
                     $deviceName = ($realDevName ?? '-') . ' (' . $track->device_id . ')';
                     
                     $fleetName = '-';
