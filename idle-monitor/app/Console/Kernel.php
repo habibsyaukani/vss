@@ -60,22 +60,20 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->description('Process idle alarms (analyze duration)');
 
-        // ✅ PRIMARY: Pull GPS tracks every 10 minutes (last 1 hour) as fallback
+        // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour) as fallback
         $schedule->command('vss:pull-gps-tracks', [
             '--hours' => 1,
         ])
-            ->everyTenMinutes()
+            ->everyThreeMinutes()
             ->runInBackground()
             ->withoutOverlapping()
             ->description('Pull GPS track data (fallback, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
-        // ⏸️ [PAUSED] Sementara dinonaktifkan — menunggu MySQL rollback migrasi ID 1167 selesai
-        // Aktifkan kembali setelah rollback selesai (cek: docker exec idle-monitor-mysql mysql ... "SELECT ID FROM processlist WHERE ID=1167")
-        // $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
-        //      ->everyThreeMinutes()
-        //      ->withoutOverlapping()
-        //      ->description('Process GPS tracks (raw to display)');
+        $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
+             ->everyThreeMinutes()
+             ->withoutOverlapping()
+             ->description('Process GPS tracks (raw to display)');
 
         // ========================================
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
