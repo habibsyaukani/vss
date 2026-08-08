@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\IdleAlarm;
-use App\Models\GpsTrack;
+use App\Models\GpsTrackRaw;
+use App\Models\Device;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
@@ -15,23 +16,21 @@ class DashboardController extends Controller
      * Show frontend dashboard
      *
      * OPTIMIZATIONS:
-     * - gps_tracks queries over 7 days are extremely slow (100+ sec per query)
-     *   → Query data hari ini saja (fast, hanya 1 hari data)
-     * - "Speed per day 7 hari" disimpan dalam daily cache terpisah (di-build incremental)
-     * - Cache TTL: 10 menit untuk data hari ini, 1 jam untuk data hari sebelumnya
+     * - Uses GpsTrackRaw directly for real-time speed metrics without heavy joins
+     * - Cache TTL: 10 minutes for today's data, 1 hour for previous days
      */
     public function index()
     {
-        $today        = Carbon::today()->toDateString();
-        $cacheKey     = "frontend_dashboard_{$today}";
+        $today    = Carbon::today()->toDateString();
+        $cacheKey = "frontend_dashboard_{$today}";
 
-        $data = Cache::remember($cacheKey, 600, function () use ($today) {
+        $data = Cache::remember($cacheKey, 300, function () use ($today) {
 
-            $start        = $today . ' 00:00:00';
-            $end          = $today . ' 23:59:59';
+            $start = $today . ' 00:00:00';
+            $end   = $today . ' 23:59:59';
 
             // ── 1. Stats hari ini: idle + speed (hanya hari ini = fast) ────
-            $speedStats = GpsTrack::whereBetween('gps_time', [$start, $end])
+            $speedStats = GpsTrackRaw::whereBetween('gps_time', [$start, $end])
                 ->where('speed', '>', 0)
                 ->selectRaw('MAX(speed) as max_speed, AVG(speed) as avg_speed')
                 ->first();
@@ -69,22 +68,20 @@ class DashboardController extends Controller
             ];
 
             // 🚀 5. Top 5 speed units hari ini 
-            $topSpeedUnits = GpsTrack::select(
-                    'gps_tracks.device_id',
-                    DB::raw('COALESCE(devices.device_name, gps_tracks.device_name) as device_name'),
-                    DB::raw('MAX(gps_tracks.speed) as max_speed')
+            $topSpeedUnits = GpsTrackRaw::select(
+                    'device_id',
+                    'device_name',
+                    DB::raw('MAX(speed) as max_speed')
                 )
-                ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
-                ->whereBetween('gps_tracks.gps_time', [$start, $end])
-                ->where('gps_tracks.speed', '>', 0)
-                ->groupBy('gps_tracks.device_id', 'devices.device_name', 'gps_tracks.device_name')
+                ->whereBetween('gps_time', [$start, $end])
+                ->where('speed', '>', 0)
+                ->groupBy('device_id', 'device_name')
                 ->orderByDesc('max_speed')
                 ->limit(5)
                 ->get();
 
             // ── 6. Speed per fleet hari ini ────────────────────────────────
-            // COALESCE agar data GPS tanpa device_name tetap masuk grafik
-            $speedFleetRaw = GpsTrack::selectRaw(
+            $speedFleetRaw = GpsTrackRaw::selectRaw(
                     "COALESCE(
                         NULLIF(SUBSTRING_INDEX(SUBSTRING_INDEX(device_name, '-', 2), '-', -1), ''),
                         'Unknown'
@@ -135,8 +132,6 @@ class DashboardController extends Controller
 
     /**
      * Build idle-per-day chart data using per-day caches.
-     * Days sebelum hari ini: cache 1 jam (data tidak berubah).
-     * Hari ini: cache 10 menit.
      */
     private function getIdlePerDayChart(string $today): array
     {
@@ -144,7 +139,7 @@ class DashboardController extends Controller
 
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i)->toDateString();
-            $ttl  = ($i === 0) ? 600 : 3600; // hari ini: 10 menit, lainnya: 1 jam
+            $ttl  = ($i === 0) ? 600 : 3600;
 
             $count = Cache::remember("idle_day_{$date}", $ttl, function () use ($date) {
                 return IdleAlarm::whereDate('starting_time', $date)->count();
@@ -159,8 +154,6 @@ class DashboardController extends Controller
 
     /**
      * Build speed-per-day chart data using per-day caches.
-     * Query gps_tracks per hari sangat jauh lebih cepat daripada 1 query 7 hari
-     * karena index gps_time dapat digunakan optimal dengan range 1 hari.
      */
     private function getSpeedPerDayChart(string $today): array
     {
@@ -168,12 +161,12 @@ class DashboardController extends Controller
 
         for ($i = 6; $i >= 0; $i--) {
             $date  = Carbon::today()->subDays($i)->toDateString();
-            $ttl   = ($i === 0) ? 600 : 3600; // hari ini: 10 menit, lainnya: 1 jam
+            $ttl   = ($i === 0) ? 600 : 3600;
             $start = $date . ' 00:00:00';
             $end   = $date . ' 23:59:59';
 
             $maxSpeed = Cache::remember("speed_max_day_{$date}", $ttl, function () use ($start, $end) {
-                return GpsTrack::whereBetween('gps_time', [$start, $end])
+                return GpsTrackRaw::whereBetween('gps_time', [$start, $end])
                     ->where('speed', '>', 0)
                     ->max('speed') ?? 0;
             });
