@@ -90,9 +90,23 @@ class ProcessGpsTrackJob implements ShouldQueue, ShouldBeUnique
                         );
                     }
 
-                    // ✅ SATU query UPDATE is_processed untuk seluruh chunk
+                    // ✅ Update is_processed — wrapped in try-catch agar job tidak FAIL
+                    // jika tabel gps_tracks_raw sedang terkunci oleh transaksi lain
                     if (!empty($chunkTrackIds)) {
-                        GpsTrackRaw::whereIn('id', $chunkTrackIds)->update(['is_processed' => 1]);
+                        try {
+                            // Set timeout singkat agar tidak blocking terlalu lama
+                            DB::statement('SET innodb_lock_wait_timeout = 3');
+                            GpsTrackRaw::whereIn('id', $chunkTrackIds)->update(['is_processed' => 1]);
+                        } catch (\Exception $e) {
+                            // Lock sedang dipegang transaksi lain — data GPS sudah tersimpan,
+                            // raw record akan diproses ulang di run berikutnya (upsert aman)
+                            Log::warning('ProcessGpsTrackJob: is_processed update skipped (lock)', [
+                                'ids_count' => count($chunkTrackIds),
+                                'reason'    => $e->getMessage(),
+                            ]);
+                        } finally {
+                            DB::statement('SET innodb_lock_wait_timeout = 50');
+                        }
                     }
 
                     // Log progress
