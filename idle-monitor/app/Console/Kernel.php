@@ -70,10 +70,12 @@ class Kernel extends ConsoleKernel
             ->description('Pull GPS track data (fallback, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
-        $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
-             ->everyThreeMinutes()
-             ->withoutOverlapping()
-             ->description('Process GPS tracks (raw to display)');
+        // ⏸️ [PAUSED] Sementara dinonaktifkan — menunggu MySQL rollback migrasi ID 1167 selesai
+        // Aktifkan kembali setelah rollback selesai (cek: docker exec idle-monitor-mysql mysql ... "SELECT ID FROM processlist WHERE ID=1167")
+        // $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
+        //      ->everyThreeMinutes()
+        //      ->withoutOverlapping()
+        //      ->description('Process GPS tracks (raw to display)');
 
         // ========================================
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
