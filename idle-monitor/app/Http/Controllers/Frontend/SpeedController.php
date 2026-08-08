@@ -93,15 +93,14 @@ class SpeedController extends Controller
             $query->where('gps_tracks_raw.acc_state', 1);
         }
 
-        // Filter by date range
         if ($request->filled('start_date')) {
             $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
+        } else {
+            // Default: hanya hari ini agar query cepat (gps_tracks_raw punya 9 juta baris)
+            $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
         }
         if ($request->filled('end_date')) {
             $query->where('gps_tracks_raw.gps_time', '<=', $request->end_date . ' 23:59:59');
-        } else {
-            // Default: hanya tampilkan 30 hari terakhir agar tidak berat
-            $query->where('gps_tracks_raw.gps_time', '>=', now()->subDays(30));
         }
 
         // Filter by speed mode
