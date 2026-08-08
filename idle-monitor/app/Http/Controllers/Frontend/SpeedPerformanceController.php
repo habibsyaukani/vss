@@ -37,7 +37,7 @@ class SpeedPerformanceController extends Controller
                 DB::raw('AVG(gps_tracks.speed) as avg_speed'),
                 DB::raw('MAX(gps_tracks.speed) as max_speed')
             )
-            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
+            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->where('gps_tracks.speed', '>', 0)
             ->groupBy('gps_tracks.device_id', 'devices.device_name');
 

@@ -35,7 +35,7 @@ class SpeedController extends Controller
         session()->save();
 
         $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
-            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
+            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks.gps_time');
 
         // Filter by specific device IDs (from tree view)
@@ -143,7 +143,7 @@ class SpeedController extends Controller
     public function export(Request $request)
     {
         $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
-            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(gps_tracks.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'))
+            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
             ->latest('gps_tracks.gps_time');
 
         // Export Selected Rows

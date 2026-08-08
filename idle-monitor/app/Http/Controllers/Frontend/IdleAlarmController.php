@@ -35,7 +35,7 @@ class IdleAlarmController extends Controller
 
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
         $query = IdleAlarm::select('idle_alarms.*')
-            ->leftJoin('devices', \Illuminate\Support\Facades\DB::raw('CAST(idle_alarms.device_id AS UNSIGNED)'), '=', \Illuminate\Support\Facades\DB::raw('CAST(devices.device_id AS UNSIGNED)'));
+            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id');
 
         // Filter by status
         if ($request->status) {
