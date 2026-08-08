@@ -60,16 +60,14 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->description('Process idle alarms (analyze duration)');
 
-        // ========================================
-        // 📍 GPS TRACK AUTO-PULL
-        // ========================================
-        
-        // Import GPS tracks every 5 minutes (last 1 hour to ensure coverage, with 500ms delay to prevent rate limit)
-        // [DISABLED] - Now handled by WebSocket (howen:websocket-listen)
-        // $schedule->job(new \App\Jobs\ImportGpsTrackJob(1, 500))
-        //      ->everyFiveMinutes()
-        //      ->withoutOverlapping()
-        //      ->description('Pull GPS track data (last 1 hour, every 5 min)');
+        // ✅ PRIMARY: Pull GPS tracks every 10 minutes (last 1 hour) as fallback
+        $schedule->command('vss:pull-gps-tracks', [
+            '--hours' => 1,
+        ])
+            ->everyTenMinutes()
+            ->runInBackground()
+            ->withoutOverlapping()
+            ->description('Pull GPS track data (fallback, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
         $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
