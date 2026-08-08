@@ -83,11 +83,23 @@ class ProcessGpsTrackJob implements ShouldQueue, ShouldBeUnique
 
                     // ✅ SATU query INSERT/UPDATE untuk seluruh chunk (jauh lebih cepat)
                     if (!empty($batchInsert)) {
-                        GpsTrack::upsert(
-                            $batchInsert,
-                            ['raw_id'],  // unique key
-                            array_keys($batchInsert[0])  // update all columns if exists
-                        );
+                        try {
+                            DB::statement('SET innodb_lock_wait_timeout = 3');
+                            GpsTrack::upsert(
+                                $batchInsert,
+                                ['raw_id'],
+                                array_keys($batchInsert[0])
+                            );
+                        } catch (\Exception $e) {
+                            Log::warning('ProcessGpsTrackJob: upsert skipped (gps_tracks lock)', [
+                                'count'  => count($batchInsert),
+                                'reason' => $e->getMessage(),
+                            ]);
+                            $batchInsert = []; // skip is_processed update too
+                            $chunkTrackIds = [];
+                        } finally {
+                            DB::statement('SET innodb_lock_wait_timeout = 50');
+                        }
                     }
 
                     // ✅ Update is_processed — wrapped in try-catch agar job tidak FAIL
