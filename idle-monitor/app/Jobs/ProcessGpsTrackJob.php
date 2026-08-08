@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -13,11 +14,20 @@ use App\Models\GpsTrackRaw;
 use App\Models\GpsTrack;
 use App\Models\ImportLog;
 
-class ProcessGpsTrackJob implements ShouldQueue
+class ProcessGpsTrackJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600;  // 10 minutes
+
+    /**
+     * Hanya 1 ProcessGpsTrackJob boleh ada di queue/running dalam 10 menit.
+     * Mencegah job menumpuk dan berebut lock MySQL.
+     */
+    public function uniqueFor(): int
+    {
+        return 600; // 10 minutes
+    }
 
     /**
      * Execute the job - Process GPS tracks from gps_tracks_raw → gps_tracks
