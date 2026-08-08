@@ -487,12 +487,8 @@
 <!-- Date Filter Row -->
 <div class="top-filter-row">
     <div class="filter-group-date">
-        <label>FROM</label>
-        <input type="date" id="startDate" class="date-input" value="{{ date('Y-m-d') }}">
-    </div>
-    <div class="filter-group-date">
-        <label>TO</label>
-        <input type="date" id="endDate" class="date-input" value="{{ date('Y-m-d') }}">
+        <label><i class="far fa-calendar-alt me-1"></i> TANGGAL</label>
+        <input type="date" id="filterDate" class="date-input" value="{{ date('Y-m-d') }}">
     </div>
 
     <!-- Speed Filter -->
@@ -596,8 +592,8 @@ $(function() {
                 d.device_ids   = getSelectedDeviceIds();
                 d.location     = $('#locationFilter').val();
                 d.series       = $('#seriesFilter').val();
-                d.start_date   = $('#startDate').val();
-                d.end_date     = $('#endDate').val();
+                d.start_date   = $('#filterDate').val();
+                d.end_date     = $('#filterDate').val();
                 d.speed_filter = activeSpeedFilter; // 'low', 'high', or ''
             }
         },
@@ -971,12 +967,7 @@ $(function() {
     }
 
     // ---- Date Filter: auto reload on change ----
-    $('#startDate, #endDate').change(function() {
-        let start = $('#startDate').val();
-        let end   = $('#endDate').val();
-        if (start && end && end < start) {
-            $('#endDate').val(start);
-        }
+    $('#filterDate').change(function() {
         reloadTable();
     });
 
@@ -987,8 +978,8 @@ $(function() {
         let url = "{{ route('frontend.speed.export') }}";
         
         let defaultData = {
-            start_date: $('#startDate').val(),
-            end_date: $('#endDate').val(),
+            start_date: $('#filterDate').val(),
+            end_date: $('#filterDate').val(),
             speed_filter: activeSpeedFilter,
             location: $('#locationFilter').val(),
             series: $('#seriesFilter').val(),

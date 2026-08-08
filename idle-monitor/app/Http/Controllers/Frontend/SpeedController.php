@@ -143,15 +143,21 @@ class SpeedController extends Controller
      */
     public function export(Request $request)
     {
-        $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
-            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
-            ->latest('gps_tracks.gps_time');
+        $query = GpsTrackRaw::select(
+                'gps_tracks_raw.*',
+                'devices.device_name as master_device_name',
+                DB::raw('acc_state as is_acc_on'),
+                DB::raw('over_speed as is_overspeed'),
+                DB::raw('urgency as is_emergency')
+            )
+            ->leftJoin('devices', 'gps_tracks_raw.device_id', '=', 'devices.device_id')
+            ->latest('gps_tracks_raw.gps_time');
 
         // Export Selected Rows
         if ($request->selected_ids && is_array($request->selected_ids)) {
-            $query->whereIn('gps_tracks.id', $request->selected_ids);
+            $query->whereIn('gps_tracks_raw.id', $request->selected_ids);
         } else {
-            // Filter by specific device IDs (from tree view) - Optimized to skip when all devices are selected
+            // Filter by specific device IDs
             if ($request->device_ids && is_array($request->device_ids)) {
                 $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
                     return Device::count();
@@ -160,14 +166,12 @@ class SpeedController extends Controller
                     $cleanIds = array_map(function($id) {
                         return ltrim((string)$id, '0');
                     }, $request->device_ids);
-                    $query->whereIn('gps_tracks.device_id', $cleanIds);
+                    $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
                 }
             }
 
-            // Filter by location or series (requires JOIN)
+            // Filter by location or series
             if ($request->filled('location') || $request->filled('series')) {
-                // leftJoin sudah dilakukan di atas secara permanen
-                
                 if ($request->filled('location')) {
                     $query->where('devices.location', $request->location);
                 }
@@ -182,25 +186,27 @@ class SpeedController extends Controller
 
             // Filter by date range
             if ($request->filled('start_date')) {
-                $query->whereDate('gps_tracks.gps_time', '>=', $request->start_date);
+                $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
+            } else {
+                $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
             }
             if ($request->filled('end_date')) {
-                $query->whereDate('gps_tracks.gps_time', '<=', $request->end_date);
+                $query->where('gps_tracks_raw.gps_time', '<=', $request->end_date . ' 23:59:59');
             }
 
             // Filter by speed mode
             if ($request->filled('speed_filter')) {
                 switch ($request->speed_filter) {
                     case 'low':
-                        $query->where('gps_tracks.speed', '>', 0)
-                              ->where('gps_tracks.speed', '<', 15);
+                        $query->where('gps_tracks_raw.speed', '>', 0)
+                              ->where('gps_tracks_raw.speed', '<', 15);
                         break;
                     case 'high':
-                        $query->where('gps_tracks.speed', '>=', 41);
+                        $query->where('gps_tracks_raw.speed', '>=', 41);
                         break;
                 }
             } else {
-                $query->where('gps_tracks.speed', '>', 0);
+                $query->where('gps_tracks_raw.speed', '>', 0);
             }
         }
 
