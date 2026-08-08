@@ -51,51 +51,45 @@ class ProcessGpsTrackJob implements ShouldQueue
             // Proses dalam chunk untuk efisiensi memory
             GpsTrackRaw::where('is_processed', 0)
                 ->orderBy('id', 'asc')
-                ->chunk(1000, function ($rawTracks) use (&$processed, &$skipped, $processLog) {
-                    Log::info("Processing chunk of GPS raw tracks", ['count' => $rawTracks->count()]);
+                ->chunk(200, function ($rawTracks) use (&$processed, &$skipped, $processLog) {
                     $chunkTrackIds = [];
+                    $batchInsert   = [];
 
                     foreach ($rawTracks as $rawTrack) {
                         $chunkTrackIds[] = $rawTrack->id;
 
                         try {
-                            // Map dan create display record
-                            $displayData = $this->mapToDisplay($rawTrack);
-
-                            GpsTrack::updateOrCreate(
-                                ['raw_id' => $rawTrack->id],
-                                $displayData
-                            );
-
+                            $batchInsert[] = $this->mapToDisplay($rawTrack);
                             $processed++;
-
-                            // Update progress every 100 records
-                            if ($processed % 100 === 0) {
-                                $processLog->update([
-                                    'total_record' => $processed,
-                                    'updated_at' => now(),
-                                ]);
-                                
-                                Log::info("ProcessGpsTrackJob progress", [
-                                    'processed' => $processed,
-                                    'skipped' => $skipped,
-                                ]);
-                            }
-
                         } catch (\Exception $e) {
                             $skipped++;
-                            Log::error("Failed to process GPS raw track: {$rawTrack->id}", [
-                                'error' => $e->getMessage(),
+                            Log::error("Failed to map GPS raw track: {$rawTrack->id}", [
+                                'error'     => $e->getMessage(),
                                 'device_id' => $rawTrack->device_id,
-                                'gps_time' => $rawTrack->gps_time,
+                                'gps_time'  => $rawTrack->gps_time,
                             ]);
                         }
                     }
 
-                    // Bulk update is_processed for all examined track IDs in chunk
+                    // ✅ SATU query INSERT/UPDATE untuk seluruh chunk (jauh lebih cepat)
+                    if (!empty($batchInsert)) {
+                        GpsTrack::upsert(
+                            $batchInsert,
+                            ['raw_id'],  // unique key
+                            array_keys($batchInsert[0])  // update all columns if exists
+                        );
+                    }
+
+                    // ✅ SATU query UPDATE is_processed untuk seluruh chunk
                     if (!empty($chunkTrackIds)) {
                         GpsTrackRaw::whereIn('id', $chunkTrackIds)->update(['is_processed' => 1]);
                     }
+
+                    // Log progress
+                    Log::info("ProcessGpsTrackJob progress", [
+                        'processed' => $processed,
+                        'skipped'   => $skipped,
+                    ]);
                 });
 
             // Final log
