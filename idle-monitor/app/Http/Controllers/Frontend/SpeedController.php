@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\GpsTrack;
+use App\Models\GpsTrackRaw;
 use App\Models\Device;
 use App\Http\Controllers\Frontend\Traits\HasDeviceGroups;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\ExcelExportService;
 
@@ -31,12 +33,20 @@ class SpeedController extends Controller
     public function getData(Request $request)
     {
         // ✅ RELEASE SESSION LOCK EARLY!
-        // This prevents the slow database query below from blocking other requests (like login)
         session()->save();
 
-        $query = GpsTrack::select('gps_tracks.*', 'devices.device_name as master_device_name')
-            ->leftJoin('devices', 'gps_tracks.device_id', '=', 'devices.device_id')
-            ->latest('gps_tracks.gps_time');
+        // ⚡ [MODE RAW] Sementara baca langsung dari gps_tracks_raw
+        // karena gps_tracks sedang terkunci oleh rollback migrasi MySQL.
+        // Setelah rollback selesai (cek processlist ID 1167), kembalikan ke GpsTrack.
+        $query = GpsTrackRaw::select(
+                'gps_tracks_raw.*',
+                'devices.device_name as master_device_name',
+                DB::raw('acc_state as is_acc_on'),
+                DB::raw('over_speed as is_overspeed'),
+                DB::raw('urgency as is_emergency')
+            )
+            ->leftJoin('devices', 'gps_tracks_raw.device_id', '=', 'devices.device_id')
+            ->latest('gps_tracks_raw.gps_time');
 
         // Filter by specific device IDs (from tree view)
         if ($request->device_ids && is_array($request->device_ids)) {
@@ -47,14 +57,12 @@ class SpeedController extends Controller
                 $cleanIds = array_map(function($id) {
                     return ltrim((string)$id, '0');
                 }, $request->device_ids);
-                $query->whereIn('gps_tracks.device_id', $cleanIds);
+                $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
             }
         }
 
-        // Filter by location or series (requires JOIN)
+        // Filter by location or series
         if ($request->filled('location') || $request->filled('series')) {
-            // leftJoin sudah dilakukan di atas secara permanen
-            
             if ($request->filled('location')) {
                 $query->where('devices.location', $request->location);
             }
@@ -67,54 +75,48 @@ class SpeedController extends Controller
             }
         }
 
-        // Filter by fleet
-        if ($request->filled('fleet_id')) {
-            $query->where('gps_tracks.fleet_id', $request->fleet_id);
-        }
-
         // Filter by speed range
         if ($request->filled('min_speed')) {
-            $query->where('gps_tracks.speed', '>=', $request->min_speed);
+            $query->where('gps_tracks_raw.speed', '>=', $request->min_speed);
         }
         if ($request->filled('max_speed')) {
-            $query->where('gps_tracks.speed', '<=', $request->max_speed);
+            $query->where('gps_tracks_raw.speed', '<=', $request->max_speed);
         }
 
         // Filter by overspeed
         if ($request->filled('overspeed') && $request->overspeed == '1') {
-            $query->where('gps_tracks.is_overspeed', true);
+            $query->where('gps_tracks_raw.over_speed', 1);
         }
 
         // Filter by ACC status
         if ($request->filled('acc_on') && $request->acc_on == '1') {
-            $query->where('gps_tracks.is_acc_on', true);
+            $query->where('gps_tracks_raw.acc_state', 1);
         }
 
-        // Filter by date range (Optimized to avoid DATE() function on indexed columns)
+        // Filter by date range
         if ($request->filled('start_date')) {
-            $query->where('gps_tracks.gps_time', '>=', $request->start_date . ' 00:00:00');
+            $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
         }
         if ($request->filled('end_date')) {
-            $query->where('gps_tracks.gps_time', '<=', $request->end_date . ' 23:59:59');
+            $query->where('gps_tracks_raw.gps_time', '<=', $request->end_date . ' 23:59:59');
+        } else {
+            // Default: hanya tampilkan 30 hari terakhir agar tidak berat
+            $query->where('gps_tracks_raw.gps_time', '>=', now()->subDays(30));
         }
 
         // Filter by speed mode
-        // Default: exclude speed = 0
-        // 'low' : speed 1 - 14 km/h
-        // 'high': speed >= 41 km/h
         if ($request->filled('speed_filter')) {
             switch ($request->speed_filter) {
                 case 'low':
-                    $query->where('gps_tracks.speed', '>', 0)
-                          ->where('gps_tracks.speed', '<', 15);
+                    $query->where('gps_tracks_raw.speed', '>', 0)
+                          ->where('gps_tracks_raw.speed', '<', 15);
                     break;
                 case 'high':
-                    $query->where('gps_tracks.speed', '>=', 41);
+                    $query->where('gps_tracks_raw.speed', '>=', 41);
                     break;
             }
         } else {
-            // Default: sembunyikan data dengan speed = 0
-            $query->where('gps_tracks.speed', '>', 0);
+            $query->where('gps_tracks_raw.speed', '>', 0);
         }
 
         return DataTables::of($query)
