@@ -33,7 +33,7 @@ class VssAuthService
     public function getAuthData(): array
     {
         return Cache::remember('vss_auth_data', now()->addMinutes(25), function () {
-            return $this->login();
+            return $this->loginWithRetry();
         });
     }
 
@@ -42,8 +42,37 @@ class VssAuthService
      */
     public function refreshToken(): string
     {
+        // Lock refresh selama 10 detik agar tidak spam request login saat error
+        if (Cache::has('vss_auth_refresh_lock')) {
+            $cached = Cache::get('vss_auth_data');
+            if (!empty($cached['token'])) {
+                return $cached['token'];
+            }
+        }
+        
+        Cache::put('vss_auth_refresh_lock', true, 10);
         Cache::forget('vss_auth_data');
         return $this->getToken();
+    }
+
+    private function loginWithRetry(): array
+    {
+        $maxRetries = 3;
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                return $this->login();
+            } catch (\Exception $e) {
+                if (str_contains($e->getMessage(), 'frequently') || str_contains($e->getMessage(), 'often')) {
+                    Log::warning("[VSS Auth] Rate limit login detected, waiting 5 seconds before retry {$attempt}/{$maxRetries}...");
+                    sleep(5);
+                } elseif ($attempt < $maxRetries) {
+                    sleep(2);
+                } else {
+                    throw $e;
+                }
+            }
+        }
+        return $this->login();
     }
 
     private function login(): array
