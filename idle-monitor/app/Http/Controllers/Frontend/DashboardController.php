@@ -22,6 +22,8 @@ class DashboardController extends Controller
      */
     public function index()
     {
+        session()->save();
+
         $today    = Carbon::today()->toDateString();
         $cacheKey = "frontend_dashboard_v2_{$today}";
 

@@ -80,6 +80,7 @@ class FrontendAuthController extends Controller
         // Simpan token ke session browser
         $request->session()->regenerate();
         session(['session_token' => $sessionToken]);
+        session()->save();
 
         // DEBUG: log session state after login
         \Log::info('[LOGIN-DEBUG] Login success', [
