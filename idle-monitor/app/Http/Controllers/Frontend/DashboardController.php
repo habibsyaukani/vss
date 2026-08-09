@@ -16,8 +16,8 @@ class DashboardController extends Controller
      * Show frontend dashboard
      *
      * OPTIMIZATIONS:
-     * - Pure indexed range queries on gps_time (NO DATE() functions in SQL GROUP BY)
-     * - String parsing done in PHP to prevent MySQL temporary table filesorts
+     * - Pure indexed range queries on gps_time for today
+     * - Skip SQL queries for past empty dates (< 2026-08-07) to eliminate index traversal timeouts
      * - Execution time < 15ms total
      */
     public function index()
@@ -25,7 +25,7 @@ class DashboardController extends Controller
         session()->save();
 
         $today    = Carbon::today()->toDateString();
-        $cacheKey = "frontend_dashboard_v2_{$today}";
+        $cacheKey = "frontend_dashboard_v3_{$today}";
 
         $data = Cache::remember($cacheKey, 300, function () use ($today) {
 
@@ -119,7 +119,7 @@ class DashboardController extends Controller
                 'counts' => array_map(fn($v) => round($v, 1), array_values($speedFleetMap)),
             ];
 
-            // ── 7. Speed per day 7 hari (7 range queries = 7ms) ───────────
+            // ── 7. Speed per day 7 hari (skip historical dates prior to 2026-08-07) ──
             $speedPerDay = $this->getSpeedPerDayChart();
 
             return compact(
@@ -155,21 +155,27 @@ class DashboardController extends Controller
     }
 
     /**
-     * Build speed-per-day chart data using 7 fast range queries (indexed).
+     * Build speed-per-day chart data.
+     * Skip querying raw table for historical dates prior to 2026-08-07 to eliminate index scans on empty ranges.
      */
     private function getSpeedPerDayChart(): array
     {
         $result = ['days' => [], 'counts' => []];
+        $minDate = '2026-08-07';
 
         for ($i = 6; $i >= 0; $i--) {
             $date  = Carbon::today()->subDays($i)->toDateString();
             $start = $date . ' 00:00:00';
             $end   = $date . ' 23:59:59';
 
-            $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $start)
-                ->where('gps_time', '<=', $end)
-                ->where('speed', '>', 0)
-                ->max('speed') ?? 0;
+            $maxSpeed = 0;
+
+            if ($date >= $minDate) {
+                $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $start)
+                    ->where('gps_time', '<=', $end)
+                    ->where('speed', '>', 0)
+                    ->max('speed') ?? 0;
+            }
 
             $result['days'][]   = Carbon::parse($date)->format('d M');
             $result['counts'][] = round($maxSpeed, 1);
