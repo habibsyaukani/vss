@@ -50,14 +50,22 @@ class HowenWebsocketListenCommand extends Command
         $loop->run();
     }
     
-    private function connect($connector, $loop)
+    private function connect($connector, $loop, bool $isReconnect = false)
     {
-        // 1. Get fresh token and pid
+        // 1. Get token and pid
+        // HANYA refresh token saat pertama kali connect, BUKAN saat reconnect
+        // agar tidak spam login ke server (bisa rate-limited)
         try {
-            // Kita panggil refreshToken agar token 100% fresh saat reconnect
-            // Karena jika token expired di tengah jalan, websocket akan putus
-            $this->authService->refreshToken(); 
-            $this->authData = $this->authService->getAuthData();
+            if ($isReconnect && $this->authData) {
+                // Reuse token yang sudah ada saat reconnect
+                Log::info('[HowenWS] Reconnect: reusing cached auth data');
+            } else {
+                // First connect: ambil data auth fresh
+                $this->authData = $this->authService->getAuthData();
+                Log::info('[HowenWS] Fresh auth data obtained', [
+                    'has_pid' => !empty($this->authData['pid']),
+                ]);
+            }
         } catch (\Exception $e) {
             $this->error('Failed to get Auth Data: ' . $e->getMessage());
             Log::error("[HowenWS] Failed to get Auth Data: " . $e->getMessage());
@@ -173,7 +181,7 @@ class HowenWebsocketListenCommand extends Command
     {
         $this->info("🔄 Reconnecting in {$this->reconnectDelay} seconds...");
         $loop->addTimer($this->reconnectDelay, function() use ($connector, $loop) {
-            $this->connect($connector, $loop);
+            $this->connect($connector, $loop, isReconnect: true);
         });
     }
 
