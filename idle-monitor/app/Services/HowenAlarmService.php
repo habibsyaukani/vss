@@ -58,9 +58,9 @@ class HowenAlarmService
                         'alarmType' => $alarmType ?? '', // Reverted to empty string to fetch all alarms (Howen API might not filter sub-types correctly)
                         'deviceID' => $deviceId ?? '',
                     ],
-                    'timeout' => 20,
+                    'timeout' => 45,
                     'verify' => false,
-                    'connect_timeout' => 20,
+                    'connect_timeout' => 15,
                 ]);
 
                 $data = json_decode($response->getBody()->getContents(), true);

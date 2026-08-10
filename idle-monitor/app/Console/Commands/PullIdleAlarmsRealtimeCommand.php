@@ -33,11 +33,11 @@ class PullIdleAlarmsRealtimeCommand extends Command
             // Fetch data secara sequential dengan delay 1 detik per halaman (anti rate-limit)
             $service = new \App\Services\HowenAlarmService();
 
-            $this->info("   📡 Fetching pages 1–10 (sequential, 1s delay/page)...");
+            $this->info("   📡 Fetching pages 1–20 (sequential, 1s delay/page)...");
             $allAlarms = $service->fetchAlarmsParallel(
                 1,
-                10, // Max 10 halaman untuk last 2 jam (sudah lebih dari cukup)
-                200,
+                20, // Max 20 halaman @ 100 record = 2000 alarms
+                100, // Kurangi pageCount 100 agar server tidak timeout
                 $beginTime->toDateTimeString(),
                 $endTime->toDateTimeString()
             );
