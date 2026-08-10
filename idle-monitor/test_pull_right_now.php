@@ -39,27 +39,27 @@ try {
     $body = $response->getBody()->getContents();
     $data = json_decode($body, true);
 
-    echo "Data Keys: " . implode(', ', array_keys($data['data'] ?? [])) . "\n\n";
+    $alarms = $data['data']['dataList'] ?? [];
+    echo "✅ SUCCESS: Found " . count($alarms) . " alarms in dataList!\n\n";
 
-    $alarms = [];
-    if (isset($data['data']['list'])) {
-        $alarms = $data['data']['list'];
-    } elseif (isset($data['data']['data'])) {
-        $alarms = $data['data']['data'];
-    } elseif (isset($data['data']['records'])) {
-        $alarms = $data['data']['records'];
-    } elseif (isset($data['data']) && is_array($data['data'])) {
-        $alarms = $data['data'];
-    }
+    foreach ($alarms as $i => $alarm) {
+        $name  = $alarm['deviceName'] ?? $alarm['devicename'] ?? 'N/A';
+        $type  = $alarm['alarmType'] ?? $alarm['alarmtype'] ?? 'N/A';
+        $state = $alarm['alarmState'] ?? $alarm['alarmstate'] ?? 'N/A';
+        $start = $alarm['startAlarmTimeStr'] ?? $alarm['startalarmtimestr'] ?? 'N/A';
+        $end   = $alarm['endAlarmTimeStr'] ?? $alarm['endalarmtimestr'] ?? 'N/A';
+        $val   = $alarm['alarmvalue'] ?? $alarm['alarmValue'] ?? 'N/A';
 
-    echo "✅ Found " . count($alarms) . " items in list!\n\n";
-
-    if (!empty($alarms) && is_array($alarms)) {
-        $firstItem = reset($alarms);
-        if (is_array($firstItem)) {
-            echo "--- First Alarm Record ---\n";
-            print_r($firstItem);
-        }
+        echo sprintf(
+            "• [#%d] %-12s | Type: %-3s | State: %s | Start: %s | End: %s | Val: %s\n",
+            $i + 1,
+            $name,
+            $type,
+            $state,
+            $start,
+            $end,
+            $val
+        );
     }
 
 } catch (\Exception $e) {
