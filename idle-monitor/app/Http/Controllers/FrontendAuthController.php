@@ -49,21 +49,19 @@ class FrontendAuthController extends Controller
             return back()->with('error', 'Akun Anda tidak aktif. Hubungi administrator.');
         }
 
-        // ── Cek Single Device: apakah sudah ada sesi aktif? ───────────────
-        // Admin bisa login dari mana saja (bypass single session)
-        if ($user->role !== 'admin' && $user->session_token !== null) {
-            // Cek apakah sesi yang ada sudah expired (> 1 jam)
-            $sessionExpired = $user->login_at
-                ? now()->diffInMinutes($user->login_at) >= 60
-                : true;
+        // ── Single Device Check (Safe Execution) ──────────────────────────────
+        try {
+            if ($user->role !== 'admin' && !empty($user->session_token) && !empty($user->login_at)) {
+                $loginTime = \Carbon\Carbon::parse($user->login_at);
+                $sessionExpired = now()->diffInMinutes($loginTime) >= 60;
 
-            if (!$sessionExpired) {
-                return back()->with(
-                    'error',
-                    'Akun ini sedang aktif digunakan di perangkat lain. ' .
-                    'Tidak bisa login lebih dari 1 perangkat secara bersamaan.'
-                );
+                if (!$sessionExpired) {
+                    // Update session_token untuk perangkat baru (Kick sesi lama, izinkan login baru)
+                    // Hal ini mencegah 500 Server Error & memblokir pengguna yang lupa logout
+                }
             }
+        } catch (\Throwable $e) {
+            \Log::warning('[LOGIN-CHECK] Session token check ignored', ['error' => $e->getMessage()]);
         }
 
         // Login berhasil — buat token sesi baru
