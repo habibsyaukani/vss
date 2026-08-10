@@ -59,13 +59,18 @@ class SpeedController extends Controller
             )
             ->latest('gps_time');
 
+        $deviceIds = $request->device_ids;
+        if (is_string($deviceIds)) {
+            $deviceIds = json_decode($deviceIds, true);
+        }
+
         // Filter by specific device IDs (from tree view)
-        if ($request->device_ids && is_array($request->device_ids)) {
+        if ($deviceIds && is_array($deviceIds)) {
             $totalDevices = count($deviceMap);
-            if (count($request->device_ids) < $totalDevices) {
+            if (count($deviceIds) < $totalDevices) {
                 $cleanIds = array_map(function($id) {
                     return ltrim((string)$id, '0');
-                }, $request->device_ids);
+                }, $deviceIds);
                 $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
             }
         }
@@ -131,6 +136,8 @@ class SpeedController extends Controller
             $query->where('gps_tracks_raw.speed', '>', 0);
         }
 
+        \Illuminate\Support\Facades\Log::info('[SpeedDebug] DataTables Query: ' . $query->toSql(), $query->getBindings());
+
         return DataTables::of($query)
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
@@ -182,16 +189,25 @@ class SpeedController extends Controller
             ->latest('gps_tracks_raw.gps_time');
 
         // Export Selected Rows
-        if ($request->selected_ids && is_array($request->selected_ids)) {
-            $query->whereIn('gps_tracks_raw.id', $request->selected_ids);
+        $selectedIds = $request->selected_ids;
+        if (is_string($selectedIds)) {
+            $selectedIds = json_decode($selectedIds, true);
+        }
+        
+        if ($selectedIds && is_array($selectedIds)) {
+            $query->whereIn('gps_tracks_raw.id', $selectedIds);
         } else {
             // Filter by specific device IDs
-            if ($request->device_ids && is_array($request->device_ids)) {
+            $deviceIds = $request->device_ids;
+            if (is_string($deviceIds)) {
+                $deviceIds = json_decode($deviceIds, true);
+            }
+            if ($deviceIds && is_array($deviceIds)) {
                 $totalDevices = count($deviceMap);
-                if (count($request->device_ids) < $totalDevices) {
+                if (count($deviceIds) < $totalDevices) {
                     $cleanIds = array_map(function($id) {
                         return ltrim((string)$id, '0');
-                    }, $request->device_ids);
+                    }, $deviceIds);
                     $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
                 }
             }

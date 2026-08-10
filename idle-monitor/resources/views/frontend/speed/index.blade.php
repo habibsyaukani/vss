@@ -589,7 +589,7 @@ $(function() {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             data: function(d) {
-                d.device_ids   = getSelectedDeviceIds();
+                d.device_ids   = JSON.stringify(getSelectedDeviceIds());
                 d.location     = $('#locationFilter').val();
                 d.series       = $('#seriesFilter').val();
                 d.start_date   = $('#filterDate').val();
@@ -986,11 +986,8 @@ $(function() {
             _token: $('meta[name="csrf-token"]').attr('content')
         };
         
-        let selectedDevices = [];
-        $('.device-checkbox:checked').each(function() {
-            selectedDevices.push($(this).val());
-        });
-        defaultData.device_ids = selectedDevices;
+        let selectedDevices = getSelectedDeviceIds();
+        defaultData.device_ids = JSON.stringify(selectedDevices);
         
         let data = $.extend({}, defaultData, extraData);
         
@@ -1011,7 +1008,7 @@ $(function() {
                     $.each(data, function(key, value) {
                         if (Array.isArray(value)) {
                             $.each(value, function(i, v) {
-                                form.append($('<input>', { name: key + '[]', value: v, type: 'hidden' }));
+                                form.append($('<input>', { name: key, value: JSON.stringify(value), type: 'hidden' }));
                             });
                         } else if (value !== null && value !== undefined && key !== '_token') {
                             form.append($('<input>', { name: key, value: value, type: 'hidden' }));
@@ -1046,7 +1043,7 @@ $(function() {
         }
         
         triggerExport({
-            selected_ids: selectedRows
+            selected_ids: JSON.stringify(selectedRows)
         });
     });
     
