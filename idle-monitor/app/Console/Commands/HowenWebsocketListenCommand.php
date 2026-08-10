@@ -309,23 +309,25 @@ class HowenWebsocketListenCommand extends Command
         $alarmTypeName = $payload['alarmTypeName'] ?? ('AlarmCode-' . $ec);
 
         try {
-            // 1. Simpan ke alarm_raws (semua alarm types)
+            // 1. Simpan ke alarm_raw (sesuai schema yang ada)
+            // alarm_type = integer (ec code), alarm_state = tinyint (1=alarming, 0=end)
             \App\Models\AlarmRaw::updateOrCreate(
                 ['guid' => $alarmId],
                 [
-                    'device_id'      => $deviceId,
-                    'device_name'    => $deviceName,
-                    'serial_no'      => $serialNo,
-                    'alarm_type'     => $alarmTypeName,
-                    'alarm_type_code'=> $ec,
-                    'alarm_state'    => 'ALARM_END',
-                    'start_time'     => $startTimeWita,
-                    'end_time'       => $endTimeWita,
-                    'latitude'       => $lat ?: null,
-                    'longitude'      => $lon ?: null,
-                    'location'       => $gpsString,
-                    'speed'          => (float)($loc['speed'] ?? 0),
-                    'source'         => 'websocket',
+                    'device_id'        => $deviceId,
+                    'device_name'      => $deviceName ?? '',
+                    'alarm_type'       => (int)$ec,    // integer di DB
+                    'alarm_value'      => $alarmTypeName,
+                    'alarm_state'      => 0,           // 0 = ALARM_END (selesai)
+                    'start_time'       => $startTimeWita ?? now()->toDateTimeString(),
+                    'end_time'         => $endTimeWita,
+                    'start_gps'        => $gpsString,
+                    'end_gps'          => $gpsString,
+                    'start_speed'      => 0,
+                    'end_speed'        => (float)($loc['speed'] ?? 0),
+                    'report_time'      => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
+                    'duration_seconds' => $durationSeconds,
+                    'raw_json'         => json_encode($payload), // simpan payload asli untuk debug
                 ]
             );
 
