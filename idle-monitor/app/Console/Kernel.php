@@ -47,14 +47,13 @@ class Kernel extends ConsoleKernel
             '--hours' => 2,
         ])
             ->everyThreeMinutes()
-            ->withoutOverlapping(10)
+            ->withoutOverlapping(5)
             ->description('Pull alarm data (real-time, last 2 hours)');
 
-        // ✅ SECONDARY: Process idle alarms every 3 minutes
-        // Analyze alarm data and calculate idle duration
-        $schedule->job(new \App\Jobs\ProcessIdleAlarmJob())
+        // ✅ SECONDARY: Process idle alarms every 3 minutes (direct command, no queue delay)
+        $schedule->command('howen:process-idle-alarms')
             ->everyThreeMinutes()
-            ->withoutOverlapping(10)
+            ->withoutOverlapping(5)
             ->description('Process idle alarms (analyze duration)');
 
         // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour)
