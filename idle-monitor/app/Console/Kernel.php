@@ -48,26 +48,30 @@ class Kernel extends ConsoleKernel
         ])
             ->everyThreeMinutes()
             ->withoutOverlapping(5)
+            ->runInBackground()
             ->description('Pull alarm data (real-time, last 2 hours)');
 
         // ✅ SECONDARY: Process idle alarms every 3 minutes (direct command, no queue delay)
         $schedule->command('howen:process-idle-alarms')
             ->everyThreeMinutes()
             ->withoutOverlapping(5)
+            ->runInBackground()
             ->description('Process idle alarms (analyze duration)');
 
-        // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour)
+        // ✅ PRIMARY: Pull GPS tracks every 5 minutes (last 1 hour)
         $schedule->command('vss:pull-gps-tracks', [
             '--hours' => 1,
         ])
-            ->everyThreeMinutes()
+            ->everyFiveMinutes()
             ->withoutOverlapping(10)
+            ->runInBackground()
             ->description('Pull GPS track data (fallback, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
         $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
              ->everyThreeMinutes()
-             ->withoutOverlapping(10)
+             ->withoutOverlapping(5)
+             ->runInBackground()
              ->description('Process GPS tracks (raw to display)');
 
         // ========================================
