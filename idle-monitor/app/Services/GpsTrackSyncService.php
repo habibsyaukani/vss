@@ -551,7 +551,15 @@ class GpsTrackSyncService
         try {
             // VSS / Howen API returns timestamps in Asia/Jakarta (WIB / UTC+7)
             // Convert to application timezone (Asia/Makassar / WITA / UTC+8)
-            return Carbon::parse($value, 'Asia/Jakarta')->setTimezone(config('app.timezone', 'Asia/Makassar'));
+            $parsed = Carbon::parse($value, 'Asia/Jakarta')->setTimezone(config('app.timezone', 'Asia/Makassar'));
+            $now = now();
+            
+            // Fix invalid device clocks that send timestamps from the future
+            if ($parsed->greaterThan($now)) {
+                return $now;
+            }
+            
+            return $parsed;
         } catch (\Throwable) {
             return null;
         }
