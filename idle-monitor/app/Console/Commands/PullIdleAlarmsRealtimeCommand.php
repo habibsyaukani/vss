@@ -29,6 +29,10 @@ class PullIdleAlarmsRealtimeCommand extends Command
 
             $this->info("🔄 Real-time pull (last {$hours} hours)");
             $this->info("   Range: {$beginTime->format('Y-m-d H:i')} → {$endTime->format('Y-m-d H:i')}");
+            Log::info("🔄 [REALTIME PULL] Started pulling alarms", [
+                'hours' => $hours,
+                'range' => "{$beginTime->format('Y-m-d H:i')} -> {$endTime->format('Y-m-d H:i')}"
+            ]);
 
             // Fetch data secara sequential dengan delay 1 detik per halaman (anti rate-limit)
             $service = new \App\Services\HowenAlarmService();
@@ -44,8 +48,8 @@ class PullIdleAlarmsRealtimeCommand extends Command
 
             if (empty($allAlarms)) {
                 $this->info("   ℹ️ No new alarms in last {$hours} hours");
+                Log::info("ℹ️ [REALTIME PULL] No alarms returned from API");
                 SystemSetting::set('last_realtime_pull', now()->toDateTimeString());
-                // ✅ Also update last_alarm_sync watermark even if empty
                 SystemSetting::set('last_alarm_sync', $endTime->toDateTimeString());
                 return 0;
             }
@@ -66,12 +70,17 @@ class PullIdleAlarmsRealtimeCommand extends Command
             }
 
             $this->info("   💾 Stored {$inserted} records to alarm_raw");
+            Log::info("✅ [REALTIME PULL] Fetched " . count($allAlarms) . " records, stored {$inserted} records to alarm_raw");
 
-            // Process idle alarms in real-time
+            // Process idle alarms in real-time immediately (inline + dispatch)
             if ($inserted > 0) {
-                // Gunakan antrean Queue Worker agar berjalan di latar belakang bergantian
                 ProcessIdleAlarmJob::dispatch();
-                $this->info("   ⚡ Processing idle alarms (dispatched to Queue)...");
+                try {
+                    (new ProcessIdleAlarmJob())->handle();
+                    Log::info("⚡ [REALTIME PULL] Inline ProcessIdleAlarmJob executed successfully");
+                } catch (\Throwable $ex) {
+                    Log::warning("⚠️ [REALTIME PULL] Inline ProcessIdleAlarmJob warning: " . $ex->getMessage());
+                }
             }
 
             // ✅ Update both timestamps so next pull doesn't re-import the same data
@@ -83,6 +92,7 @@ class PullIdleAlarmsRealtimeCommand extends Command
 
         } catch (\Exception $e) {
             $this->error("❌ Error: " . $e->getMessage());
+            Log::error("❌ [REALTIME PULL] Error: " . $e->getMessage());
             return 1;
         }
     }
