@@ -13,7 +13,9 @@ class ProcessIdleAlarmJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 600;  // Increased from 300 to 600 seconds (10 minutes)
+    public $timeout = 300;     // 5 minutes timeout per job execution
+    public $tries = 3;         // Max 3 retries
+    public $maxExceptions = 3; // Max 3 exceptions before failure
 
     /**
      * Execute the job - Process idle alarms from alarm_raw → idle_alarms
@@ -43,6 +45,7 @@ class ProcessIdleAlarmJob implements ShouldQueue
         try {
             $processed = 0;
             $skipped = 0;
+            $maxRecordsPerRun = 5000; // Max 5000 alarms per job run to prevent DB lock & worker hogging
 
             // Count pending alarms to process
             $pendingCount = \App\Models\AlarmRaw::where('alarm_type', 32)
@@ -69,13 +72,14 @@ class ProcessIdleAlarmJob implements ShouldQueue
             SystemLogger::success('PROCESSING', "Found {$pendingCount} new idle alarms to process");
 
             // ✅ OPTIMASI: Filter di level database agar tidak meload seluruh data ke RAM
-            // Hanya proses tipe 32 (Idle) dan state 0 (Alarm End) yang belum ada di idle_alarms
             // Hanya proses tipe 32 (Idle) dan state 0 (Alarm End) yang belum diproses
             \App\Models\AlarmRaw::where('alarm_type', 32)
                 ->where('alarm_state', 0)
                 ->where('is_processed', 0)
-                ->orderBy('id', 'asc')
-                ->chunk(1000, function ($alarms) use (&$processed, &$skipped, $processLog) {
+                ->chunkById(500, function ($alarms) use (&$processed, &$skipped, $processLog, $maxRecordsPerRun) {
+                    if ($processed >= $maxRecordsPerRun) {
+                        return false; // Stop chunk loop if limit reached
+                    }
                     SystemLogger::success('PROCESSING', "Processing chunk of alarms", ['count' => $alarms->count()]);
                     $chunkRawIds = [];
 

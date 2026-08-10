@@ -18,15 +18,17 @@ class ProcessGpsTrackJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 600;  // 10 minutes
+    public $timeout = 300;       // 5 minutes timeout per job execution
+    public $tries = 3;         // Max 3 retries
+    public $maxExceptions = 3; // Max 3 exceptions before failure
 
     /**
-     * Hanya 1 ProcessGpsTrackJob boleh ada di queue/running dalam 10 menit.
+     * Hanya 1 ProcessGpsTrackJob boleh ada di queue/running dalam 5 menit.
      * Mencegah job menumpuk dan berebut lock MySQL.
      */
     public function uniqueFor(): int
     {
-        return 600; // 10 minutes
+        return 300; // 5 minutes
     }
 
     /**
@@ -56,12 +58,15 @@ class ProcessGpsTrackJob implements ShouldQueue, ShouldBeUnique
 
             $processed = 0;
             $skipped = 0;
+            $maxRecordsPerRun = 5000; // Maksimal 5000 record per eksekusi job agar tidak membebani DB I/O & Worker
 
-            // Find gps_tracks_raw yang belum diproses (jauh lebih cepat daripada whereDoesntHave)
-            // Proses dalam chunk untuk efisiensi memory
+            // Find gps_tracks_raw yang belum diproses
+            // Gunakan chunkById agar aman & cepat saat update is_processed
             GpsTrackRaw::where('is_processed', 0)
-                ->orderBy('id', 'asc')
-                ->chunk(200, function ($rawTracks) use (&$processed, &$skipped, $processLog) {
+                ->chunkById(200, function ($rawTracks) use (&$processed, &$skipped, $processLog, $maxRecordsPerRun) {
+                    if ($processed >= $maxRecordsPerRun) {
+                        return false; // Stop chunk loop if max limit reached
+                    }
                     $chunkTrackIds = [];
                     $batchInsert   = [];
 
