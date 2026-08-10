@@ -83,17 +83,23 @@ class HowenWebsocketListenCommand extends Command
             Log::info("[HowenWS] Connected to WebSocket server");
             
             // 2. Send Login (Action 80000)
-            $loginPayload = [
-                'action' => '80000',
-                'payload' => [
-                    'username' => $this->username,
-                    'pid' => $this->authData['pid'],
-                    'token' => $this->authData['token']
-                ]
-            ];
-            
-            $conn->send(json_encode($loginPayload));
-            $this->info("📤 Sent Login Request (80000)");
+        // Hanya kirim pid jika ada nilainya (pid opsional di beberapa versi Howen)
+        $loginPayloadData = [
+            'username' => $this->username,
+            'token'    => $this->authData['token'],
+        ];
+        if (!empty($this->authData['pid'])) {
+            $loginPayloadData['pid'] = $this->authData['pid'];
+        }
+
+        $loginPayload = [
+            'action'  => '80000',
+            'payload' => $loginPayloadData,
+        ];
+        
+        $conn->send(json_encode($loginPayload));
+        Log::info('[HowenWS] Login sent', ['username' => $this->username, 'has_pid' => !empty($this->authData['pid'])]);
+        $this->info("📤 Sent Login Request (80000)");
 
             // 3. Start Heartbeat Timer (Action 80009) - every 60 seconds
             $heartbeatTimer = $loop->addPeriodicTimer(60, function() use ($conn) {
