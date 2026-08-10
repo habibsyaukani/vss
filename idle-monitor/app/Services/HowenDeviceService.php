@@ -37,13 +37,11 @@ class HowenDeviceService
             $host = $parsedUrl['host'] ?? '';
             $scheme = $parsedUrl['scheme'] ?? 'http';
             
-            // List of endpoints to try (CORRECT endpoint first)
+            // List of endpoints to try (Primary endpoint without port 9966 FIRST)
             $endpoints = [
-                "http://{$host}:9966/vss/vehicle/findAll.action",  // Correct endpoint with port 9966
+                "{$this->apiUrl}/vehicle/findAll.action",             // Primary working endpoint
+                "http://{$host}:9966/vss/vehicle/findAll.action",
                 "https://{$host}:9966/vss/vehicle/findAll.action",
-                "{$this->apiUrl}/vehicle/findAll.action",             // Fallback without port
-                "{$this->apiUrl}/vehicle/getDeviceList.action",
-                "{$this->apiUrl}/vehicle/apiFindVehicle.action",
             ];
 
             $lastError = null;
@@ -60,7 +58,7 @@ class HowenDeviceService
                             'isOnline' => '',  // All (online + offline)
                             'keyword' => '',
                         ],
-                        'timeout' => 60,
+                        'timeout' => 15,
                         'verify' => false,
                     ]);
 
