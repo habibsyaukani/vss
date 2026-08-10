@@ -165,18 +165,22 @@ class GpsTrackSyncService
         $concurrency = 20; // 20 concurrent requests per batch
         $allRecords = [];
 
+        $appTz = config('app.timezone', 'Asia/Makassar');
+        $beginTimeWib = \Carbon\Carbon::parse($beginTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+        $endTimeWib   = \Carbon\Carbon::parse($endTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+
         foreach (array_chunk($deviceIds, $concurrency) as $batchIndex => $deviceBatch) {
             
-            $responses = \Illuminate\Support\Facades\Http::pool(function ($pool) use ($deviceBatch, $token, $beginTime, $endTime) {
-                return collect($deviceBatch)->map(function ($deviceId) use ($pool, $token, $beginTime, $endTime) {
+            $responses = \Illuminate\Support\Facades\Http::pool(function ($pool) use ($deviceBatch, $token, $beginTimeWib, $endTimeWib) {
+                return collect($deviceBatch)->map(function ($deviceId) use ($pool, $token, $beginTimeWib, $endTimeWib) {
                     return $pool->as("device-{$deviceId}")
                         ->withOptions(['verify' => false])
                         ->timeout(15)
                         ->post("{$this->baseUrl}/vss/track/getApiTrackList.action", [
                             'token'     => $token,
                             'deviceID'  => $deviceId,
-                            'beginTime' => $beginTime,
-                            'endTime'   => $endTime,
+                            'beginTime' => $beginTimeWib,
+                            'endTime'   => $endTimeWib,
                             'pageNum'   => 1,
                             'pageCount' => 20, // 20 records is enough for short polling
                         ]);

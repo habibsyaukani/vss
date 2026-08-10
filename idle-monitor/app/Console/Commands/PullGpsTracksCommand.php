@@ -96,8 +96,8 @@ class PullGpsTracksCommand extends Command
             
             $result = $syncService->syncMultipleDevicesFast(
                 $deviceIds, 
-                $beginWib->format('Y-m-d H:i:s'),
-                $nowWib->format('Y-m-d H:i:s')
+                $beginTime->format('Y-m-d H:i:s'),
+                $endTime->format('Y-m-d H:i:s')
             );
             
             $totalFetched = $result['total_fetched'] ?? 0;
