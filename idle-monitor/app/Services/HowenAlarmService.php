@@ -40,8 +40,18 @@ class HowenAlarmService
     {
         $token = $this->authService->getToken();
         
-        if (!$beginTime) $beginTime = SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString());
-        if (!$endTime) $endTime = now()->toDateTimeString();
+        $appTz = config('app.timezone', 'Asia/Makassar');
+        $toWib = function($timeStr) use ($appTz) {
+            if (!$timeStr) return null;
+            try {
+                return \Carbon\Carbon::parse($timeStr, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+            } catch (\Exception $e) {
+                return $timeStr;
+            }
+        };
+
+        $beginTimeWib = $toWib($beginTime ?: SystemSetting::get('last_alarm_sync', now()->subDays(1)->toDateTimeString()));
+        $endTimeWib   = $toWib($endTime   ?: now()->toDateTimeString());
 
         $maxRetries = 5;
         $retryDelay = 3000000; // 3 seconds awal
@@ -53,8 +63,8 @@ class HowenAlarmService
                         'token' => $token,
                         'pageNum' => $pageNum,
                         'pageCount' => $pageCount,
-                        'beginTime' => $beginTime,
-                        'endTime' => $endTime,
+                        'beginTime' => $beginTimeWib,
+                        'endTime' => $endTimeWib,
                         'alarmType' => $alarmType ?? '', // Reverted to empty string to fetch all alarms (Howen API might not filter sub-types correctly)
                         'deviceID' => $deviceId ?? '',
                     ],

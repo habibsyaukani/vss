@@ -121,12 +121,25 @@ class PullIdleAlarmsRealtimeCommand extends Command
         $alarmType = $alarm['alarmtype'] ?? $alarm['alarmType'] ?? $alarm['alarm_type'] ?? null;
         $alarmState = $alarm['alarmState'] ?? $alarm['alarmstate'] ?? $alarm['alarm_state'] ?? 0;
 
-        // ✅ Exact Howen API field names confirmed from live API test:
-        // 'createtime' = alarm START time
-        // 'endTime'    = alarm END time
-        $startTime = $alarm['createtime'] ?? $alarm['startAlarmTimeStr'] ?? $alarm['start_time'] ?? null;
-        $endTime   = $alarm['endTime']    ?? $alarm['endAlarmTimeStr']   ?? $alarm['end_time']   ?? null;
-        $reportTime = $alarm['reportTime'] ?? $alarm['report_time'] ?? $startTime ?? now()->toDateTimeString();
+        $appTz = config('app.timezone', 'Asia/Makassar');
+        $toAppTz = function($timeStr) use ($appTz) {
+            if (empty($timeStr)) return null;
+            try {
+                return \Carbon\Carbon::parse($timeStr, 'Asia/Jakarta')
+                    ->setTimezone($appTz)
+                    ->toDateTimeString();
+            } catch (\Exception $e) {
+                return $timeStr;
+            }
+        };
+
+        $rawStartTime  = $alarm['createtime'] ?? $alarm['startAlarmTimeStr'] ?? $alarm['start_time'] ?? null;
+        $rawEndTime    = $alarm['endTime']    ?? $alarm['endAlarmTimeStr']   ?? $alarm['end_time']   ?? null;
+        $rawReportTime = $alarm['reportTime'] ?? $alarm['report_time']       ?? $rawStartTime        ?? now()->toDateTimeString();
+
+        $startTime  = $toAppTz($rawStartTime);
+        $endTime    = $toAppTz($rawEndTime);
+        $reportTime = $toAppTz($rawReportTime);
 
         // If end_time is empty, calculate end_time from start_time + duration
         if (empty($endTime) && !empty($startTime) && $duration > 0) {

@@ -160,13 +160,17 @@ class GpsTrackSyncService
         int    $page = 1
     ): array {
         try {
+            $appTz = config('app.timezone', 'Asia/Makassar');
+            $beginTimeWib = Carbon::parse($beginTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+            $endTimeWib   = Carbon::parse($endTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+
             $response = Http::withOptions([
                 'verify' => false, // Disable SSL verification for development
             ])->timeout(30)->post("{$this->baseUrl}/vss/track/getApiTrackList.action", [
                 'token'     => $token,
                 'deviceID'  => $deviceId,
-                'beginTime' => $beginTime,
-                'endTime'   => $endTime,
+                'beginTime' => $beginTimeWib,
+                'endTime'   => $endTimeWib,
                 'pageNum'   => $page,
                 'pageCount' => $this->perPage,
             ]);
@@ -452,7 +456,9 @@ class GpsTrackSyncService
         if (empty($value)) return null;
         
         try {
-            return Carbon::parse($value);
+            // VSS / Howen API returns timestamps in Asia/Jakarta (WIB / UTC+7)
+            // Convert to application timezone (Asia/Makassar / WITA / UTC+8)
+            return Carbon::parse($value, 'Asia/Jakarta')->setTimezone(config('app.timezone', 'Asia/Makassar'));
         } catch (\Throwable) {
             return null;
         }
