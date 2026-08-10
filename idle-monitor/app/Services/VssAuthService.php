@@ -42,7 +42,7 @@ class VssAuthService
                     Log::info('[VSS Auth] Menggunakan token valid dari DB ApiToken.');
                     return [
                         'token' => $latestToken->token,
-                        'pid' => '',
+                        'pid'   => $latestToken->pid ?? '',
                     ];
                 }
             } catch (\Throwable $e) {
@@ -136,11 +136,15 @@ class VssAuthService
         $token = $body['data']['token'];
         $pid = $body['data']['pid'] ?? '';
 
-        // Simpan ke DB ApiToken agar bisa dipakai lintas service
+        // Simpan token DAN pid ke DB agar WebSocket bisa login dengan benar
         try {
             \App\Models\ApiToken::updateOrCreate(
                 ['token' => $token],
-                ['expires_at' => now()->addMinutes(25)]
+                [
+                    'pid'        => $pid,
+                    'username'   => $this->username,
+                    'expires_at' => now()->addMinutes(25),
+                ]
             );
         } catch (\Throwable $e) {
             // Ignore
