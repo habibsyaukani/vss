@@ -52,10 +52,11 @@ echo "-----------------------------------------\n";
 echo "Total Raw Alarm di Database : $rawAlarmCount record\n";
 echo "Total Raw Alarm Hari Ini    : $rawAlarmToday record\n";
 
-// 4. Latest GPS Track sample time
-$latestGps = \App\Models\GpsTrack::orderBy('id', 'desc')->first(['gps_time', 'device_name']);
-if ($latestGps) {
-    echo "Waktu GPS Terbaru           : {$latestGps->gps_time} ({$latestGps->device_name})\n";
-}
+// 4. Latest GPS Track time (MAX gps_time)
+$maxGpsTimeRaw = \App\Models\GpsTrackRaw::where('gps_time', '>=', $todayStart)->max('gps_time');
+$maxGpsTimeDisplay = \App\Models\GpsTrack::where('gps_time', '>=', $todayStart)->max('gps_time');
+
+echo "Waktu GPS Raw Terbaru (API) : " . ($maxGpsTimeRaw ?? 'Belum ada') . "\n";
+echo "Waktu GPS Display Terbaru   : " . ($maxGpsTimeDisplay ?? 'Belum ada') . "\n";
 
 echo "=========================================\n";
