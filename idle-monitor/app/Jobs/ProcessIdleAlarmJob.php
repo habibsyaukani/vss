@@ -72,11 +72,12 @@ class ProcessIdleAlarmJob implements ShouldQueue
             SystemLogger::success('PROCESSING', "Found {$pendingCount} new idle alarms to process");
 
             // ✅ OPTIMASI: Filter di level database agar tidak meload seluruh data ke RAM
-            // Hanya proses tipe 32 (Idle) dan state 0 (Alarm End) yang belum diproses
+            // Order BY ID DESC agar data TERBARU (hari ini) diproses TERLEBIH DAHULU
             \App\Models\AlarmRaw::where('alarm_type', 32)
                 ->where('alarm_state', 0)
                 ->where('is_processed', 0)
-                ->chunkById(500, function ($alarms) use (&$processed, &$skipped, $processLog, $maxRecordsPerRun) {
+                ->orderBy('id', 'desc')
+                ->chunk(500, function ($alarms) use (&$processed, &$skipped, $processLog, $maxRecordsPerRun) {
                     if ($processed >= $maxRecordsPerRun) {
                         return false; // Stop chunk loop if limit reached
                     }
