@@ -39,17 +39,27 @@ try {
     $body = $response->getBody()->getContents();
     $data = json_decode($body, true);
 
-    if (isset($data['status']) && $data['status'] == 10000 && isset($data['data'])) {
-        $alarms = is_array($data['data']) ? $data['data'] : [$data['data']];
-        echo "✅ SUCCESS: Fetched " . count($alarms) . " alarms from Howen API!\n\n";
-        
-        foreach (array_slice($alarms, 0, 5) as $i => $alarm) {
-            echo "--- Alarm #$i ---\n";
-            print_r($alarm);
-            echo "\n";
+    echo "Data Keys: " . implode(', ', array_keys($data['data'] ?? [])) . "\n\n";
+
+    $alarms = [];
+    if (isset($data['data']['list'])) {
+        $alarms = $data['data']['list'];
+    } elseif (isset($data['data']['data'])) {
+        $alarms = $data['data']['data'];
+    } elseif (isset($data['data']['records'])) {
+        $alarms = $data['data']['records'];
+    } elseif (isset($data['data']) && is_array($data['data'])) {
+        $alarms = $data['data'];
+    }
+
+    echo "✅ Found " . count($alarms) . " items in list!\n\n";
+
+    if (!empty($alarms) && is_array($alarms)) {
+        $firstItem = reset($alarms);
+        if (is_array($firstItem)) {
+            echo "--- First Alarm Record ---\n";
+            print_r($firstItem);
         }
-    } else {
-        echo "⚠️ Response status: " . ($data['status'] ?? 'UNKNOWN') . " | Msg: " . ($data['message'] ?? $body) . "\n";
     }
 
 } catch (\Exception $e) {
