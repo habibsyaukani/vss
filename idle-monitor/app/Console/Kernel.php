@@ -59,6 +59,8 @@ class Kernel extends ConsoleKernel
             ->description('Process idle alarms (analyze duration)');
 
         // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour, fast concurrent)
+        // [DISABLED] Karena sekarang sudah menggunakan Real-time WebSocket (HowenWebsocketListenCommand)
+        /*
         $schedule->command('vss:pull-gps-tracks', [
             '--hours' => 1,
         ])
@@ -66,8 +68,11 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping(10)
             ->runInBackground()
             ->description('Pull GPS track data (fast concurrent, last 1 hour)');
+        */
 
         // Process GPS tracks every 3 minutes (dispatch to queue)
+        // [DISABLED] Sama, ini sudah tidak perlu lagi karena WebSocket memproses secara instan.
+        /*
         $schedule->call(function () {
             \App\Jobs\ProcessGpsTrackJob::dispatch();
         })
@@ -75,6 +80,7 @@ class Kernel extends ConsoleKernel
             ->everyThreeMinutes()
             ->withoutOverlapping(5)
             ->description('Process GPS tracks (raw to display)');
+        */
 
         // ========================================
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
