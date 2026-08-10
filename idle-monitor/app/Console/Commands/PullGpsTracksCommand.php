@@ -95,6 +95,7 @@ class PullGpsTracksCommand extends Command
             $this->info("📡 Fetching GPS data for {$devices->count()} devices concurrently...");
             
             $result = $syncService->syncMultipleDevicesFast(
+                $this->token,
                 $deviceIds, 
                 $beginTime->format('Y-m-d H:i:s'),
                 $endTime->format('Y-m-d H:i:s')

@@ -146,9 +146,8 @@ class GpsTrackSyncService
     /**
      * Pull GPS tracks for multiple devices concurrently (for fast real-time pulling)
      */
-    public function syncMultipleDevicesFast(array $deviceIds, string $beginTime, string $endTime): array
+    public function syncMultipleDevicesFast(string $token, array $deviceIds, string $beginTime, string $endTime): array
     {
-        $token = $this->authService->getToken();
         if (!$token) {
             Log::error("[GPS Sync Bulk] Gagal mendapatkan token VSS");
             return ['status' => 'error', 'message' => 'Token failed'];
