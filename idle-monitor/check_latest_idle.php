@@ -9,14 +9,20 @@ echo "📊 MONITOR DATA IDLE & GPS (LATEST DATA)\n";
 echo "=========================================\n\n";
 
 $today = date('Y-m-d');
+$todayStart = "$today 00:00:00";
+$todayEnd   = "$today 23:59:59";
 echo "📅 Tanggal Hari Ini: $today\n\n";
 
-// 1. Check Idle Alarms Today
-$idleTodayCount = \App\Models\IdleAlarm::whereDate('starting_time', $today)->count();
+// 1. Check Idle Alarms Today (Indexed Query)
+$idleTodayCount = \App\Models\IdleAlarm::where('starting_time', '>=', $todayStart)
+    ->where('starting_time', '<=', $todayEnd)
+    ->count();
 echo "🚨 Total Idle Alarms Hari Ini ($today): $idleTodayCount record\n";
 
-// 2. Check GPS Tracks Today
-$gpsTodayCount = \App\Models\GpsTrack::whereDate('gps_time', $today)->count();
+// 2. Check GPS Tracks Today (Indexed Query)
+$gpsTodayCount = \App\Models\GpsTrack::where('gps_time', '>=', $todayStart)
+    ->where('gps_time', '<=', $todayEnd)
+    ->count();
 echo "📍 Total GPS Track Hari Ini ($today): $gpsTodayCount record\n\n";
 
 // 3. 5 Data Idle Alarm Terbaru (Global)
@@ -31,11 +37,10 @@ if ($latestIdle->isEmpty()) {
 } else {
     foreach ($latestIdle as $idle) {
         echo sprintf(
-            "• [%s] %s | Durasi: %d menit (%d dtk) | Start: %s\n",
+            "• [%s] %s | Durasi: %d min | Start: %s\n",
             $idle->id,
             $idle->device_name,
             $idle->duration_minutes,
-            $idle->duration_seconds,
             $idle->starting_time
         );
     }
@@ -43,7 +48,9 @@ if ($latestIdle->isEmpty()) {
 
 // 4. Raw Alarms Count
 $rawAlarmCount = \App\Models\AlarmRaw::count();
-$rawAlarmToday = \App\Models\AlarmRaw::whereDate('start_time', $today)->count();
+$rawAlarmToday = \App\Models\AlarmRaw::where('start_time', '>=', $todayStart)
+    ->where('start_time', '<=', $todayEnd)
+    ->count();
 
 echo "\n-----------------------------------------\n";
 echo "📦 STATISTIK DATA RAW ALARM (HOWEN API):\n";
