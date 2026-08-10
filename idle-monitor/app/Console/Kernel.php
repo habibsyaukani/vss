@@ -43,36 +43,32 @@ class Kernel extends ConsoleKernel
         // ========================================
         
         // ✅ PRIMARY: Pull alarms every 3 minutes (last 2 hours)
-        // [DISABLED] - Now handled by WebSocket (howen:websocket-listen)
-        // Re-enabled as fallback since websocket might not be running
         $schedule->command('howen:pull-alarms-realtime', [
             '--hours' => 2,
         ])
             ->everyThreeMinutes()
-            ->runInBackground()
-            ->withoutOverlapping()
+            ->withoutOverlapping(10)
             ->description('Pull alarm data (real-time, last 2 hours)');
 
-        // ✅ SECONDARY: Process idle alarms every 5 minutes
+        // ✅ SECONDARY: Process idle alarms every 3 minutes
         // Analyze alarm data and calculate idle duration
         $schedule->job(new \App\Jobs\ProcessIdleAlarmJob())
-            ->cron('*/5 * * * *')
-            ->withoutOverlapping()
+            ->everyThreeMinutes()
+            ->withoutOverlapping(10)
             ->description('Process idle alarms (analyze duration)');
 
-        // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour) as fallback
+        // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour)
         $schedule->command('vss:pull-gps-tracks', [
             '--hours' => 1,
         ])
             ->everyThreeMinutes()
-            ->runInBackground()
-            ->withoutOverlapping()
+            ->withoutOverlapping(10)
             ->description('Pull GPS track data (fallback, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (raw → display table)
         $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
              ->everyThreeMinutes()
-             ->withoutOverlapping()
+             ->withoutOverlapping(10)
              ->description('Process GPS tracks (raw to display)');
 
         // ========================================
