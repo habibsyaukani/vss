@@ -13,21 +13,15 @@ $todayStart = "$today 00:00:00";
 $todayEnd   = "$today 23:59:59";
 echo "📅 Tanggal Hari Ini: $today\n\n";
 
-// 1. Check Idle Alarms Today (Indexed Query)
+// 1. Check Idle Alarms Today (Fast Query)
 $idleTodayCount = \App\Models\IdleAlarm::where('starting_time', '>=', $todayStart)
     ->where('starting_time', '<=', $todayEnd)
     ->count();
-echo "🚨 Total Idle Alarms Hari Ini ($today): $idleTodayCount record\n";
+echo "🚨 Total Idle Alarms Hari Ini ($today): $idleTodayCount record\n\n";
 
-// 2. Check GPS Tracks Today (Indexed Query)
-$gpsTodayCount = \App\Models\GpsTrack::where('gps_time', '>=', $todayStart)
-    ->where('gps_time', '<=', $todayEnd)
-    ->count();
-echo "📍 Total GPS Track Hari Ini ($today): $gpsTodayCount record\n\n";
-
-// 3. 5 Data Idle Alarm Terbaru (Global)
+// 2. 5 Data Idle Alarm Terbaru (Global)
 echo "-----------------------------------------\n";
-echo "🔥 5 DATA IDLE ALARM TERBARU:\n";
+echo "🔥 5 DATA IDLE ALARM TERBARU DI DATABASE:\n";
 echo "-----------------------------------------\n";
 
 $latestIdle = \App\Models\IdleAlarm::orderBy('id', 'desc')->take(5)->get();
@@ -46,7 +40,7 @@ if ($latestIdle->isEmpty()) {
     }
 }
 
-// 4. Raw Alarms Count
+// 3. Raw Alarms Count
 $rawAlarmCount = \App\Models\AlarmRaw::count();
 $rawAlarmToday = \App\Models\AlarmRaw::where('start_time', '>=', $todayStart)
     ->where('start_time', '<=', $todayEnd)
@@ -58,4 +52,10 @@ echo "-----------------------------------------\n";
 echo "Total Raw Alarm di Database : $rawAlarmCount record\n";
 echo "Total Raw Alarm Hari Ini    : $rawAlarmToday record\n";
 
-echo "\n=========================================\n";
+// 4. Latest GPS Track sample time
+$latestGps = \App\Models\GpsTrack::orderBy('id', 'desc')->first(['gps_time', 'device_name']);
+if ($latestGps) {
+    echo "Waktu GPS Terbaru           : {$latestGps->gps_time} ({$latestGps->device_name})\n";
+}
+
+echo "=========================================\n";
