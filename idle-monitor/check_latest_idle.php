@@ -24,18 +24,19 @@ echo "-----------------------------------------\n";
 echo "🔥 5 DATA IDLE ALARM TERBARU DI DATABASE:\n";
 echo "-----------------------------------------\n";
 
-$latestIdle = \App\Models\IdleAlarm::orderBy('id', 'desc')->take(5)->get();
+$latestIdle = \App\Models\IdleAlarm::orderBy('starting_time', 'desc')->take(10)->get();
 
 if ($latestIdle->isEmpty()) {
     echo "Belum ada data Idle Alarm.\n";
 } else {
     foreach ($latestIdle as $idle) {
         echo sprintf(
-            "• [%s] %s | Durasi: %d min | Start: %s\n",
+            "• [%s] %s | Durasi: %d min | Start: %s | End: %s\n",
             $idle->id,
             $idle->device_name,
             $idle->duration_minutes,
-            $idle->starting_time
+            $idle->starting_time,
+            $idle->ending_time ?? 'N/A'
         );
     }
 }
