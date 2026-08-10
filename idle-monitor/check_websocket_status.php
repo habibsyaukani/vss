@@ -23,8 +23,13 @@ $wsGpsCount = 0;
 $wsAlarmCount = 0;
 
 if (file_exists($logPath)) {
-    $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $recentLines = array_slice($lines, -500); // Last 500 lines
+    // Read only last 100KB of log file to avoid memory exhaustion
+    $fp = fopen($logPath, 'r');
+    fseek($fp, max(0, filesize($logPath) - 100000));
+    $chunk = fread($fp, 100000);
+    fclose($fp);
+    $recentLines = explode("\n", $chunk);
+
     foreach (array_reverse($recentLines) as $line) {
         if (str_contains($line, '[HowenWS] Connected')) {
             $wsConnected = true;
@@ -34,7 +39,7 @@ if (file_exists($logPath)) {
         }
     }
     foreach ($recentLines as $line) {
-        if (str_contains($line, '[HowenWS] GPS:')) $wsGpsCount++;
+        if (str_contains($line, '[HowenWS] GPS:'))       $wsGpsCount++;
         if (str_contains($line, '[HowenWS] Alarm ec=')) $wsAlarmCount++;
     }
 }
