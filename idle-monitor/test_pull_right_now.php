@@ -50,9 +50,17 @@ try {
     ]);
     $data2 = json_decode($res2->getBody()->getContents(), true);
     $items2 = $data2['data']['dataList'] ?? [];
-    echo "Count without deviceID: " . count($items2) . " items\n\n";
+    echo "Count: " . count($items2) . " items\n\n";
+    
+    if (!empty($items2)) {
+        $first = $items2[0];
+        echo "=== ALL FIELD NAMES IN ALARM #1 ===\n";
+        foreach ($first as $key => $value) {
+            echo "  '$key' => " . (is_string($value) || is_numeric($value) ? $value : json_encode($value)) . "\n";
+        }
+    }
 } catch (\Exception $e) {
-    echo "Error 2: " . $e->getMessage() . "\n\n";
+    echo "Error: " . $e->getMessage() . "\n";
 }
 
-echo "=========================================\n";
+echo "\n=========================================\n";
