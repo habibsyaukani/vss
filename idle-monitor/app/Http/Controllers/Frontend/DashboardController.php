@@ -33,7 +33,7 @@ class DashboardController extends Controller
             $end   = $today . ' 23:59:59';
 
             // ── 1. Stats hari ini: idle + speed ───────────────────────────
-            $speedStats = GpsTrackRaw::where('gps_time', '>=', $start)
+            $speedStats = GpsTrack::where('gps_time', '>=', $start)
                 ->where('gps_time', '<=', $end)
                 ->where('speed', '>', 0)
                 ->selectRaw('MAX(speed) as max_speed, AVG(speed) as avg_speed')
@@ -80,7 +80,7 @@ class DashboardController extends Controller
             ];
 
             // 🚀 5. Top 5 speed units hari ini 
-            $topSpeedUnits = GpsTrackRaw::select(
+            $topSpeedUnits = GpsTrack::select(
                     'device_id',
                     'device_name',
                     DB::raw('MAX(speed) as max_speed')
@@ -94,7 +94,7 @@ class DashboardController extends Controller
                 ->get();
 
             // ── 6. Speed per fleet hari ini (process in PHP) ──────────────
-            $speedRaw = GpsTrackRaw::select('device_name', DB::raw('MAX(speed) as max_speed'))
+            $speedRaw = GpsTrack::select('device_name', DB::raw('MAX(speed) as max_speed'))
                 ->where('gps_time', '>=', $start)
                 ->where('gps_time', '<=', $end)
                 ->where('speed', '>', 0)
@@ -171,7 +171,7 @@ class DashboardController extends Controller
             $maxSpeed = 0;
 
             if ($date >= $minDate) {
-                $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $start)
+                $maxSpeed = GpsTrack::where('gps_time', '>=', $start)
                     ->where('gps_time', '<=', $end)
                     ->where('speed', '>', 0)
                     ->max('speed') ?? 0;
