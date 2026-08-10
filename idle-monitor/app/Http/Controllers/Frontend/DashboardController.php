@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\IdleAlarm;
 use App\Models\GpsTrackRaw;
-use App\Models\GpsTrack;
 use App\Models\Device;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -34,7 +33,7 @@ class DashboardController extends Controller
             $end   = $today . ' 23:59:59';
 
             // ── 1. Stats hari ini: idle + speed ───────────────────────────
-            $speedStats = GpsTrack::where('gps_time', '>=', $start)
+            $speedStats = GpsTrackRaw::where('gps_time', '>=', $start)
                 ->where('gps_time', '<=', $end)
                 ->where('speed', '>', 0)
                 ->selectRaw('MAX(speed) as max_speed, AVG(speed) as avg_speed')
@@ -80,8 +79,8 @@ class DashboardController extends Controller
                 'counts' => array_values($idleFleetMap),
             ];
 
-            // 🚀 5. Top 5 speed units hari ini 
-            $topSpeedUnits = GpsTrack::select(
+            // ── 5. Top 5 speed units hari ini ────────────────────────────
+            $topSpeedUnits = GpsTrackRaw::select(
                     'device_id',
                     'device_name',
                     DB::raw('MAX(speed) as max_speed')
@@ -95,7 +94,7 @@ class DashboardController extends Controller
                 ->get();
 
             // ── 6. Speed per fleet hari ini (process in PHP) ──────────────
-            $speedRaw = GpsTrack::select('device_name', DB::raw('MAX(speed) as max_speed'))
+            $speedRaw = GpsTrackRaw::select('device_name', DB::raw('MAX(speed) as max_speed'))
                 ->where('gps_time', '>=', $start)
                 ->where('gps_time', '<=', $end)
                 ->where('speed', '>', 0)
@@ -120,7 +119,7 @@ class DashboardController extends Controller
                 'counts' => array_map(fn($v) => round($v, 1), array_values($speedFleetMap)),
             ];
 
-            // ── 7. Speed per day 7 hari (skip historical dates prior to 2026-08-07) ──
+            // ── 7. Speed per day 7 hari ───────────────────────────────────
             $speedPerDay = $this->getSpeedPerDayChart();
 
             return compact(
@@ -161,7 +160,7 @@ class DashboardController extends Controller
      */
     private function getSpeedPerDayChart(): array
     {
-        $result = ['days' => [], 'counts' => []];
+        $result  = ['days' => [], 'counts' => []];
         $minDate = '2026-08-07';
 
         for ($i = 6; $i >= 0; $i--) {
@@ -172,7 +171,7 @@ class DashboardController extends Controller
             $maxSpeed = 0;
 
             if ($date >= $minDate) {
-                $maxSpeed = GpsTrack::where('gps_time', '>=', $start)
+                $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $start)
                     ->where('gps_time', '<=', $end)
                     ->where('speed', '>', 0)
                     ->max('speed') ?? 0;
