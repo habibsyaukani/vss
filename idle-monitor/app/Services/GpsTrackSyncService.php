@@ -203,7 +203,10 @@ class GpsTrackSyncService
 
                 if (($body['status'] ?? null) !== 10000) {
                     $msg = $body['msg'] ?? 'Unknown error';
-                    $stats['errors'][] = "Device {$deviceId}: {$msg}";
+                    // Hanya log sebagai error jika bukan "no data" response
+                    if (!str_contains(strtolower($msg), 'no data') && !str_contains(strtolower($msg), 'not found') && !str_contains($msg, '10001')) {
+                        $stats['errors'][] = "Device {$deviceId}: {$msg}";
+                    }
                     continue;
                 }
 
@@ -352,9 +355,24 @@ class GpsTrackSyncService
         // ⚡ Matikan query log agar tidak menumpuk di memory saat proses besar
         \Illuminate\Support\Facades\DB::connection()->disableQueryLog();
 
-        // ✅ FILTER: Skip data dengan speed = 0 km/h
+        // ✅ FILTER 1: Skip data dengan speed = 0 km/h
         $records = array_filter($records, function ($item) {
             return isset($item['speed']) && (int)$item['speed'] > 0;
+        });
+
+        if (empty($records)) return 0;
+
+        // ✅ FILTER 2: Skip data dengan createtime dari masa depan (hardware clock rusak)
+        $nowWib = now()->setTimezone('Asia/Jakarta');
+        $records = array_filter($records, function ($item) use ($nowWib) {
+            $rawTime = $item['createtime'] ?? null;
+            if (!$rawTime) return true; // Kalau tidak ada waktu, biarkan masuk
+            try {
+                $t = \Carbon\Carbon::parse($rawTime, 'Asia/Jakarta');
+                return $t->lessThanOrEqualTo($nowWib);
+            } catch (\Throwable $e) {
+                return true;
+            }
         });
 
         if (empty($records)) return 0;
