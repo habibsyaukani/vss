@@ -108,30 +108,45 @@ class HowenWebsocketListenCommand extends Command
 
             // 4. Handle Incoming Messages
             $conn->on('message', function ($msg) use ($conn) {
-                $data = json_decode($msg->getPayload(), true);
+                $rawPayload = $msg->getPayload();
+                $data = json_decode($rawPayload, true);
                 if (!$data) return;
 
                 $action = $data['action'] ?? null;
+
+                // Log ALL incoming messages for debugging
+                Log::debug("[HowenWS] RAW IN action={$action}: " . substr($rawPayload, 0, 300));
                 
                 // Handle Login Response
                 if ($action === '80000') {
-                    if (($data['payload']['result'] ?? '') === 'success' || ($data['msg'] ?? '') === 'success') {
-                        $this->info("✅ Login successful. Sending Subscribe (80001)...");
+                    Log::info('[HowenWS] Login response: ' . $rawPayload);
+                    // Howen dapat return msg='success' ATAU payload.result='success' tergantung versi
+                    $isSuccess = ($data['msg'] ?? '') === 'success'
+                        || ($data['payload']['result'] ?? '') === 'success'
+                        || ($data['payload']['msg']    ?? '') === 'success'
+                        || ($data['status'] ?? 0) === 10000;
+
+                    if ($isSuccess) {
+                        $this->info('✅ Login successful. Sending Subscribe (80001)...');
+                        Log::info('[HowenWS] Login successful, sending Subscribe');
                         $conn->send(json_encode([
-                            'action' => '80001',
-                            'payload' => ''
+                            'action'  => '80001',
+                            'payload' => ['username' => $this->username]
                         ]));
-                        $this->info("📡 Subscribed to realtime events!");
+                        Log::info('[HowenWS] Subscribe sent');
+                        $this->info('📡 Subscribed to realtime events!');
                     } else {
-                        $this->error("❌ Login failed: " . json_encode($data));
-                        $conn->close(); // Will trigger reconnect
+                        $this->error('❌ Login failed: ' . $rawPayload);
+                        Log::error('[HowenWS] Login FAILED: ' . $rawPayload);
+                        $conn->close();
                     }
                     return;
                 }
 
-                // Handle Subscribe Response (Optional verification)
+                // Handle Subscribe Response
                 if ($action === '80001') {
-                    $this->line("✅ Subscribe response received.");
+                    Log::info('[HowenWS] Subscribe response: ' . substr($rawPayload, 0, 300));
+                    $this->line('✅ Subscribe response received.');
                     return;
                 }
 
