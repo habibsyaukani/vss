@@ -7,6 +7,7 @@ use App\Jobs\ProcessIdleAlarmJob;
 use App\Models\SystemSetting;
 use App\Models\AlarmRaw;
 use App\Models\IdleAlarm;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class PullIdleAlarmsRealtimeCommand extends Command
