@@ -5,28 +5,41 @@ $app = require_once __DIR__ . '/bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 echo "=========================================\n";
-echo "📡 TESTING HOWEN API REALTIME PULL RIGHT NOW\n";
+echo "🧪 TESTING HOWEN API PARAMETER PARAM CHECK\n";
 echo "=========================================\n\n";
 
 $authService = app(\App\Services\HowenAuthService::class);
-try {
-    $token = $authService->getToken();
-    echo "✅ Howen Auth Token: " . substr($token, 0, 15) . "...\n";
-} catch (\Exception $e) {
-    echo "❌ Howen Auth Token Error: " . $e->getMessage() . "\n";
-    exit(1);
-}
-
+$token = $authService->getToken();
 $beginTime = now()->subHours(6)->format('Y-m-d H:i:s');
 $endTime   = now()->format('Y-m-d H:i:s');
-
-echo "Range: $beginTime → $endTime\n\n";
-
 $client = new \GuzzleHttp\Client(['timeout' => 30, 'verify' => false]);
 $apiUrl = config('vss.howen_api_url');
 
+// Test 1: WITH empty deviceID parameter
+echo "--- TEST 1: Sending 'deviceID' => '' ---\n";
 try {
-    $response = $client->post("{$apiUrl}/alarm/apiFindAllByTime.action", [
+    $res1 = $client->post("{$apiUrl}/alarm/apiFindAllByTime.action", [
+        'form_params' => [
+            'token' => $token,
+            'pageNum' => 1,
+            'pageCount' => 50,
+            'beginTime' => $beginTime,
+            'endTime' => $endTime,
+            'alarmType' => '',
+            'deviceID' => '',
+        ],
+    ]);
+    $data1 = json_decode($res1->getBody()->getContents(), true);
+    $items1 = $data1['data']['dataList'] ?? [];
+    echo "Count with empty deviceID: " . count($items1) . " items\n\n";
+} catch (\Exception $e) {
+    echo "Error 1: " . $e->getMessage() . "\n\n";
+}
+
+// Test 2: WITHOUT deviceID parameter
+echo "--- TEST 2: OMITTING deviceID parameter ---\n";
+try {
+    $res2 = $client->post("{$apiUrl}/alarm/apiFindAllByTime.action", [
         'form_params' => [
             'token' => $token,
             'pageNum' => 1,
@@ -35,35 +48,11 @@ try {
             'endTime' => $endTime,
         ],
     ]);
-
-    $body = $response->getBody()->getContents();
-    $data = json_decode($body, true);
-
-    $alarms = $data['data']['dataList'] ?? [];
-    echo "✅ SUCCESS: Found " . count($alarms) . " alarms in dataList!\n\n";
-
-    foreach ($alarms as $i => $alarm) {
-        $name  = $alarm['deviceName'] ?? $alarm['devicename'] ?? 'N/A';
-        $type  = $alarm['alarmType'] ?? $alarm['alarmtype'] ?? 'N/A';
-        $state = $alarm['alarmState'] ?? $alarm['alarmstate'] ?? 'N/A';
-        $start = $alarm['startAlarmTimeStr'] ?? $alarm['startalarmtimestr'] ?? 'N/A';
-        $end   = $alarm['endAlarmTimeStr'] ?? $alarm['endalarmtimestr'] ?? 'N/A';
-        $val   = $alarm['alarmvalue'] ?? $alarm['alarmValue'] ?? 'N/A';
-
-        echo sprintf(
-            "• [#%d] %-12s | Type: %-3s | State: %s | Start: %s | End: %s | Val: %s\n",
-            $i + 1,
-            $name,
-            $type,
-            $state,
-            $start,
-            $end,
-            $val
-        );
-    }
-
+    $data2 = json_decode($res2->getBody()->getContents(), true);
+    $items2 = $data2['data']['dataList'] ?? [];
+    echo "Count without deviceID: " . count($items2) . " items\n\n";
 } catch (\Exception $e) {
-    echo "❌ API Request Failed: " . $e->getMessage() . "\n";
+    echo "Error 2: " . $e->getMessage() . "\n\n";
 }
 
-echo "\n=========================================\n";
+echo "=========================================\n";
