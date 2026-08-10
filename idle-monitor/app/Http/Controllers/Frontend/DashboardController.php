@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\IdleAlarm;
 use App\Models\GpsTrackRaw;
+use App\Models\GpsTrack;
 use App\Models\Device;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -27,7 +28,7 @@ class DashboardController extends Controller
         $today    = Carbon::today()->toDateString();
         $cacheKey = "frontend_dashboard_v3_{$today}";
 
-        $data = Cache::remember($cacheKey, 300, function () use ($today) {
+        $data = Cache::remember($cacheKey, 60, function () use ($today) {
 
             $start = $today . ' 00:00:00';
             $end   = $today . ' 23:59:59';
