@@ -257,13 +257,33 @@ class HowenWebsocketListenCommand extends Command
         $acc = (isset($payload['basic']['key']) && $payload['basic']['key'] == 1);
 
         try {
-            // Simpan ke gps_tracks langsung (WebSocket adalah sumber real-time utama)
+            // 1. Simpan ke gps_tracks_raw agar struktur sama dengan metode HTTP Polling
+            // Web VAMS kemungkinan melakukan JOIN atau membutuhkan raw_id
+            $guid = 'ws_' . $deviceId . '_' . time() . '_' . rand(100, 999);
+            $raw = \App\Models\GpsTrackRaw::create([
+                'device_id'   => $deviceId,
+                'device_name' => $deviceName,
+                'guid'        => $guid,
+                'latitude'    => $lat,
+                'longitude'   => $lon,
+                'speed'       => $speed,
+                'direction'   => (int)($loc['direct'] ?? 0),
+                'satellites'  => (int)($loc['satellites'] ?? 0),
+                'altitude'    => (int)($loc['altitude'] ?? 0),
+                'acc_state'   => $acc ? 1 : 0,
+                'gps_time'    => $gpsTimeStr,
+                'report_time' => $gpsTimeStr,
+                'is_later'    => 0,
+            ]);
+
+            // 2. Simpan ke gps_tracks dengan raw_id
             \App\Models\GpsTrack::updateOrCreate(
                 [
                     'device_id' => $deviceId,
                     'gps_time'  => $gpsTimeStr,
                 ],
                 [
+                    'raw_id'      => $raw->id,
                     'device_name' => $deviceName,
                     'latitude'    => $lat,
                     'longitude'   => $lon,
@@ -276,13 +296,8 @@ class HowenWebsocketListenCommand extends Command
                 ]
             );
 
-            // Update lokasi terkini di tabel devices
-            if ($device) {
-                $device->update([
-                    'location'   => "{$lat},{$lon}",
-                    'updated_at' => now(),
-                ]);
-            }
+            // Kita hapus update 'devices' location karena HTTP polling juga tidak melakukannya
+            // Biarkan backend VAMS membaca dari gps_tracks
 
             Log::info("[HowenWS] GPS: {$deviceName} ({$deviceId}) | Speed: {$speed} | Time: {$gpsTimeStr}");
             $this->line("📍 GPS: {$deviceName} | Speed: {$speed} km/h | {$gpsTimeStr}");
