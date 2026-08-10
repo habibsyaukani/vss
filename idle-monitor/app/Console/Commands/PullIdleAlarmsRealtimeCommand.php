@@ -116,43 +116,41 @@ class PullIdleAlarmsRealtimeCommand extends Command
                         : (int)($alarm['alarmTimeLength'] ?? 0));
         
         $guid = $alarm['guid'] ?? $alarm['id'] ?? uniqid();
-        $deviceId = $alarm['deviceguid'] ?? $alarm['deviceID'] ?? $alarm['deviceId'] ?? $alarm['device_id'] ?? null;
+        $deviceId = $alarm['deviceguid'] ?? $alarm['deviceno'] ?? $alarm['deviceID'] ?? $alarm['device_id'] ?? null;
         $deviceName = $alarm['deviceName'] ?? $alarm['devicename'] ?? $alarm['device_name'] ?? null;
-        $alarmType = $alarm['alarmType'] ?? $alarm['alarmtype'] ?? $alarm['alarm_type'] ?? null;
+        $alarmType = $alarm['alarmtype'] ?? $alarm['alarmType'] ?? $alarm['alarm_type'] ?? null;
         $alarmState = $alarm['alarmState'] ?? $alarm['alarmstate'] ?? $alarm['alarm_state'] ?? 0;
-        
-        $startTime = $alarm['startAlarmTimeStr'] ?? $alarm['startAlarmTime'] ?? $alarm['alarmTimeStr'] ?? $alarm['alarmTime'] ?? $alarm['createtime'] ?? $alarm['start_time'] ?? null;
-        $endTime = $alarm['endAlarmTimeStr'] ?? $alarm['endAlarmTime'] ?? $alarm['endTime'] ?? $alarm['end_time'] ?? null;
-        
+
+        // ✅ Exact Howen API field names confirmed from live API test:
+        // 'createtime' = alarm START time
+        // 'endTime'    = alarm END time
+        $startTime = $alarm['createtime'] ?? $alarm['startAlarmTimeStr'] ?? $alarm['start_time'] ?? null;
+        $endTime   = $alarm['endTime']    ?? $alarm['endAlarmTimeStr']   ?? $alarm['end_time']   ?? null;
         $reportTime = $alarm['reportTime'] ?? $alarm['report_time'] ?? $startTime ?? now()->toDateTimeString();
 
         // If end_time is empty, calculate end_time from start_time + duration
-        if (empty($endTime) && !empty($startTime)) {
-            if ($duration > 0) {
-                $endTime = \Carbon\Carbon::parse($startTime)->addSeconds($duration)->toDateTimeString();
-            } else {
-                $endTime = $startTime;
-            }
+        if (empty($endTime) && !empty($startTime) && $duration > 0) {
+            $endTime = \Carbon\Carbon::parse($startTime)->addSeconds($duration)->toDateTimeString();
         }
 
         return [
-            'guid' => $guid,
-            'device_id' => $deviceId,
-            'device_name' => $deviceName,
-            'alarm_type' => $alarmType,
-            'alarm_value' => $alarmValue,
-            'alarm_state' => $alarmState,
-            'start_time' => $startTime,
-            'end_time' => $endTime,
-            'start_gps' => $alarm['alarmGps'] ?? $alarm['start_gps'] ?? null,
-            'end_gps' => $alarm['endGps'] ?? $alarm['end_gps'] ?? null,
-            'start_speed' => (float)($alarm['speed'] ?? $alarm['start_speed'] ?? 0),
-            'end_speed' => (float)($alarm['endSpeed'] ?? $alarm['end_speed'] ?? 0),
-            'report_time' => $reportTime,
+            'guid'             => $guid,
+            'device_id'        => $deviceId,
+            'device_name'      => $deviceName,
+            'alarm_type'       => $alarmType,
+            'alarm_value'      => $alarmValue,
+            'alarm_state'      => $alarmState,
+            'start_time'       => $startTime,
+            'end_time'         => $endTime,
+            'start_gps'        => $alarm['alarmGps']  ?? $alarm['start_gps'] ?? null,
+            'end_gps'          => $alarm['endGps']    ?? $alarm['end_gps']   ?? null,
+            'start_speed'      => (float)($alarm['speed']    ?? $alarm['start_speed'] ?? 0),
+            'end_speed'        => (float)($alarm['endSpeed'] ?? $alarm['end_speed']   ?? 0),
+            'report_time'      => $reportTime,
             'duration_seconds' => $duration,
-            'start_detail' => $alarmValue,
-            'end_detail' => $endDetail ?: null,
-            'raw_json' => json_encode($alarm),
+            'start_detail'     => $alarmValue,
+            'end_detail'       => $endDetail ?: null,
+            'raw_json'         => json_encode($alarm),
         ];
     }
 }
