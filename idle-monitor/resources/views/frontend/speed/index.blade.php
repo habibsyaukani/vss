@@ -494,7 +494,7 @@
     <!-- Speed Filter -->
     <div class="speed-filter-group ms-3">
         <label><i class="fas fa-tachometer-alt me-1"></i> SPEED</label>
-        <button type="button" class="btn-speed-filter" id="btnLowSpeed">
+        <button type="button" class="btn-speed-filter active-low" id="btnLowSpeed">
             <span class="speed-dot" style="background:#1963f2;"></span>
             Low Speed &lt;15 km/h
         </button>
@@ -568,8 +568,8 @@ $(function() {
         return ids;
     }
 
-    // ---- Speed Filter State — default: Tampilkan Semua ----
-    let activeSpeedFilter = '';
+    // ---- Speed Filter State — default: Low Speed aktif ----
+    let activeSpeedFilter = 'low';
 
     // Disable annoying DataTables alert popup (e.g., when AJAX is aborted by clicking another filter quickly)
     $.fn.dataTable.ext.errMode = 'none';
