@@ -411,7 +411,8 @@ class GpsTrackSyncService
             if (isset($existingTrackRawIds[$rawId])) continue; // sudah ada, skip
 
             $item     = $validRecords[$guid];
-            $trackMap = $this->mapToDisplay($item, $deviceId, $rawId);
+            $resolvedDeviceId = $deviceId ?? ($item['_injected_device_id'] ?? null);
+            $trackMap = $this->mapToDisplay($item, $resolvedDeviceId, $rawId);
             if (isset($trackMap['gps_time']) && $trackMap['gps_time'] instanceof Carbon) {
                 $trackMap['gps_time'] = $trackMap['gps_time']->toDateTimeString();
             }
@@ -488,11 +489,11 @@ class GpsTrackSyncService
     // MAPPING: VSS response → gps_tracks (display)
     // ----------------------------------------------------------------
 
-    private function mapToDisplay(array $item, string $deviceId, int $rawId): array
+    private function mapToDisplay(array $item, ?string $deviceId, int $rawId): array
     {
         return [
             'raw_id'             => $rawId,
-            'device_id'          => $deviceId,
+            'device_id'          => $deviceId ?? ($item['_injected_device_id'] ?? null),
             'device_name'        => $item['deviceName'] ?? null,
             'longitude'          => $item['longitude']  ?? null,
             'latitude'           => $item['latitude']   ?? null,
