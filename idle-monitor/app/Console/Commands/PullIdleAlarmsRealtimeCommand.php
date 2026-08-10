@@ -55,7 +55,7 @@ class PullIdleAlarmsRealtimeCommand extends Command
             // Store to alarm_raw
             $inserted = 0;
             foreach ($allAlarms as $alarm) {
-                $deviceId = $alarm['deviceguid'] ?? $alarm['device_id'] ?? null;
+                $deviceId = $alarm['deviceguid'] ?? $alarm['deviceID'] ?? $alarm['deviceId'] ?? $alarm['device_id'] ?? null;
                 if (!$deviceId) continue;
 
                 AlarmRaw::updateOrCreate(
