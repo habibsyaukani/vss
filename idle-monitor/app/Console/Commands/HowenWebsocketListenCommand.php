@@ -251,7 +251,7 @@ class HowenWebsocketListenCommand extends Command
 
         if ($lat == 0 || $lon == 0) return; // Invalid GPS
 
-        $device = Device::where('device_id', $deviceId)->select('id', 'device_name', 'serial_no')->first();
+        $device = Device::where('device_id', $deviceId)->select('id', 'device_name')->first();
         $deviceName = $device ? $device->device_name : null;
 
         $acc = (isset($payload['basic']['key']) && $payload['basic']['key'] == 1);
@@ -328,9 +328,9 @@ class HowenWebsocketListenCommand extends Command
             }
         }
 
-        $device     = Device::where('device_id', $deviceId)->select('id', 'device_name', 'serial_no')->first();
+        $device     = Device::where('device_id', $deviceId)->select('id', 'device_name', 'imei')->first();
         $deviceName = $device ? $device->device_name : null;
-        $serialNo   = $device ? $device->serial_no   : null;
+        $serialNo   = $device ? $device->imei        : null; // Fallback ke imei karena serial_no tidak ada di tabel devices
 
         $lat = (float)($loc['latitude']  ?? 0);
         $lon = (float)($loc['longitude'] ?? 0);
