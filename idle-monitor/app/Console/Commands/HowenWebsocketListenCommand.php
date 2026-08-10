@@ -196,103 +196,171 @@ class HowenWebsocketListenCommand extends Command
         if (empty($loc)) return;
 
         $speed = (float)($loc['speed'] ?? 0);
-        $dtu = $loc['dtu'] ?? now()->toDateTimeString();
+        if ($speed <= 0) return; // Skip jika speed = 0 (tidak bergerak)
+
+        // dtu dari WebSocket dalam format WIB (UTC+7), konversi ke WITA (UTC+8)
+        $dtuRaw = $loc['dtu'] ?? null;
+        if ($dtuRaw) {
+            try {
+                $gpsTime = \Carbon\Carbon::parse($dtuRaw, 'Asia/Jakarta')->setTimezone('Asia/Makassar');
+                // Tolak timestamp masa depan dari hardware clock rusak
+                if ($gpsTime->greaterThan(now()->addMinutes(1))) {
+                    Log::warning("[HowenWS] Future timestamp ignored from device {$deviceId}: {$dtuRaw}");
+                    return;
+                }
+                $gpsTimeStr = $gpsTime->toDateTimeString();
+            } catch (\Exception $e) {
+                $gpsTimeStr = now()->toDateTimeString();
+            }
+        } else {
+            $gpsTimeStr = now()->toDateTimeString();
+        }
+
         $lat = (float)($loc['latitude'] ?? 0);
         $lon = (float)($loc['longitude'] ?? 0);
-        
-        $acc = (isset($payload['basic']['key']) && $payload['basic']['key'] == 1) ? true : false;
-        
+
         if ($lat == 0 || $lon == 0) return; // Invalid GPS
 
-        // Update to gps_tracks
-        // Menggunakan updateOrCreate untuk mencegah duplikasi jika waktu sama persis
-        GpsTrack::updateOrCreate(
-            [
-                'device_id' => $deviceId,
-                'gps_time' => $dtu
-            ],
-            [
-                'latitude' => $lat,
-                'longitude' => $lon,
-                'speed' => $speed,
-                'direction' => $loc['direct'] ?? 0,
-                'satellites' => $loc['satellites'] ?? 0,
-                'altitude' => $loc['altitude'] ?? 0,
-                'is_acc_on' => $acc,
-                // Kolom lain dapat disesuaikan dengan skema tabel GpsTrack Anda
-            ]
-        );
+        $device = Device::where('device_id', $deviceId)->select('id', 'device_name', 'serial_no')->first();
+        $deviceName = $device ? $device->device_name : null;
 
-        // Opsional: Anda bisa memperbarui 'location' (format lat,lon) di tabel devices
-        Device::where('device_id', $deviceId)->update([
-            'location' => "{$lat},{$lon}",
-            'updated_at' => now()
-        ]);
-        
-        $this->line("📍 GPS Updated: Device {$deviceId} at {$dtu} (Speed: {$speed})");
+        $acc = (isset($payload['basic']['key']) && $payload['basic']['key'] == 1);
+
+        try {
+            // Simpan ke gps_tracks langsung (WebSocket adalah sumber real-time utama)
+            \App\Models\GpsTrack::updateOrCreate(
+                [
+                    'device_id' => $deviceId,
+                    'gps_time'  => $gpsTimeStr,
+                ],
+                [
+                    'device_name' => $deviceName,
+                    'latitude'    => $lat,
+                    'longitude'   => $lon,
+                    'speed'       => $speed,
+                    'direction'   => (int)($loc['direct'] ?? 0),
+                    'satellites'  => (int)($loc['satellites'] ?? 0),
+                    'altitude'    => (int)($loc['altitude'] ?? 0),
+                    'is_acc_on'   => $acc,
+                    'report_time' => $gpsTimeStr,
+                ]
+            );
+
+            // Update lokasi terkini di tabel devices
+            if ($device) {
+                $device->update([
+                    'location'   => "{$lat},{$lon}",
+                    'updated_at' => now(),
+                ]);
+            }
+
+            Log::info("[HowenWS] GPS: {$deviceName} ({$deviceId}) | Speed: {$speed} | Time: {$gpsTimeStr}");
+            $this->line("📍 GPS: {$deviceName} | Speed: {$speed} km/h | {$gpsTimeStr}");
+
+        } catch (\Exception $e) {
+            Log::error("[HowenWS] GPS save error for {$deviceId}: " . $e->getMessage());
+        }
     }
 
     private function handleAlarmPush($payload)
     {
         $deviceId = $payload['deviceID'] ?? null;
-        $alarmId = $payload['alarmID'] ?? null; // Digunakan sebagai GUID
-        $ec = $payload['ec'] ?? null;           // Event Code / Alarm Type
-        
+        $alarmId  = $payload['alarmID']  ?? null;
+        $ec       = $payload['ec']       ?? null; // Event Code / Alarm Type
+
         if (!$deviceId || !$alarmId) return;
 
-        // ec = 32 adalah Idle Alarm
-        if ($ec != '32' && $ec != 32) {
-            return; // Ignore other alarms
-        }
-
-        $st = $payload['st'] ?? null; // Start Time
-        $et = $payload['et'] ?? null; // End Time
+        $st  = $payload['st']  ?? null; // Start Time (WIB)
+        $et  = $payload['et']  ?? null; // End Time (WIB)
         $loc = $payload['location'] ?? [];
+
+        // Konversi WIB → WITA
+        $toWita = function (?string $t): ?string {
+            if (!$t) return null;
+            try {
+                return \Carbon\Carbon::parse($t, 'Asia/Jakarta')->setTimezone('Asia/Makassar')->toDateTimeString();
+            } catch (\Exception $e) {
+                return $t;
+            }
+        };
+
+        $startTimeWita = $toWita($st);
+        $endTimeWita   = $toWita($et);
 
         $durationSeconds = 0;
         $durationMinutes = 0;
-        
-        if ($st && $et) {
-            $startTime = \Carbon\Carbon::parse($st);
-            $endTime = \Carbon\Carbon::parse($et);
-            $durationSeconds = $endTime->diffInSeconds($startTime);
-            $durationMinutes = ceil($durationSeconds / 60);
+        if ($startTimeWita && $endTimeWita) {
+            try {
+                $durationSeconds = \Carbon\Carbon::parse($endTimeWita)->diffInSeconds(\Carbon\Carbon::parse($startTimeWita));
+                $durationMinutes = (int) ceil($durationSeconds / 60);
+            } catch (\Exception $e) {
+                // ignore
+            }
         }
 
-        // Jika durasi 0, abaikan (mungkin alarm invalid atau alarm mulai tapi belum selesai)
-        if ($durationSeconds <= 0) return;
+        $device     = Device::where('device_id', $deviceId)->select('id', 'device_name', 'serial_no')->first();
+        $deviceName = $device ? $device->device_name : null;
+        $serialNo   = $device ? $device->serial_no   : null;
 
-        $lat = (float)($loc['latitude'] ?? 0);
+        $lat = (float)($loc['latitude']  ?? 0);
         $lon = (float)($loc['longitude'] ?? 0);
-        $gpsString = ($lat && $lon) ? "{$lon},{$lat}" : null; // Howen format lon,lat
+        $gpsString = ($lat && $lon) ? "{$lon},{$lat}" : null;
 
-        // Cari data device untuk mendapatkan serial_no dan device_name
-        $device = Device::where('device_id', $deviceId)->first();
-        
-        IdleAlarm::updateOrCreate(
-            ['guid' => $alarmId],
-            [
-                'serial_no' => $device ? $device->serial_no : null,
-                'device_id' => $deviceId,
-                'device_name' => $device ? $device->device_name : null,
-                'alarm_type' => 'Idle',
-                'alarm_status' => 'ALARM_END', // Realtime push mengirimkan saat alarm selesai
-                'starting_time' => $st,
-                'ending_time' => $et,
-                'duration_seconds' => $durationSeconds,
-                'duration_minutes' => $durationMinutes,
-                'latitude_start' => $lat, // Asumsikan start/end di posisi yang sama untuk idle
-                'longitude_start' => $lon,
-                'latitude_end' => $lat,
-                'longitude_end' => $lon,
-                'starting_location' => $gpsString,
-                'ending_location' => $gpsString,
-                'start_speed' => 0,
-                'end_speed' => (float)($loc['speed'] ?? 0),
-                'report_time' => $loc['dtu'] ?? now()->toDateTimeString(),
-            ]
-        );
+        $alarmTypeName = $payload['alarmTypeName'] ?? ('AlarmCode-' . $ec);
 
-        $this->info("🚨 Idle Alarm Received: Device {$deviceId} duration {$durationMinutes} min");
+        try {
+            // 1. Simpan ke alarm_raws (semua alarm types)
+            \App\Models\AlarmRaw::updateOrCreate(
+                ['guid' => $alarmId],
+                [
+                    'device_id'      => $deviceId,
+                    'device_name'    => $deviceName,
+                    'serial_no'      => $serialNo,
+                    'alarm_type'     => $alarmTypeName,
+                    'alarm_type_code'=> $ec,
+                    'alarm_state'    => 'ALARM_END',
+                    'start_time'     => $startTimeWita,
+                    'end_time'       => $endTimeWita,
+                    'latitude'       => $lat ?: null,
+                    'longitude'      => $lon ?: null,
+                    'location'       => $gpsString,
+                    'speed'          => (float)($loc['speed'] ?? 0),
+                    'source'         => 'websocket',
+                ]
+            );
+
+            // 2. Jika ec = 32 (Idle), simpan juga ke idle_alarms
+            if (($ec == '32' || $ec == 32) && $durationSeconds > 0) {
+                \App\Models\IdleAlarm::updateOrCreate(
+                    ['guid' => $alarmId],
+                    [
+                        'serial_no'        => $serialNo,
+                        'device_id'        => $deviceId,
+                        'device_name'      => $deviceName,
+                        'alarm_type'       => 'Idle',
+                        'alarm_status'     => 'ALARM_END',
+                        'starting_time'    => $startTimeWita,
+                        'ending_time'      => $endTimeWita,
+                        'duration_seconds' => $durationSeconds,
+                        'duration_minutes' => $durationMinutes,
+                        'latitude_start'   => $lat ?: null,
+                        'longitude_start'  => $lon ?: null,
+                        'latitude_end'     => $lat ?: null,
+                        'longitude_end'    => $lon ?: null,
+                        'starting_location'=> $gpsString,
+                        'ending_location'  => $gpsString,
+                        'start_speed'      => 0,
+                        'end_speed'        => (float)($loc['speed'] ?? 0),
+                        'report_time'      => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
+                    ]
+                );
+                $this->info("🚨 Idle Alarm: {$deviceName} durasi {$durationMinutes} menit");
+            }
+
+            Log::info("[HowenWS] Alarm ec={$ec} ({$alarmTypeName}) device {$deviceId} disimpan.");
+
+        } catch (\Exception $e) {
+            Log::error("[HowenWS] Alarm save error for {$deviceId}: " . $e->getMessage());
+        }
     }
 }
