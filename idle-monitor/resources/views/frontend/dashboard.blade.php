@@ -312,6 +312,7 @@
         <a href="#">Lihat semua</a>
     </div>
     <div class="sidebar-list">
+        @php $rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue']; @endphp
         @forelse($topIdleUnits as $i => $unit)
             <div class="sidebar-item">
                 <div class="sidebar-rank {{ $rankColors[$i] ?? 'rank-blue' }}">{{ $i + 1 }}</div>
