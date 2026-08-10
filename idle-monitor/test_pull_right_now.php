@@ -32,6 +32,15 @@ try {
     $data1 = json_decode($res1->getBody()->getContents(), true);
     $items1 = $data1['data']['dataList'] ?? [];
     echo "Count with empty deviceID: " . count($items1) . " items\n\n";
+
+    if (!empty($items1)) {
+        $first = $items1[0];
+        echo "=== ALL FIELD NAMES IN FIRST ALARM ===\n";
+        foreach ($first as $key => $value) {
+            echo "  '$key' => " . (is_string($value) || is_numeric($value) ? $value : json_encode($value)) . "\n";
+        }
+        echo "\n";
+    }
 } catch (\Exception $e) {
     echo "Error 1: " . $e->getMessage() . "\n\n";
 }
