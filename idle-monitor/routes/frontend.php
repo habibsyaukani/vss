@@ -10,6 +10,7 @@ Route::middleware(['auth', 'fleet_manager', 'single_session'])->prefix('')->name
     
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/speed-stats', [DashboardController::class, 'speedStats'])->name('dashboard.speed-stats');
 
     // Idle Alarm Management (Read-only)
     Route::get('/idle-alarm', [IdleAlarmController::class, 'index'])->name('idle-alarm.index');

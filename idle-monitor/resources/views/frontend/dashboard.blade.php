@@ -302,17 +302,8 @@
         <div><i class="fas fa-trophy text-orange-400" style="color:#f97316"></i> TOP SPEED HARI INI</div>
         <a href="#">Lihat semua</a>
     </div>
-    <div class="sidebar-list mb-4">
-        @php $rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue']; @endphp
-        @forelse($topSpeedUnits as $i => $unit)
-            <div class="sidebar-item">
-                <div class="sidebar-rank {{ $rankColors[$i] ?? 'rank-blue' }}">{{ $i + 1 }}</div>
-                <div class="sidebar-name" title="{{ $unit->device_name }}">{{ $unit->device_name }}</div>
-                <div class="sidebar-value red">{{ $unit->max_speed }}<span>km/h</span></div>
-            </div>
-        @empty
-            <div style="font-size:12px;color:#94a3b8;text-align:center;">Belum ada data</div>
-        @endforelse
+    <div class="sidebar-list mb-4" id="sidebarTopSpeed">
+        <div style="font-size:12px;color:#94a3b8;text-align:center;"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
     </div>
 
     <!-- Top Idle -->
@@ -366,7 +357,7 @@
                 <div class="stat-content">
                     <div class="stat-label">MAX SPEED HARI INI</div>
                     <div class="stat-value-row">
-                        <div class="stat-value" style="color:#22c55e;">{{ $stats['max_speed'] }}</div>
+                        <div class="stat-value" id="statMaxSpeed" style="color:#22c55e;"><i class="fas fa-circle-notch fa-spin" style="font-size:24px"></i></div>
                         <div class="stat-unit">km/h</div>
                     </div>
                     <div class="stat-desc">
@@ -385,7 +376,7 @@
                 <div class="stat-content">
                     <div class="stat-label">AVG SPEED HARI INI</div>
                     <div class="stat-value-row">
-                        <div class="stat-value" style="color:#f97316;">{{ $stats['avg_speed'] }}</div>
+                        <div class="stat-value" id="statAvgSpeed" style="color:#f97316;"><i class="fas fa-circle-notch fa-spin" style="font-size:24px"></i></div>
                         <div class="stat-unit">km/h</div>
                     </div>
                     <div class="stat-desc">
@@ -606,124 +597,100 @@ new Chart(idleCtx, {
 });
 generateLegend(idleLabels, idleCounts, chartColors, 'idleLegend', true, '');
 
-// 2. Speed per Fleet (Donut Chart) - MULTI COLOR
-const speedLabels = {!! json_encode($speedPerFleet['labels']) !!};
-const speedCounts = {!! json_encode($speedPerFleet['counts']) !!};
-const maxSpeedOverall = speedCounts.length > 0 ? Math.max(...speedCounts) : 0;
-
-// Define unique colors for each fleet (6 different colors)
-const speedColors = [
-    '#ef4444',  // Red - B-GPE
-    '#f97316',  // Orange - DT-GPE
-    '#f59e0b',  // Amber - FT-GPE
-    '#8b5cf6',  // Purple - HD-GPE
-    '#3b82f6',  // Blue - WT-GPE
-    '#10b981'   // Green - LV-GPE
-];
-
+// 2. Speed Donut Chart — placeholder (will be updated via AJAX)
+const speedColors = ['#ef4444','#f97316','#f59e0b','#8b5cf6','#3b82f6','#10b981'];
 const speedCtx = document.getElementById('speedDonutChart').getContext('2d');
-new Chart(speedCtx, {
+const speedDonutChart = new Chart(speedCtx, {
     type: 'doughnut',
     data: {
-        labels: speedLabels,
-        datasets: [{
-            data: speedCounts.length > 0 ? speedCounts : [1],
-            backgroundColor: speedCounts.length > 0 ? speedColors.slice(0, speedCounts.length) : ['#e2e8f0'],
-            borderWidth: 0,
-            hoverOffset: 6
-        }]
+        labels: ['Loading...'],
+        datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }]
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '75%',
-        plugins: {
-            legend: { display: false },
-            centerText: {
-                value: maxSpeedOverall,
-                label: 'KM/H MAX',
-                colorValue: '#ef4444'
-            }
-        }
+        responsive: true, maintainAspectRatio: false, cutout: '75%',
+        plugins: { legend: { display: false }, centerText: { value: '...', label: 'KM/H MAX', colorValue: '#94a3b8' } }
     }
 });
-generateLegend(speedLabels, speedCounts, speedColors, 'speedLegend', false, 'km/h');
 
-
-// 3. Trend Idle Alarm - Bar Chart
+// 3. Trend Idle Alarm - Bar Chart (static, fast)
 const idleBarCtx = document.getElementById('idleBarChart').getContext('2d');
 new Chart(idleBarCtx, {
     type: 'bar',
     data: {
         labels: {!! json_encode($idlePerDay['days']) !!},
-        datasets: [{
-            label: 'Idle Alarm',
-            data: {!! json_encode($idlePerDay['counts']) !!},
-            backgroundColor: '#3b82f6',
-            borderRadius: 4,
-            barThickness: 35
-        }]
+        datasets: [{ label: 'Idle Alarm', data: {!! json_encode($idlePerDay['counts']) !!}, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 35 }]
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: { label: function(c) { return c.parsed.y + ' alarms'; } }
-            }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + ' alarms' } } },
         scales: {
-            x: {
-                grid: { display: false },
-                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' }
-            },
-            y: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9', drawBorder: false },
-                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' },
-                border: { display: false }
-            }
+            x: { grid: { display: false }, ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' } },
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' }, border: { display: false } }
         }
     }
 });
 
-// 4. Trend Max Speed - Bar Chart
+// 4. Trend Max Speed - Bar Chart — placeholder
 const speedBarCtx = document.getElementById('speedBarChart').getContext('2d');
-new Chart(speedBarCtx, {
+const speedBarChart = new Chart(speedBarCtx, {
     type: 'bar',
     data: {
-        labels: {!! json_encode($speedPerDay['days']) !!},
-        datasets: [{
-            label: 'Max Speed',
-            data: {!! json_encode($speedPerDay['counts']) !!},
-            backgroundColor: '#ef4444',
-            borderRadius: 4,
-            barThickness: 35
-        }]
+        labels: ['Loading...'],
+        datasets: [{ label: 'Max Speed', data: [0], backgroundColor: '#ef4444', borderRadius: 4, barThickness: 35 }]
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: { label: function(c) { return c.parsed.y + ' km/h'; } }
-            }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + ' km/h' } } },
         scales: {
-            x: {
-                grid: { display: false },
-                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' }
-            },
-            y: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9', drawBorder: false },
-                ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' },
-                border: { display: false }
-            }
+            x: { grid: { display: false }, ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' } },
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11, weight: 600, family: 'Inter' }, color: '#64748b' }, border: { display: false } }
         }
     }
 });
+
+// ── AJAX: Load speed data setelah halaman tampil ──────────────────────────
+const rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue'];
+fetch('{{ route("frontend.dashboard.speed-stats") }}')
+    .then(r => r.json())
+    .then(d => {
+        // Update stat cards
+        document.getElementById('statMaxSpeed').textContent = d.max_speed;
+        document.getElementById('statAvgSpeed').textContent = d.avg_speed;
+
+        // Update sidebar top speed
+        const rankClasses = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue'];
+        const sidebarEl = document.getElementById('sidebarTopSpeed');
+        if (d.topSpeedUnits && d.topSpeedUnits.length > 0) {
+            sidebarEl.innerHTML = d.topSpeedUnits.map((u, i) => `
+                <div class="sidebar-item">
+                    <div class="sidebar-rank ${rankClasses[i] || 'rank-blue'}">${i+1}</div>
+                    <div class="sidebar-name" title="${u.device_name}">${u.device_name}</div>
+                    <div class="sidebar-value red">${parseFloat(u.max_speed).toFixed(1)}<span>km/h</span></div>
+                </div>`).join('');
+        } else {
+            sidebarEl.innerHTML = '<div style="font-size:12px;color:#94a3b8;text-align:center;">Belum ada data</div>';
+        }
+
+        // Update speed donut chart
+        const sLabels = d.speedPerFleet.labels;
+        const sCounts = d.speedPerFleet.counts;
+        const maxSpd  = sCounts.length > 0 ? Math.max(...sCounts) : 0;
+        speedDonutChart.data.labels = sLabels.length ? sLabels : ['Tidak ada data'];
+        speedDonutChart.data.datasets[0].data = sCounts.length ? sCounts : [1];
+        speedDonutChart.data.datasets[0].backgroundColor = sCounts.length ? speedColors.slice(0, sCounts.length) : ['#e2e8f0'];
+        speedDonutChart.options.plugins.centerText = { value: maxSpd, label: 'KM/H MAX', colorValue: '#ef4444' };
+        speedDonutChart.update();
+        generateLegend(sLabels, sCounts, speedColors, 'speedLegend', false, 'km/h');
+
+        // Update speed bar chart
+        speedBarChart.data.labels = d.speedPerDay.days;
+        speedBarChart.data.datasets[0].data = d.speedPerDay.counts;
+        speedBarChart.update();
+    })
+    .catch(err => {
+        console.warn('Speed stats AJAX error:', err);
+        document.getElementById('statMaxSpeed').textContent = '—';
+        document.getElementById('statAvgSpeed').textContent = '—';
+    });
 </script>
 @endsection
