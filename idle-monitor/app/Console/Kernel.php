@@ -67,12 +67,13 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Pull GPS track data (fallback, last 1 hour)');
 
-        // Process GPS tracks every 3 minutes (raw → display table)
-        $schedule->job(new \App\Jobs\ProcessGpsTrackJob())
-             ->everyThreeMinutes()
-             ->withoutOverlapping(5)
-             ->runInBackground()
-             ->description('Process GPS tracks (raw to display)');
+        // Process GPS tracks every 3 minutes (dispatch to queue)
+        $schedule->call(function () {
+            \App\Jobs\ProcessGpsTrackJob::dispatch();
+        })
+            ->everyThreeMinutes()
+            ->withoutOverlapping(5)
+            ->description('Process GPS tracks (raw to display)');
 
         // ========================================
         // 🗑️ DATABASE CLEANUP (AUTO-MAINTENANCE)
