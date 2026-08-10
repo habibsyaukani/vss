@@ -71,173 +71,178 @@ class ProcessIdleAlarmJob implements ShouldQueue
 
             SystemLogger::success('PROCESSING', "Found {$pendingCount} new idle alarms to process");
 
-            // ✅ OPTIMASI: Filter di level database agar tidak meload seluruh data ke RAM
+            // ✅ OPTIMASI: Loop do-while mengambil 500 record belum diproses per iterasi
             // Order BY ID DESC agar data TERBARU (hari ini) diproses TERLEBIH DAHULU
-            \App\Models\AlarmRaw::where('alarm_type', 32)
-                ->where('alarm_state', 0)
-                ->where('is_processed', 0)
-                ->orderBy('id', 'desc')
-                ->chunk(500, function ($alarms) use (&$processed, &$skipped, $processLog, $maxRecordsPerRun) {
-                    if ($processed >= $maxRecordsPerRun) {
-                        return false; // Stop chunk loop if limit reached
-                    }
-                    SystemLogger::success('PROCESSING', "Processing chunk of alarms", ['count' => $alarms->count()]);
-                    $chunkRawIds = [];
+            do {
+                $alarms = \App\Models\AlarmRaw::where('alarm_type', 32)
+                    ->where('alarm_state', 0)
+                    ->where('is_processed', 0)
+                    ->orderBy('id', 'desc')
+                    ->take(500)
+                    ->get();
 
-                    foreach ($alarms as $alarmRaw) {
-                        $chunkRawIds[] = $alarmRaw->id;
+                if ($alarms->isEmpty()) {
+                    break;
+                }
 
-                        try {
-                            // Extract fields
-                            $startSpeed = (float)($alarmRaw->start_speed ?? 0);
-                            $endSpeed = (float)($alarmRaw->end_speed ?? 0);
-                            $alarmType = (int)($alarmRaw->alarm_type ?? 0);
-                            $alarmState = (int)($alarmRaw->alarm_state ?? 0);
-                            
-                            // Calculate duration with correct priority based on Howen logic:
-                            // 1. If start_detail has dur > 0: USE start_detail
-                            // 2. If start_detail has dur:0 or empty: USE end_detail
-                            // 3. If both empty: USE alarmTimeLength
-                            $durationFromStart = 0;
-                            if (!empty($alarmRaw->alarm_value) && preg_match('/dur:(\d+)/', $alarmRaw->alarm_value, $m)) {
-                                $durationFromStart = (int)$m[1];
-                            }
+                SystemLogger::success('PROCESSING', "Processing chunk of alarms", ['count' => $alarms->count()]);
+                $chunkRawIds = [];
 
-                            $durationFromEnd = 0;
-                            if (!empty($alarmRaw->end_detail) && preg_match('/dur:(\d+)/', $alarmRaw->end_detail, $m)) {
-                                $durationFromEnd = (int)$m[1];
-                            }
+                foreach ($alarms as $alarmRaw) {
+                    $chunkRawIds[] = $alarmRaw->id;
 
-                            $alarmTimeLength = (int)($alarmRaw->duration_seconds ?? 0);
-                            
-                            // Priority: start_detail (if > 0) > endDetail > alarmTimeLength
-                            $durationSeconds = $durationFromStart > 0 ? $durationFromStart : 
-                                              ($durationFromEnd > 0 ? $durationFromEnd : $alarmTimeLength);
-                            
-                            // Fallback to time diff if all extraction methods fail
-                            if ($durationSeconds <= 0 && !empty($alarmRaw->start_time) && !empty($alarmRaw->end_time)) {
-                                $startTime = \Carbon\Carbon::parse($alarmRaw->start_time);
-                                $endTime = \Carbon\Carbon::parse($alarmRaw->end_time);
-                                $durationSeconds = $endTime->diffInSeconds($startTime);
-                            }
-                            
-                            // FILTER IDLE ALARM:
-                            // 1. alarmType = 32 (Idle Alarm Code)
-                            // 2. alarmState = 0 (Alarm End)
-                            // 3. duration > 0 (ada durasi valid)
-                            // 4. end_time exists
-                            
-                            $isIdleAlarm = (
-                                $alarmType == 32 &&                     // Idle Alarm Type
-                                $alarmState == 0 &&                     // Alarm End
-                                $durationSeconds > 0 &&                 // Ada durasi valid
-                                !empty($alarmRaw->end_time)             // End time exists
-                            );
-                            
-                            if (!$isIdleAlarm) {
-                                $skipped++;
-                                continue;
-                            }
-                            
-                            $durationMinutes = ceil($durationSeconds / 60);
-                            
-                            // MAP ALARM_STATE: 0 = ALARM_END (idle selesai)
-                            $alarmStatus = 'ALARM_END';
-                            
-                            // Parse GPS coordinates (format dari Howen: longitude,latitude)
-                            $startLat = null;
-                            $startLong = null;
-                            $endLat = null;
-                            $endLong = null;
-
-                            if ($alarmRaw->start_gps && strpos($alarmRaw->start_gps, ',') !== false) {
-                                [$startLong, $startLat] = array_map('trim', explode(',', $alarmRaw->start_gps));
-                                $startLat = (float)$startLat;
-                                $startLong = (float)$startLong;
-                            }
-
-                            if ($alarmRaw->end_gps && strpos($alarmRaw->end_gps, ',') !== false) {
-                                [$endLong, $endLat] = array_map('trim', explode(',', $alarmRaw->end_gps));
-                                $endLat = (float)$endLat;
-                                $endLong = (float)$endLong;
-                            }
-
-                            // Get serial_no from devices table
-                            $device = \App\Models\Device::where('device_id', $alarmRaw->device_id)->first();
-                            $serialNo = $device ? $device->serial_no : null;
-
-                            // ✅ Use start_detail from alarm_raw directly (already mapped from alarmvalue)
-                            // No need to create synthetic dur:0 - use actual technical data
-                            $startDetail = $alarmRaw->start_detail ?: $alarmRaw->alarm_value;
-                            $endDetail = $alarmRaw->end_detail;
-                            
-                            // Data untuk disimpan ke idle_alarms
-                            $idleData = [
-                                'serial_no'          => $serialNo,
-                                'device_id'          => $alarmRaw->device_id,
-                                'device_name'        => $alarmRaw->device_name,
-                                'alarm_type'         => 'Idle',
-                                'alarm_status'       => $alarmStatus,
-                                'starting_time'      => $alarmRaw->start_time,
-                                'starting_location'  => $alarmRaw->start_gps,
-                                'ending_time'        => $alarmRaw->end_time,
-                                'ending_location'    => $alarmRaw->end_gps,
-                                'start_detail'       => $startDetail,
-                                'end_detail'         => $endDetail,
-                                'start_speed'        => $startSpeed,
-                                'end_speed'          => $endSpeed,
-                                'report_time'        => $alarmRaw->report_time,
-                                'duration_seconds'   => $durationSeconds,
-                                'duration_minutes'   => $durationMinutes,
-                                'latitude_start'     => $startLat,
-                                'longitude_start'    => $startLong,
-                                'latitude_end'       => $endLat,
-                                'longitude_end'      => $endLong,
-                            ];
-
-                            // Tambah alarm_state jika kolom sudah ada di tabel
-                            if (\Illuminate\Support\Facades\Schema::hasColumn('idle_alarms', 'alarm_state')) {
-                                $idleData['alarm_state'] = $alarmState;
-                            }
-
-                            // Create or update idle_alarm (only valid ones)
-                            \App\Models\IdleAlarm::updateOrCreate(
-                                ['guid' => $alarmRaw->guid],
-                                $idleData
-                            );
-
-                            $processed++;
-                            
-                            // Update processLog every 100 records to show progress
-                            if ($processed % 100 === 0) {
-                                $processLog->update([
-                                    'total_record' => $processed,
-                                    'updated_at' => now(),
-                                ]);
-                                
-                                SystemLogger::success('PROCESSING', "Progress update", [
-                                    'processed' => $processed,
-                                    'skipped' => $skipped,
-                                ]);
-                            }
-
-                        } catch (\Exception $e) {
-                            $skipped++;
-                            SystemLogger::error(
-                                'PROCESSING',
-                                "Failed to process alarm: {$alarmRaw->guid}",
-                                ['guid' => $alarmRaw->guid],
-                                SystemLogger::hints()['database_query'],
-                                $e
-                            );
+                    try {
+                        // Extract fields
+                        $startSpeed = (float)($alarmRaw->start_speed ?? 0);
+                        $endSpeed = (float)($alarmRaw->end_speed ?? 0);
+                        $alarmType = (int)($alarmRaw->alarm_type ?? 0);
+                        $alarmState = (int)($alarmRaw->alarm_state ?? 0);
+                        
+                        // Calculate duration with correct priority based on Howen logic:
+                        // 1. If start_detail has dur > 0: USE start_detail
+                        // 2. If start_detail has dur:0 or empty: USE end_detail
+                        // 3. If both empty: USE alarmTimeLength
+                        $durationFromStart = 0;
+                        if (!empty($alarmRaw->alarm_value) && preg_match('/dur:(\d+)/', $alarmRaw->alarm_value, $m)) {
+                            $durationFromStart = (int)$m[1];
                         }
-                    }
 
-                    // Bulk update is_processed for all examined raw IDs in chunk
-                    if (!empty($chunkRawIds)) {
-                        \App\Models\AlarmRaw::whereIn('id', $chunkRawIds)->update(['is_processed' => 1]);
+                        $durationFromEnd = 0;
+                        if (!empty($alarmRaw->end_detail) && preg_match('/dur:(\d+)/', $alarmRaw->end_detail, $m)) {
+                            $durationFromEnd = (int)$m[1];
+                        }
+
+                        $alarmTimeLength = (int)($alarmRaw->duration_seconds ?? 0);
+                        
+                        // Priority: start_detail (if > 0) > endDetail > alarmTimeLength
+                        $durationSeconds = $durationFromStart > 0 ? $durationFromStart : 
+                                          ($durationFromEnd > 0 ? $durationFromEnd : $alarmTimeLength);
+                        
+                        // Fallback to time diff if all extraction methods fail
+                        if ($durationSeconds <= 0 && !empty($alarmRaw->start_time) && !empty($alarmRaw->end_time)) {
+                            $startTime = \Carbon\Carbon::parse($alarmRaw->start_time);
+                            $endTime = \Carbon\Carbon::parse($alarmRaw->end_time);
+                            $durationSeconds = $endTime->diffInSeconds($startTime);
+                        }
+                        
+                        // FILTER IDLE ALARM:
+                        // 1. alarmType = 32 (Idle Alarm Code)
+                        // 2. alarmState = 0 (Alarm End)
+                        // 3. duration > 0 (ada durasi valid)
+                        // 4. end_time exists
+                        
+                        $isIdleAlarm = (
+                            $alarmType == 32 &&                     // Idle Alarm Type
+                            $alarmState == 0 &&                     // Alarm End
+                            $durationSeconds > 0 &&                 // Ada durasi valid
+                            !empty($alarmRaw->end_time)             // End time exists
+                        );
+                        
+                        if (!$isIdleAlarm) {
+                            $skipped++;
+                            continue;
+                        }
+                        
+                        $durationMinutes = ceil($durationSeconds / 60);
+                        
+                        // MAP ALARM_STATE: 0 = ALARM_END (idle selesai)
+                        $alarmStatus = 'ALARM_END';
+                        
+                        // Parse GPS coordinates (format dari Howen: longitude,latitude)
+                        $startLat = null;
+                        $startLong = null;
+                        $endLat = null;
+                        $endLong = null;
+
+                        if ($alarmRaw->start_gps && strpos($alarmRaw->start_gps, ',') !== false) {
+                            [$startLong, $startLat] = array_map('trim', explode(',', $alarmRaw->start_gps));
+                            $startLat = (float)$startLat;
+                            $startLong = (float)$startLong;
+                        }
+
+                        if ($alarmRaw->end_gps && strpos($alarmRaw->end_gps, ',') !== false) {
+                            [$endLong, $endLat] = array_map('trim', explode(',', $alarmRaw->end_gps));
+                            $endLat = (float)$endLat;
+                            $endLong = (float)$endLong;
+                        }
+
+                        // Get serial_no from devices table
+                        $device = \App\Models\Device::where('device_id', $alarmRaw->device_id)->first();
+                        $serialNo = $device ? $device->serial_no : null;
+
+                        // ✅ Use start_detail from alarm_raw directly (already mapped from alarmvalue)
+                        // No need to create synthetic dur:0 - use actual technical data
+                        $startDetail = $alarmRaw->start_detail ?: $alarmRaw->alarm_value;
+                        $endDetail = $alarmRaw->end_detail;
+                        
+                        // Data untuk disimpan ke idle_alarms
+                        $idleData = [
+                            'serial_no'          => $serialNo,
+                            'device_id'          => $alarmRaw->device_id,
+                            'device_name'        => $alarmRaw->device_name,
+                            'alarm_type'         => 'Idle',
+                            'alarm_status'       => $alarmStatus,
+                            'starting_time'      => $alarmRaw->start_time,
+                            'starting_location'  => $alarmRaw->start_gps,
+                            'ending_time'        => $alarmRaw->end_time,
+                            'ending_location'    => $alarmRaw->end_gps,
+                            'start_detail'       => $startDetail,
+                            'end_detail'         => $endDetail,
+                            'start_speed'        => $startSpeed,
+                            'end_speed'          => $endSpeed,
+                            'report_time'        => $alarmRaw->report_time,
+                            'duration_seconds'   => $durationSeconds,
+                            'duration_minutes'   => $durationMinutes,
+                            'latitude_start'     => $startLat,
+                            'longitude_start'    => $startLong,
+                            'latitude_end'       => $endLat,
+                            'longitude_end'      => $endLong,
+                        ];
+
+                        // Tambah alarm_state jika kolom sudah ada di tabel
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('idle_alarms', 'alarm_state')) {
+                            $idleData['alarm_state'] = $alarmState;
+                        }
+
+                        // Create or update idle_alarm (only valid ones)
+                        \App\Models\IdleAlarm::updateOrCreate(
+                            ['guid' => $alarmRaw->guid],
+                            $idleData
+                        );
+
+                        $processed++;
+                        
+                        // Update processLog every 100 records to show progress
+                        if ($processed % 100 === 0) {
+                            $processLog->update([
+                                'total_record' => $processed,
+                                'updated_at' => now(),
+                            ]);
+                            
+                            SystemLogger::success('PROCESSING', "Progress update", [
+                                'processed' => $processed,
+                                'skipped' => $skipped,
+                            ]);
+                        }
+
+                    } catch (\Exception $e) {
+                        $skipped++;
+                        SystemLogger::error(
+                            'PROCESSING',
+                            "Failed to process alarm: {$alarmRaw->guid}",
+                            ['guid' => $alarmRaw->guid],
+                            SystemLogger::hints()['database_query'],
+                            $e
+                        );
                     }
-                });
+                }
+
+                // Bulk update is_processed for all examined raw IDs in chunk
+                if (!empty($chunkRawIds)) {
+                    \App\Models\AlarmRaw::whereIn('id', $chunkRawIds)->update(['is_processed' => 1]);
+                }
+
+            } while ($processed < $maxRecordsPerRun);
 
             // ✅ AUTO-UPDATE: Update device_id yang masih NULL di devices table
             $this->autoUpdateDeviceIds();
