@@ -17,7 +17,7 @@ try {
     exit(1);
 }
 
-$beginTime = now()->subHours(4)->format('Y-m-d H:i:s');
+$beginTime = now()->subHours(6)->format('Y-m-d H:i:s');
 $endTime   = now()->format('Y-m-d H:i:s');
 
 echo "Range: $beginTime → $endTime\n\n";
@@ -43,13 +43,10 @@ try {
         $alarms = is_array($data['data']) ? $data['data'] : [$data['data']];
         echo "✅ SUCCESS: Fetched " . count($alarms) . " alarms from Howen API!\n\n";
         
-        $idleCount = 0;
-        foreach (array_slice($alarms, 0, 5) as $alarm) {
-            $type = $alarm['alarmType'] ?? $alarm['alarmtype'] ?? 'N/A';
-            $state = $alarm['alarmState'] ?? $alarm['alarmstate'] ?? 'N/A';
-            $name = $alarm['deviceName'] ?? $alarm['devicename'] ?? 'N/A';
-            $start = $alarm['startAlarmTimeStr'] ?? $alarm['startalarmtimestr'] ?? 'N/A';
-            echo "• Device: $name | Type: $type | State: $state | Start: $start\n";
+        foreach (array_slice($alarms, 0, 5) as $i => $alarm) {
+            echo "--- Alarm #$i ---\n";
+            print_r($alarm);
+            echo "\n";
         }
     } else {
         echo "⚠️ Response status: " . ($data['status'] ?? 'UNKNOWN') . " | Msg: " . ($data['message'] ?? $body) . "\n";
