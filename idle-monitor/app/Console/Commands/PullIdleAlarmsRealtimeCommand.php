@@ -115,21 +115,40 @@ class PullIdleAlarmsRealtimeCommand extends Command
                         ? $durationFromEnd 
                         : (int)($alarm['alarmTimeLength'] ?? 0));
         
+        $guid = $alarm['guid'] ?? $alarm['id'] ?? uniqid();
+        $deviceId = $alarm['deviceguid'] ?? $alarm['deviceID'] ?? $alarm['deviceId'] ?? $alarm['device_id'] ?? null;
+        $deviceName = $alarm['deviceName'] ?? $alarm['devicename'] ?? $alarm['device_name'] ?? null;
+        $alarmType = $alarm['alarmType'] ?? $alarm['alarmtype'] ?? $alarm['alarm_type'] ?? null;
+        $alarmState = $alarm['alarmState'] ?? $alarm['alarmstate'] ?? $alarm['alarm_state'] ?? 0;
+        
+        $startTime = $alarm['startAlarmTimeStr'] ?? $alarm['startAlarmTime'] ?? $alarm['alarmTimeStr'] ?? $alarm['alarmTime'] ?? $alarm['createtime'] ?? $alarm['start_time'] ?? null;
+        $endTime = $alarm['endAlarmTimeStr'] ?? $alarm['endAlarmTime'] ?? $alarm['endTime'] ?? $alarm['end_time'] ?? null;
+        
+        $reportTime = $alarm['reportTime'] ?? $alarm['report_time'] ?? $startTime ?? now()->toDateTimeString();
+
+        // If end_time is empty, calculate end_time from start_time + duration
+        if (empty($endTime) && !empty($startTime)) {
+            if ($duration > 0) {
+                $endTime = \Carbon\Carbon::parse($startTime)->addSeconds($duration)->toDateTimeString();
+            } else {
+                $endTime = $startTime;
+            }
+        }
+
         return [
-            'guid' => $alarm['guid'] ?? uniqid(),
-            'device_id' => $alarm['deviceguid'] ?? $alarm['device_id'] ?? null,
-            'device_name' => $alarm['deviceName'] ?? $alarm['device_name'] ?? null,
-            'alarm_type' => $alarm['alarmtype'] ?? $alarm['alarm_type'] ?? null,
+            'guid' => $guid,
+            'device_id' => $deviceId,
+            'device_name' => $deviceName,
+            'alarm_type' => $alarmType,
             'alarm_value' => $alarmValue,
             'alarm_state' => $alarmState,
-            'start_time' => $alarm['createtime'] ?? $alarm['start_time'] ?? null,
-            'end_time' => $alarm['endTime'] ?? $alarm['end_time'] ?? null,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
             'start_gps' => $alarm['alarmGps'] ?? $alarm['start_gps'] ?? null,
             'end_gps' => $alarm['endGps'] ?? $alarm['end_gps'] ?? null,
             'start_speed' => (float)($alarm['speed'] ?? $alarm['start_speed'] ?? 0),
             'end_speed' => (float)($alarm['endSpeed'] ?? $alarm['end_speed'] ?? 0),
-            'report_time' => $alarm['reportTime'] ?? $alarm['report_time'] ?? null,
-            // ✅ Duration dari dur di alarmvalue (start_detail)
+            'report_time' => $reportTime,
             'duration_seconds' => $duration,
             'start_detail' => $alarmValue,
             'end_detail' => $endDetail ?: null,
