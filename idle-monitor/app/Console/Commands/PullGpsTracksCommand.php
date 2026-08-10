@@ -89,41 +89,21 @@ class PullGpsTracksCommand extends Command
             $bar->start();
 
             $syncService = app(\App\Services\GpsTrackSyncService::class);
-            $totalFetched = 0;
-            $totalSaved = 0;
-            $devicesWithData = 0;
-            $deviceErrors = [];
-
-            foreach ($devices as $device) {
-                $bar->setMessage($device->device_name);
-                
-                try {
-                    $result = $syncService->syncDevice(
-                        $this->token,
-                        $device->device_id,
-                        $beginTime->format('Y-m-d H:i:s'),
-                        $endTime->format('Y-m-d H:i:s')
-                    );
-
-                    $totalFetched += $result['total_fetched'];
-                    $totalSaved += $result['total_saved'];
-                    
-                    if ($result['total_saved'] > 0) {
-                        $devicesWithData++;
-                    }
-                    
-                    // Delay 50ms between devices
-                    usleep(50000);
-                    
-                } catch (\Exception $e) {
-                    $deviceErrors[] = [
-                        'device_name' => $device->device_name,
-                        'error' => $e->getMessage(),
-                    ];
-                }
-                
-                $bar->advance();
-            }
+            
+            $deviceIds = $devices->pluck('device_id')->toArray();
+            
+            $this->info("📡 Fetching GPS data for {$devices->count()} devices concurrently...");
+            
+            $result = $syncService->syncMultipleDevicesFast(
+                $deviceIds, 
+                $beginWib->format('Y-m-d H:i:s'),
+                $nowWib->format('Y-m-d H:i:s')
+            );
+            
+            $totalFetched = $result['total_fetched'] ?? 0;
+            $totalSaved = $result['total_saved'] ?? 0;
+            $devicesWithData = $result['success_devices'] ?? 0;
+            $deviceErrors = $result['errors'] ?? [];
 
             $bar->setMessage('Completed');
             $bar->finish();

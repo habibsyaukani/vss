@@ -143,6 +143,99 @@ class GpsTrackSyncService
         return $stats;
     }
 
+    /**
+     * Pull GPS tracks for multiple devices concurrently (for fast real-time pulling)
+     */
+    public function syncMultipleDevicesFast(array $deviceIds, string $beginTime, string $endTime): array
+    {
+        $token = $this->authService->getToken();
+        if (!$token) {
+            Log::error("[GPS Sync Bulk] Gagal mendapatkan token VSS");
+            return ['status' => 'error', 'message' => 'Token failed'];
+        }
+
+        $stats = [
+            'total_devices' => count($deviceIds),
+            'success_devices' => 0,
+            'total_fetched' => 0,
+            'total_saved'   => 0,
+            'errors'        => [],
+        ];
+
+        $concurrency = 20; // 20 concurrent requests per batch
+        $allRecords = [];
+
+        foreach (array_chunk($deviceIds, $concurrency) as $batchIndex => $deviceBatch) {
+            
+            $responses = \Illuminate\Support\Facades\Http::pool(function ($pool) use ($deviceBatch, $token, $beginTime, $endTime) {
+                return collect($deviceBatch)->map(function ($deviceId) use ($pool, $token, $beginTime, $endTime) {
+                    return $pool->as("device-{$deviceId}")
+                        ->withOptions(['verify' => false])
+                        ->timeout(15)
+                        ->post("{$this->baseUrl}/vss/track/getApiTrackList.action", [
+                            'token'     => $token,
+                            'deviceID'  => $deviceId,
+                            'beginTime' => $beginTime,
+                            'endTime'   => $endTime,
+                            'pageNum'   => 1,
+                            'pageCount' => 20, // 20 records is enough for short polling
+                        ]);
+                });
+            });
+
+            foreach ($responses as $key => $response) {
+                $deviceId = str_replace('device-', '', $key);
+
+                if ($response instanceof \Illuminate\Http\Client\Response && $response->failed()) {
+                    $stats['errors'][] = "Device {$deviceId}: HTTP {$response->status()}";
+                    continue;
+                }
+                
+                if ($response instanceof \Exception) {
+                    $stats['errors'][] = "Device {$deviceId}: {$response->getMessage()}";
+                    continue;
+                }
+
+                $body = $response->json();
+
+                if (($body['status'] ?? null) !== 10000) {
+                    $msg = $body['msg'] ?? 'Unknown error';
+                    $stats['errors'][] = "Device {$deviceId}: {$msg}";
+                    continue;
+                }
+
+                $stats['success_devices']++;
+                $records = $body['data']['dataList'] ?? [];
+                
+                if (!empty($records)) {
+                    $stats['total_fetched'] += count($records);
+                    
+                    // Attach deviceId just in case it's missing in raw data
+                    foreach ($records as &$rec) {
+                        $rec['_injected_device_id'] = $deviceId;
+                    }
+                    
+                    $allRecords = array_merge($allRecords, $records);
+                }
+            }
+
+            // Optional delay between large batches to avoid rate limit
+            if ($this->delayMs > 0) {
+                usleep($this->delayMs * 1000);
+            }
+        }
+
+        // Save all collected records across this batch of devices
+        if (!empty($allRecords)) {
+            // saveRecords takes care of formatting, filtering speed > 0, and inserting Or Ignore
+            $saved = $this->saveRecords($allRecords, null); // passing null as deviceId because records have it or we rely on GUID
+            $stats['total_saved'] += $saved;
+            Log::info("[GPS Sync Bulk] Completed bulk save | Fetched: {$stats['total_fetched']} | Saved: {$saved}");
+        }
+
+        return $stats;
+    }
+
     // ----------------------------------------------------------------
     // FETCH SATU PAGE
     // ----------------------------------------------------------------
@@ -249,7 +342,7 @@ class GpsTrackSyncService
     // SIMPAN RECORDS KE DB
     // ----------------------------------------------------------------
 
-    private function saveRecords(array $records, string $deviceId): int
+    private function saveRecords(array $records, ?string $deviceId): int
     {
         if (empty($records)) return 0;
 
@@ -345,10 +438,10 @@ class GpsTrackSyncService
     // MAPPING: VSS response → gps_tracks_raw
     // ----------------------------------------------------------------
 
-    private function mapToRaw(array $item, string $deviceId): array
+    private function mapToRaw(array $item, ?string $deviceId): array
     {
         return [
-            'device_id'        => $deviceId,
+            'device_id'        => $deviceId ?? ($item['_injected_device_id'] ?? null),
             'device_name'      => $item['deviceName'] ?? null,
             'guid'             => $item['guid'] ?? null,
             'longitude'        => $item['longitude'] ?? null,

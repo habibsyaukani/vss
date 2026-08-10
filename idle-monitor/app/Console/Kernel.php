@@ -58,14 +58,14 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Process idle alarms (analyze duration)');
 
-        // ✅ PRIMARY: Pull GPS tracks every 5 minutes (last 1 hour)
+        // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour, fast concurrent)
         $schedule->command('vss:pull-gps-tracks', [
             '--hours' => 1,
         ])
-            ->everyFiveMinutes()
+            ->everyThreeMinutes()
             ->withoutOverlapping(10)
             ->runInBackground()
-            ->description('Pull GPS track data (fallback, last 1 hour)');
+            ->description('Pull GPS track data (fast concurrent, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (dispatch to queue)
         $schedule->call(function () {
