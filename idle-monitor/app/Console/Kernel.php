@@ -71,6 +71,7 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () {
             \App\Jobs\ProcessGpsTrackJob::dispatch();
         })
+            ->name('process-gps-track-job')
             ->everyThreeMinutes()
             ->withoutOverlapping(5)
             ->description('Process GPS tracks (raw to display)');
