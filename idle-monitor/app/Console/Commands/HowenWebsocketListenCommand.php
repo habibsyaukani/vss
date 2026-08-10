@@ -227,13 +227,14 @@ class HowenWebsocketListenCommand extends Command
         $speed = (float)($loc['speed'] ?? 0);
         if ($speed <= 0) return; // Skip jika speed = 0 (tidak bergerak)
 
-        // dtu dari WebSocket dalam format WIB (UTC+7), konversi ke WITA (UTC+8)
+        // dtu dari WebSocket push sudah dalam WITA (UTC+8) — BERBEDA dengan HTTP API yang pakai WIB
+        // Jangan dikonversi! Parse langsung sebagai WITA.
         $dtuRaw = $loc['dtu'] ?? null;
         if ($dtuRaw) {
             try {
-                $gpsTime = \Carbon\Carbon::parse($dtuRaw, 'Asia/Jakarta')->setTimezone('Asia/Makassar');
-                // Tolak timestamp masa depan dari hardware clock rusak
-                if ($gpsTime->greaterThan(now()->addMinutes(1))) {
+                $gpsTime = \Carbon\Carbon::parse($dtuRaw, 'Asia/Makassar'); // Already WITA
+                // Tolak timestamp masa depan (toleransi 2 menit untuk clock drift kecil)
+                if ($gpsTime->greaterThan(now()->addMinutes(2))) {
                     Log::warning("[HowenWS] Future timestamp ignored from device {$deviceId}: {$dtuRaw}");
                     return;
                 }
