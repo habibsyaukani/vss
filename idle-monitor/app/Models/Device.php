@@ -9,7 +9,7 @@ class Device extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['group_id', 'device_id', 'device_name', 'group_name', 'plate_no', 'imei', 'sim_number', 'status', 'last_sync_at', 'unit_code', 'location', 'series'];
+    protected $fillable = ['group_id', 'device_id', 'device_name', 'group_name', 'plate_no', 'imei', 'sim_number', 'status', 'last_sync_at', 'unit_code', 'location', 'lokasi', 'series'];
 
     public function group()
     {

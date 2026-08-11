@@ -575,7 +575,7 @@
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
-                                <li class="tree-child" data-location="{{ $device->location ?? '' }}" data-series="{{ $device->series ?? '' }}">
+                                <li class="tree-child" data-location="{{ $device->lokasi ?? '' }}" data-series="{{ $device->series ?? '' }}">
                                     <input type="checkbox" class="tree-checkbox device-checkbox" value="{{ $device->device_id }}" checked data-group="{{ Str::slug($groupName) }}">
                                     @php
                                         $deviceIcon = 'fa-car';

@@ -24,7 +24,7 @@ trait HasDeviceGroups
             // Single query — fetch all columns we need at once
             $devices = Device::whereNotNull('device_name')
                 ->orderBy('device_name')
-                ->get(['device_id', 'device_name', 'status', 'location', 'series']);
+                ->get(['device_id', 'device_name', 'status', 'location', 'lokasi', 'series']);
 
             // ── Locations ─────────────────────────────────────────────
             $locations = collect(['JO SELATAN', 'M.SERVICE', 'MUD', 'SELATAN', 'UTARA']);

@@ -61,7 +61,7 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('location', $request->location);
+                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
             }
             if ($request->filled('series')) {
                 $seriesParam = strtoupper($request->series);
@@ -187,7 +187,7 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('location', $request->location);
+                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
             }
             if ($request->filled('series')) {
                 $seriesParam = strtoupper($request->series);

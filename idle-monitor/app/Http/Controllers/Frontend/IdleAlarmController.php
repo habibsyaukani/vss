@@ -44,7 +44,7 @@ class IdleAlarmController extends Controller
 
         // Filter by location (direct JOIN filter - much faster)
         if ($request->location) {
-            $query->where('devices.location', $request->location);
+            $query->where('devices.lokasi', $request->location);
         }
 
         // Filter by series (direct JOIN filter - much faster)
@@ -176,7 +176,7 @@ class IdleAlarmController extends Controller
             // Apply sidebar and top filters
             if ($request->location) {
                 $query->whereHas('device', function($q) use ($request) {
-                    $q->where('location', $request->location);
+                    $q->where('lokasi', $request->location);
                 });
             }
             if ($request->series) {

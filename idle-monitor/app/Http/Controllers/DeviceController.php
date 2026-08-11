@@ -35,9 +35,8 @@ class DeviceController extends Controller
             $query->where('series', $request->series);
         }
 
-        // Filter by location (UTARA, SELATAN, etc)
         if ($request->filled('location') && $request->location !== 'all') {
-            $query->where('location', $request->location);
+            $query->where('lokasi', $request->location);
         }
 
         // Filter by status (active/inactive)
@@ -55,7 +54,7 @@ class DeviceController extends Controller
                 return $device->unit_code ?? '<span class="text-muted">(NULL)</span>';
             })
             ->addColumn('location', function ($device) {
-                return $device->location ?? '<span class="text-muted">(NULL)</span>';
+                return $device->lokasi ?? '<span class="text-muted">(NULL)</span>';
             })
             ->addColumn('series', function ($device) {
                 return $device->series ?? '<span class="text-muted">(NULL)</span>';
