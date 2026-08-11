@@ -8,42 +8,33 @@ use Illuminate\Support\Facades\DB;
 class ImportLokasiFromDumpCommand extends Command
 {
     protected $signature = 'devices:import-lokasi-dump';
-    protected $description = 'Import lokasi data from a SQL dump file';
+    protected $description = 'Import lokasi data from DATA_397_DEVICES.txt';
 
     public function handle()
     {
-        $path = '/var/www/devices_dump.sql';
+        $path = base_path('DATA_397_DEVICES.txt');
         if (!file_exists($path)) {
-            $this->error("File tidak ditemukan: /var/www/devices_dump.sql");
-            $this->info("Silakan upload file SQL dump Anda ke folder storage/app/ dengan nama devices_dump.sql");
+            $this->error("File tidak ditemukan: " . $path);
             return 1;
         }
 
-        $this->info("Membaca file SQL dump...");
-        $content = file_get_contents($path);
-
-        // Extract all VALUES (...) 
-        preg_match_all("/\((?:[^')(]+|'[^']*')*\)/", $content, $matches);
+        $this->info("Membaca file " . $path . "...");
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         
         $updated = 0;
-        $bar = $this->output->createProgressBar(count($matches[0]));
+        $bar = $this->output->createProgressBar(count($lines));
         $bar->start();
 
-        foreach ($matches[0] as $match) {
-            // Remove outer parentheses
-            $match = substr($match, 1, -1);
+        foreach ($lines as $line) {
+            $parts = explode("\t", $line);
             
-            // Parse CSV-like string, considering single quotes
-            $parts = str_getcsv($match, ',', "'");
-            
-            if (count($parts) >= 5) {
-                $deviceId = trim($parts[1], " '");
-                $location = trim($parts[4], " '");
+            if (count($parts) >= 4) {
+                $deviceName = trim($parts[1]);
+                $location = trim($parts[3]);
                 
-                // If location is not NULL and not empty
                 if ($location !== 'NULL' && $location !== '') {
                     DB::table('devices')
-                        ->where('device_id', $deviceId)
+                        ->where('device_name', $deviceName)
                         ->update(['lokasi' => $location]);
                     $updated++;
                 }
@@ -53,7 +44,7 @@ class ImportLokasiFromDumpCommand extends Command
 
         $bar->finish();
         $this->newLine(2);
-        $this->info("Selesai! Berhasil mengupdate {$updated} perangkat dari SQL dump.");
+        $this->info("Selesai! Berhasil mengupdate {$updated} perangkat dari file TXT.");
         return 0;
     }
 }
