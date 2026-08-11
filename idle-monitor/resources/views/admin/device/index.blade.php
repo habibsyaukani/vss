@@ -53,9 +53,9 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Filter by Location</label>
+                    <label class="form-label fw-bold">Filter by Lokasi</label>
                     <select id="filterLocation" class="form-select form-select-sm">
-                        <option value="all">Semua Location</option>
+                        <option value="all">Semua Lokasi</option>
                         <option value="JO SELATAN">JO SELATAN</option>
                         <option value="MUD">MUD</option>
                         <option value="SELATAN">SELATAN</option>
@@ -84,7 +84,7 @@
                         <th>Device ID</th>
                         <th>Device Name</th>
                         <th>Unit Code</th>
-                        <th>Location</th>
+                        <th>Lokasi</th>
                         <th>Series</th>
                         <th>Group Name</th>
                         <th>Plate No</th>
