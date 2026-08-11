@@ -37,8 +37,8 @@ class ImportLokasiFromDumpCommand extends Command
             $parts = str_getcsv($match, ',', "'");
             
             if (count($parts) >= 5) {
-                $deviceId = trim($parts[1]);
-                $location = trim($parts[4]);
+                $deviceId = trim($parts[1], " '");
+                $location = trim($parts[4], " '");
                 
                 // If location is not NULL and not empty
                 if ($location !== 'NULL' && $location !== '') {
