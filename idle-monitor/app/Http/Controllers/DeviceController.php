@@ -212,35 +212,95 @@ class DeviceController extends Controller
         ]);
 
         $file = $request->file('file');
+        
+        // Detect delimiter
+        $content = file_get_contents($file->getRealPath());
+        $delimiter = strpos($content, ';') !== false ? ';' : ',';
+        
         $handle = fopen($file->getRealPath(), 'r');
 
         $row = 0;
         $imported = 0;
         $errors = [];
+        $header = [];
 
-        while (($line = fgetcsv($handle)) !== false) {
+        while (($line = fgetcsv($handle, 10000, $delimiter)) !== false) {
             $row++;
-            if ($row == 1) continue; // Skip header
-
-            if (count($line) < 4) {
-                $errors[] = "Row $row: Invalid format";
+            
+            // Skip empty rows
+            if (empty(array_filter($line))) {
                 continue;
             }
 
+            if ($row == 1) {
+                // Parse header, convert to lowercase and replace spaces with underscores
+                foreach ($line as $col) {
+                    $colName = strtolower(trim(str_replace(' ', '_', $col)));
+                    // Handle legacy or alternative header formats
+                    if ($colName == 'location') $colName = 'lokasi';
+                    if ($colName == 'unit') $colName = 'unit_code';
+                    $header[] = $colName;
+                }
+                continue;
+            }
+
+            // Map line data to associative array based on header
+            $data = [];
+            foreach ($header as $index => $colName) {
+                if (isset($line[$index])) {
+                    $data[$colName] = trim($line[$index]);
+                }
+            }
+
+            // Require device_name or device_id to identify the device
+            if (empty($data['device_name']) && empty($data['device_id'])) {
+                 $errors[] = "Row $row: Missing device_name or device_id";
+                 continue;
+            }
+
             try {
-                Device::updateOrCreate(
-                    ['device_id' => trim($line[0])],
-                    [
-                        'device_name' => trim($line[1]),
-                        'group_name' => trim($line[2]),
-                        'imei' => trim($line[3] ?? ''),
-                        'sim_number' => trim($line[4] ?? ''),
-                        'status' => 'active',
-                    ]
-                );
-                $imported++;
+                // Find device by device_id or device_name
+                $device = null;
+                if (!empty($data['device_id'])) {
+                    $device = Device::where('device_id', $data['device_id'])->first();
+                } 
+                if (!$device && !empty($data['device_name'])) {
+                    $device = Device::where('device_name', $data['device_name'])->first();
+                }
+
+                $allowedFields = ['device_name', 'device_id', 'group_name', 'unit_code', 'lokasi', 'series', 'plate_no', 'imei', 'sim_number', 'status'];
+                
+                if ($device) {
+                    // Update existing device
+                    $updateData = [];
+                    foreach ($allowedFields as $field) {
+                        if (array_key_exists($field, $data)) {
+                            $updateData[$field] = $data[$field] === '' ? null : $data[$field];
+                        }
+                    }
+                    if (!empty($updateData)) {
+                        $device->update($updateData);
+                        $imported++;
+                    }
+                } else {
+                    // Create new device if we have required fields
+                    if (!empty($data['device_id']) && !empty($data['device_name'])) {
+                        $device = new Device();
+                        $device->status = 'active'; // Default
+                        
+                        foreach ($allowedFields as $field) {
+                            if (array_key_exists($field, $data)) {
+                                $device->{$field} = $data[$field] === '' ? null : $data[$field];
+                            }
+                        }
+                        $device->save();
+                        $imported++;
+                    } else {
+                        $errors[] = "Row $row: Cannot create new device. Missing required fields (device_id, device_name)";
+                    }
+                }
             } catch (\Exception $e) {
-                $errors[] = "Row $row: {$e->getMessage()}";
+                $errors[] = "Row $row: " . $e->getMessage();
             }
         }
 
@@ -249,7 +309,7 @@ class DeviceController extends Controller
         return response()->json([
             'imported' => $imported,
             'errors' => $errors,
-            'message' => "$imported devices imported successfully!",
+            'message' => "$imported devices processed successfully!",
         ]);
     }
 }

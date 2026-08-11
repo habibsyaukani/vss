@@ -13,10 +13,10 @@
                     <div class="alert alert-info">
                         <strong><i class="fas fa-info-circle"></i> Instructions:</strong>
                         <ul class="mb-0 mt-2">
-                            <li>CSV file must have header row</li>
-                            <li>Columns: device_id, device_name, group_name, imei, sim_number</li>
+                            <li>CSV file must have header row (e.g. <b>device_name, lokasi, unit_code, series</b>)</li>
+                            <li>You can include any of these columns: <b>device_id, device_name, group_name, unit_code, lokasi, series, plate_no, imei, sim_number, status</b></li>
+                            <li>Existing devices will be automatically <b>UPDATED</b> if they match `device_id` or `device_name`</li>
                             <li>Maximum file size: 5MB</li>
-                            <li>Duplicate device_id will be updated</li>
                         </ul>
                     </div>
 
@@ -45,10 +45,10 @@
                     <h6 class="mb-0"><i class="fas fa-file-csv"></i> Sample CSV Format</h6>
                 </div>
                 <div class="card-body">
-                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">device_id,device_name,group_name,imei,sim_number
-755161145,GPE-B-8322,BUS - GPE,123456789012345,08123456789
-732390518,GPE-FT-873,FT - GPE,123456789012346,08123456790
-731865503,GPE-DTI-807,DT - GPE,123456789012347,08123456791</pre>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">device_name,lokasi,unit_code,series
+GPE-B-8322,Area Operasional,GPE8322,DOZER
+GPE-FT-873,M.SERVICE,GPE873,FUEL TRUCK
+GPE-DT-1000,UTARA,GPE1000,DT VOLVO</pre>
                     <a href="javascript:void(0)" onclick="downloadSample()" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-download"></i> Download Sample
                     </a>
@@ -128,7 +128,7 @@ $(function() {
 });
 
 function downloadSample() {
-    const csv = 'device_id,device_name,group_name,imei,sim_number\n755161145,GPE-B-8322,BUS - GPE,123456789012345,08123456789\n732390518,GPE-FT-873,FT - GPE,123456789012346,08123456790';
+    const csv = 'device_name,lokasi,unit_code,series\nGPE-B-8322,Area Operasional,GPE8322,DOZER\nGPE-FT-873,M.SERVICE,GPE873,FUEL TRUCK\nGPE-DT-1000,UTARA,GPE1000,DT VOLVO';
     const blob = new Blob([csv], { type: 'text/csv' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
