@@ -9,11 +9,11 @@
             <h3><i class="fas fa-car"></i> Device Management</h3>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ route('admin.device.create') }}" class="btn btn-primary me-2">
+            <button class="btn btn-warning me-2" id="btnBulkEdit" disabled>
+                <i class="fas fa-edit"></i> Bulk Edit
+            </button>
+            <a href="{{ route('admin.device.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Add Device
-            </a>
-            <a href="{{ route('admin.device.import-form') }}" class="btn btn-success">
-                <i class="fas fa-upload"></i> Import CSV
             </a>
         </div>
     </div>
@@ -81,6 +81,7 @@
             <table class="table table-hover table-sm datatable" width="100%" style="font-size: 12px;">
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
                         <th>Device ID</th>
                         <th>Device Name</th>
                         <th>Unit Code</th>
@@ -103,6 +104,43 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Edit Modal -->
+<div class="modal fade" id="bulkEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Bulk Edit <span id="selectedCount">0</span> Devices</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkEditForm">
+                    <div class="mb-3">
+                        <label class="form-label">Field to Update</label>
+                        <select class="form-select" id="bulkEditField" required>
+                            <option value="">-- Select Field --</option>
+                            <option value="lokasi">Lokasi</option>
+                            <option value="series">Series</option>
+                            <option value="group_name">Group Name</option>
+                            <option value="unit_code">Unit Code</option>
+                            <option value="status">Status</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Value</label>
+                        <input type="text" class="form-control" id="bulkEditValue" placeholder="Enter new value...">
+                        <small class="text-muted">For status, use 'active' or 'inactive'. Leave empty to set as NULL.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnSubmitBulkEdit">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -126,6 +164,7 @@ $(function() {
             }
         },
         columns: [
+            {data: 'checkbox', orderable: false, searchable: false},
             {data: 'device_id'},
             {data: 'device_name'},
             {data: 'unit_code'},
@@ -174,6 +213,79 @@ $(function() {
                 }
             });
         }
+    });
+
+    // Checkbox Logic
+    function updateBulkEditButton() {
+        const checkedCount = $('.device-checkbox:checked').length;
+        $('#btnBulkEdit').prop('disabled', checkedCount === 0);
+        $('#selectedCount').text(checkedCount);
+    }
+
+    $('#selectAll').on('change', function() {
+        $('.device-checkbox').prop('checked', this.checked);
+        updateBulkEditButton();
+    });
+
+    $(document).on('change', '.device-checkbox', function() {
+        updateBulkEditButton();
+        if (!this.checked) {
+            $('#selectAll').prop('checked', false);
+        }
+    });
+
+    // Bulk Edit Modal
+    $('#btnBulkEdit').on('click', function() {
+        $('#bulkEditModal').modal('show');
+    });
+
+    $('#btnSubmitBulkEdit').on('click', function() {
+        const selectedIds = [];
+        $('.device-checkbox:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) return;
+
+        const field = $('#bulkEditField').val();
+        const value = $('#bulkEditValue').val();
+
+        if (!field) {
+            alert('Please select a field to update.');
+            return;
+        }
+
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+        $.ajax({
+            url: "{{ route('admin.device.bulk-edit') }}",
+            type: 'POST',
+            data: {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                device_ids: selectedIds,
+                field: field,
+                value: value
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#bulkEditModal').modal('hide');
+                    table.ajax.reload();
+                    $('#selectAll').prop('checked', false);
+                    updateBulkEditButton();
+                    alert(response.message);
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function(xhr) {
+                console.error(xhr);
+                alert('An error occurred during bulk edit.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text('Save Changes');
+            }
+        });
     });
 });
 </script>

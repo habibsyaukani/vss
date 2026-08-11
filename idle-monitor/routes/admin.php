@@ -34,8 +34,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/device/{device}/edit', [DeviceController::class, 'edit'])->name('device.edit');
     Route::put('/device/{device}', [DeviceController::class, 'update'])->name('device.update');
     Route::delete('/device/{device}', [DeviceController::class, 'destroy'])->name('device.destroy');
-    Route::get('/device/import-form', [DeviceController::class, 'importForm'])->name('device.import-form');
-    Route::post('/device/import', [DeviceController::class, 'import'])->name('device.import');
+    Route::post('/device/bulk-edit', [DeviceController::class, 'bulkEdit'])->name('device.bulk-edit');
 
     // Device Group Management
     Route::get('/device-group', [DeviceGroupController::class, 'index'])->name('device-group.index');

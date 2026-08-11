@@ -50,6 +50,9 @@ class DeviceController extends Controller
         }
 
         return DataTables::eloquent($query)
+            ->addColumn('checkbox', function ($device) {
+                return '<input type="checkbox" class="device-checkbox" value="' . $device->id . '">';
+            })
             ->addColumn('unit_code', function ($device) {
                 return $device->unit_code ?? '<span class="text-muted">(NULL)</span>';
             })
@@ -101,7 +104,7 @@ class DeviceController extends Controller
                     </button>
                 ';
             })
-            ->rawColumns(['unit_code', 'location', 'series', 'group_name', 'plate_no', 'imei', 'sim_number', 'status_badge', 'last_sync_formatted', 'group_id', 'actions'])
+            ->rawColumns(['checkbox', 'unit_code', 'location', 'series', 'group_name', 'plate_no', 'imei', 'sim_number', 'status_badge', 'last_sync_formatted', 'group_id', 'actions'])
             ->make(true);
     }
 
@@ -195,121 +198,44 @@ class DeviceController extends Controller
     }
 
     /**
-     * Show import form
+     * Handle Bulk Edit
      */
-    public function importForm()
-    {
-        return view('admin.device.import');
-    }
-
-    /**
-     * Handle CSV import
-     */
-    public function import(Request $request)
+    public function bulkEdit(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:5120',
+            'device_ids' => 'required|array',
+            'device_ids.*' => 'exists:devices,id',
+            'field' => 'required|string|in:lokasi,series,group_name,unit_code,status,group_id',
+            'value' => 'nullable|string'
         ]);
 
-        $file = $request->file('file');
-        
-        // Detect delimiter
-        $content = file_get_contents($file->getRealPath());
-        $delimiter = strpos($content, ';') !== false ? ';' : ',';
-        
-        $handle = fopen($file->getRealPath(), 'r');
+        $field = $request->field;
+        $value = $request->value;
+        $deviceIds = $request->device_ids;
 
-        $row = 0;
-        $imported = 0;
-        $errors = [];
-        $header = [];
-
-        while (($line = fgetcsv($handle, 10000, $delimiter)) !== false) {
-            $row++;
-            
-            // Skip empty rows
-            if (empty(array_filter($line))) {
-                continue;
-            }
-
-            if ($row == 1) {
-                // Parse header, convert to lowercase and replace spaces with underscores
-                foreach ($line as $col) {
-                    $colName = strtolower(trim(str_replace(' ', '_', $col)));
-                    // Handle legacy or alternative header formats
-                    if ($colName == 'location') $colName = 'lokasi';
-                    if ($colName == 'unit') $colName = 'unit_code';
-                    $header[] = $colName;
-                }
-                continue;
-            }
-
-            // Map line data to associative array based on header
-            $data = [];
-            foreach ($header as $index => $colName) {
-                if (isset($line[$index])) {
-                    $data[$colName] = trim($line[$index]);
-                }
-            }
-
-            // Require device_name or device_id to identify the device
-            if (empty($data['device_name']) && empty($data['device_id'])) {
-                 $errors[] = "Row $row: Missing device_name or device_id";
-                 continue;
-            }
-
-            try {
-                // Find device by device_id or device_name
-                $device = null;
-                if (!empty($data['device_id'])) {
-                    $device = Device::where('device_id', $data['device_id'])->first();
-                } 
-                if (!$device && !empty($data['device_name'])) {
-                    $device = Device::where('device_name', $data['device_name'])->first();
-                }
-
-                $allowedFields = ['device_name', 'device_id', 'group_name', 'unit_code', 'lokasi', 'series', 'plate_no', 'imei', 'sim_number', 'status'];
-                
-                if ($device) {
-                    // Update existing device
-                    $updateData = [];
-                    foreach ($allowedFields as $field) {
-                        if (array_key_exists($field, $data)) {
-                            $updateData[$field] = $data[$field] === '' ? null : $data[$field];
-                        }
-                    }
-                    if (!empty($updateData)) {
-                        $device->update($updateData);
-                        $imported++;
-                    }
-                } else {
-                    // Create new device if we have required fields
-                    if (!empty($data['device_id']) && !empty($data['device_name'])) {
-                        $device = new Device();
-                        $device->status = 'active'; // Default
-                        
-                        foreach ($allowedFields as $field) {
-                            if (array_key_exists($field, $data)) {
-                                $device->{$field} = $data[$field] === '' ? null : $data[$field];
-                            }
-                        }
-                        $device->save();
-                        $imported++;
-                    } else {
-                        $errors[] = "Row $row: Cannot create new device. Missing required fields (device_id, device_name)";
-                    }
-                }
-            } catch (\Exception $e) {
-                $errors[] = "Row $row: " . $e->getMessage();
+        // Note: For group_id, we need to ensure the value is valid if it's not null.
+        if ($field === 'group_id' && !empty($value)) {
+            $exists = \App\Models\DeviceGroup::where('id', $value)->exists();
+            if (!$exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid group ID selected.'
+                ], 422);
             }
         }
 
-        fclose($handle);
+        // Special handling if updating 'lokasi', also update 'location' in frontend code 
+        // to prevent mismatch if they rely on it, though 'lokasi' is the single source of truth now.
+        $updateData = [$field => $value];
+        if ($field === 'lokasi') {
+            $updateData['location'] = $value;
+        }
+
+        $updatedCount = Device::whereIn('id', $deviceIds)->update($updateData);
 
         return response()->json([
-            'imported' => $imported,
-            'errors' => $errors,
-            'message' => "$imported devices processed successfully!",
+            'success' => true,
+            'message' => "$updatedCount devices updated successfully!"
         ]);
     }
 }
