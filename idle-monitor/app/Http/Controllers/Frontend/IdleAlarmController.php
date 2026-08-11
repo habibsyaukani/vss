@@ -57,13 +57,18 @@ class IdleAlarmController extends Controller
         }
 
         // Filter by specific devices (from tree view) - Optimized to skip when all devices are selected
-        if ($request->device_ids && is_array($request->device_ids)) {
-            $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
-                return \App\Models\Device::count();
-            });
-            if (count($request->device_ids) < $totalDevices) {
-                $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
-                $query->whereIn('idle_alarms.device_id', $cleanIds);
+        if ($request->has('device_ids')) {
+            if (empty($request->device_ids)) {
+                // If device_ids is passed but empty (no devices checked), return 0 records
+                $query->whereRaw('1 = 0');
+            } else {
+                $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                    return \App\Models\Device::count();
+                });
+                if (count($request->device_ids) < $totalDevices) {
+                    $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                    $query->whereIn('idle_alarms.device_id', $cleanIds);
+                }
             }
         }
 
@@ -183,13 +188,17 @@ class IdleAlarmController extends Controller
                     }
                 });
             }
-            if ($request->device_ids && is_array($request->device_ids)) {
-                $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
-                    return \App\Models\Device::count();
-                });
-                if (count($request->device_ids) < $totalDevices) {
-                    $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
-                    $query->whereIn('device_id', $cleanIds);
+            if ($request->has('device_ids')) {
+                if (empty($request->device_ids)) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $totalDevices = cache()->remember('total_devices_count_db', 300, function() {
+                        return \App\Models\Device::count();
+                    });
+                    if (count($request->device_ids) < $totalDevices) {
+                        $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
+                        $query->whereIn('device_id', $cleanIds);
+                    }
                 }
             }
             if ($request->start_date) {

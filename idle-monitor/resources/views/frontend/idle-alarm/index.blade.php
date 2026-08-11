@@ -790,14 +790,14 @@ $(document).ready(function() {
         $('.tree-child').each(function(index) {
             let $device = $(this);
             let deviceName = $device.find('span').text().toLowerCase();
-            let deviceLocation = $device.data('location') || '';
-            let deviceSeries = $device.data('series') || '';
+            let deviceLocation = ($device.data('location') || '').toString().trim();
+            let deviceSeries = ($device.data('series') || '').toString().trim();
             
             // Check if device name matches search
             let nameMatches = deviceName.includes(searchQuery);
             
             // Check location filter
-            let locationMatches = !selectedLocation || deviceLocation === selectedLocation;
+            let locationMatches = !selectedLocation || deviceLocation === selectedLocation.toString().trim();
             
             // Check series filter
             let seriesMatches = true;
@@ -1043,12 +1043,12 @@ $(document).ready(function() {
         // Show only devices that match filter (but preserve checkbox state)
         $('.tree-child').each(function(index) {
             let $treeChild = $(this);
-            let deviceLocation = $treeChild.data('location') || '';
-            let deviceSeries = $treeChild.data('series') || '';
+            let deviceLocation = ($treeChild.data('location') || '').toString().trim();
+            let deviceSeries = ($treeChild.data('series') || '').toString().trim();
             let shouldShow = true;
             
             // Check location match
-            if (selectedLocation && deviceLocation !== selectedLocation) {
+            if (selectedLocation && deviceLocation !== selectedLocation.toString().trim()) {
                 shouldShow = false;
             }
             
