@@ -123,7 +123,7 @@ class DeviceController extends Controller
             'device_id' => 'required|string|unique:devices,device_id',
             'device_name' => 'required|string|max:255',
             'unit_code' => 'nullable|string|max:100',
-            'location' => 'nullable|string|max:100',
+            'lokasi' => 'nullable|string|max:100',
             'series' => 'nullable|string|max:100',
             'group_id' => 'required|exists:device_groups,id',
             'group_name' => 'required|string|max:255',
@@ -132,6 +132,12 @@ class DeviceController extends Controller
             'sim_number' => 'nullable|string|max:50',
             'status' => 'required|in:active,inactive',
         ]);
+
+        if (isset($validated['lokasi']) && empty($validated['location'])) {
+            $validated['location'] = $validated['lokasi'];
+        } elseif (isset($validated['location']) && empty($validated['lokasi'])) {
+            $validated['lokasi'] = $validated['location'];
+        }
 
         Device::create($validated);
 
@@ -157,7 +163,7 @@ class DeviceController extends Controller
             'device_id' => 'required|string|unique:devices,device_id,' . $device->id,
             'device_name' => 'required|string|max:255',
             'unit_code' => 'nullable|string|max:100',
-            'location' => 'nullable|string|max:100',
+            'lokasi' => 'nullable|string|max:100',
             'series' => 'nullable|string|max:100',
             'group_id' => 'required|exists:device_groups,id',
             'group_name' => 'required|string|max:255',
@@ -166,6 +172,12 @@ class DeviceController extends Controller
             'sim_number' => 'nullable|string|max:50',
             'status' => 'required|in:active,inactive',
         ]);
+
+        if (isset($validated['lokasi']) && empty($validated['location'])) {
+            $validated['location'] = $validated['lokasi'];
+        } elseif (isset($validated['location']) && empty($validated['lokasi'])) {
+            $validated['lokasi'] = $validated['location'];
+        }
 
         $device->update($validated);
 
