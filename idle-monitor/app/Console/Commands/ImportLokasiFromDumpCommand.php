@@ -12,9 +12,9 @@ class ImportLokasiFromDumpCommand extends Command
 
     public function handle()
     {
-        $path = storage_path('app/devices_dump.sql');
+        $path = '/var/www/devices_dump.sql';
         if (!file_exists($path)) {
-            $this->error("File tidak ditemukan: storage/app/devices_dump.sql");
+            $this->error("File tidak ditemukan: /var/www/devices_dump.sql");
             $this->info("Silakan upload file SQL dump Anda ke folder storage/app/ dengan nama devices_dump.sql");
             return 1;
         }

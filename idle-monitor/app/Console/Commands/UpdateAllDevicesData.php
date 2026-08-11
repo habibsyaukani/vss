@@ -44,6 +44,7 @@ class UpdateAllDevicesData extends Command
                     ->update([
                         'unit_code' => $unitCode,
                         'location' => $location,
+                        'lokasi' => $location,
                         'series' => $series,
                         'updated_at' => now()
                     ]);
