@@ -93,36 +93,39 @@ class DashboardController extends Controller
         $end   = $today . ' 23:59:59';
 
         $data = Cache::remember("dash_speed_all_{$today}", 120, function () use ($start, $end, $today) {
-            // Stats
-            $speedStats = GpsTrackRaw::where('gps_time', '>=', $start)
-                ->where('gps_time', '<=', $end)
-                ->where('speed', '>', 0)
-                ->selectRaw('MAX(speed) as max_speed, AVG(speed) as avg_speed')
-                ->first();
-
-            // Top 5 speed units
-            $topSpeedUnits = GpsTrackRaw::select('device_id', 'device_name', DB::raw('MAX(speed) as max_speed'))
+            // One combined query for today's data to drastically improve performance
+            $deviceStats = GpsTrackRaw::select(
+                    'device_id', 
+                    'device_name', 
+                    DB::raw('MAX(speed) as max_speed'), 
+                    DB::raw('SUM(speed) as sum_speed'),
+                    DB::raw('COUNT(*) as row_count')
+                )
                 ->where('gps_time', '>=', $start)
                 ->where('gps_time', '<=', $end)
                 ->where('speed', '>', 0)
                 ->groupBy('device_id', 'device_name')
-                ->orderByDesc('max_speed')
-                ->limit(5)
                 ->get();
+
+            // Stats
+            $overallMaxSpeed = $deviceStats->max('max_speed') ?? 0;
+            $totalSpeed = $deviceStats->sum('sum_speed');
+            $totalCount = $deviceStats->sum('row_count');
+            $overallAvgSpeed = $totalCount > 0 ? ($totalSpeed / $totalCount) : 0;
+            
+            $speedStats = (object)[
+                'max_speed' => $overallMaxSpeed,
+                'avg_speed' => $overallAvgSpeed
+            ];
+
+            // Top 5 speed units
+            $topSpeedUnits = $deviceStats->sortByDesc('max_speed')->take(5)->values();
 
             // Speed per fleet
-            $speedRaw = GpsTrackRaw::select('device_name', DB::raw('MAX(speed) as max_speed'))
-                ->where('gps_time', '>=', $start)
-                ->where('gps_time', '<=', $end)
-                ->where('speed', '>', 0)
-                ->whereNotNull('device_name')
-                ->where('device_name', '!=', '')
-                ->groupBy('device_name')
-                ->get();
-
             $speedFleetMap = [];
-            foreach ($speedRaw as $r) {
-                $parts = explode('-', $r->device_name ?? '');
+            foreach ($deviceStats as $r) {
+                if (empty($r->device_name)) continue;
+                $parts = explode('-', $r->device_name);
                 $fleet = isset($parts[1]) ? trim($parts[1]) : 'Unknown';
                 $maxSpd = (float) $r->max_speed;
                 if (!isset($speedFleetMap[$fleet]) || $maxSpd > $speedFleetMap[$fleet]) {
@@ -176,12 +179,25 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $date     = Carbon::today()->subDays($i)->toDateString();
             $maxSpeed = 0;
+            
             if ($date >= $minDate) {
-                $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $date . ' 00:00:00')
-                    ->where('gps_time', '<=', $date . ' 23:59:59')
-                    ->where('speed', '>', 0)
-                    ->max('speed') ?? 0;
+                if ($i > 0) {
+                    // Cache historical data forever since it will not change
+                    $maxSpeed = Cache::rememberForever("dash_max_speed_{$date}", function () use ($date) {
+                        return GpsTrackRaw::where('gps_time', '>=', $date . ' 00:00:00')
+                            ->where('gps_time', '<=', $date . ' 23:59:59')
+                            ->where('speed', '>', 0)
+                            ->max('speed') ?? 0;
+                    });
+                } else {
+                    // Today's data (not cached forever)
+                    $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $date . ' 00:00:00')
+                        ->where('gps_time', '<=', $date . ' 23:59:59')
+                        ->where('speed', '>', 0)
+                        ->max('speed') ?? 0;
+                }
             }
+            
             $result['days'][]   = Carbon::parse($date)->format('d M');
             $result['counts'][] = round($maxSpeed, 1);
         }
