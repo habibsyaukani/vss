@@ -535,31 +535,7 @@
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ═══════════════════════════════════════════════════════════════
-        // AUTO-REFRESH CSRF TOKEN ON LOGIN PAGE (prevent Page Expired)
-        // ═══════════════════════════════════════════════════════════════
-        $(document).ready(function() {
-            // Auto-refresh CSRF token every 15 minutes
-            setInterval(function() {
-                $.ajax({
-                    url: '{{ route("csrf.refresh") }}',
-                    method: 'GET',
-                    success: function(data) {
-                        if (data.token) {
-                            // Update meta tag
-                            $('meta[name="csrf-token"]').attr('content', data.token);
-                            // Update form token
-                            $('input[name="_token"]').val(data.token);
-                            console.log('[Login] CSRF token refreshed successfully');
-                        }
-                    },
-                    error: function() {
-                        console.warn('[Login] CSRF token refresh failed');
-                    }
-                });
-            }, 15 * 60 * 1000); // 15 minutes
-            
-        });
+
 
 
         // Toggle password visibility
