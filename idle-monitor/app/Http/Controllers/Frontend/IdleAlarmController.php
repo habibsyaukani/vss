@@ -34,7 +34,13 @@ class IdleAlarmController extends Controller
         session()->save();
 
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
-        $query = AlarmRaw::select('alarm_raw.*')
+        $query = AlarmRaw::select(
+                'alarm_raw.*',
+                'alarm_raw.start_time as starting_time',
+                'alarm_raw.end_time as ending_time',
+                'alarm_raw.start_gps as starting_location',
+                'alarm_raw.end_gps as ending_location'
+            )
             ->leftJoin('devices', 'alarm_raw.device_id', '=', 'devices.device_id')
             ->where('alarm_raw.alarm_type', 32)
             ->where('alarm_raw.alarm_state', 0)
