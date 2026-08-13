@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use App\Models\AlarmRaw;
+use App\Models\IdleAlarm;
 use App\Http\Controllers\Frontend\Traits\HasDeviceGroups;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
@@ -34,43 +34,12 @@ class IdleAlarmController extends Controller
         session()->save();
 
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
-        $query = AlarmRaw::select(
-                'alarm_raw.*',
-                'alarm_raw.start_time as starting_time',
-                'alarm_raw.end_time as ending_time',
-                'alarm_raw.start_gps as starting_location',
-                'alarm_raw.end_gps as ending_location'
-            )
-            ->leftJoin('devices', 'alarm_raw.device_id', '=', 'devices.device_id')
-            ->where('alarm_raw.alarm_type', 32)
-            ->where('alarm_raw.alarm_state', 0)
-            ->whereNotNull('alarm_raw.end_time');
+        $query = IdleAlarm::select('idle_alarms.*')
+            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id');
 
-        // Filter by duration range — pakai kalkulasi real dari start_time → end_time
-        if ($request->duration_range) {
-            $durExpr = 'TIMESTAMPDIFF(SECOND, alarm_raw.start_time, IFNULL(alarm_raw.end_time, NOW()))';
-
-            switch ($request->duration_range) {
-                case 'lt5':
-                    $query->whereRaw("{$durExpr} > 0")->whereRaw("{$durExpr} < 300");
-                    break;
-                case '5to15':
-                    $query->whereRaw("{$durExpr} >= 300")->whereRaw("{$durExpr} < 900");
-                    break;
-                case '15to30':
-                    $query->whereRaw("{$durExpr} >= 900")->whereRaw("{$durExpr} < 1800");
-                    break;
-                case 'gt30':
-                    $query->whereRaw("{$durExpr} >= 1800");
-                    break;
-            }
-        }
-
-
-        // Filter by status (we don't have alarm_status in raw, we assume CLOSED/ALARM_END since state is 0)
-        // Kept for signature compatibility but essentially ignored since alarm_state = 0 implies ALARM_END
+        // Filter by status
         if ($request->status) {
-            // $query->where('idle_alarms.alarm_status', $request->status);
+            $query->where('idle_alarms.alarm_status', $request->status);
         }
 
         // Filter by location (direct JOIN filter - much faster)
@@ -98,7 +67,7 @@ class IdleAlarmController extends Controller
                 });
                 if (count($request->device_ids) < $totalDevices) {
                     $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
-                    $query->whereIn('alarm_raw.device_id', $cleanIds);
+                    $query->whereIn('idle_alarms.device_id', $cleanIds);
                 }
             }
         }
@@ -111,19 +80,46 @@ class IdleAlarmController extends Controller
         // Filter by date range
         if ($request->start_date) {
             $start = $request->start_date . ' 00:00:00';
-            $query->where('alarm_raw.start_time', '>=', $start);
+            $query->where('idle_alarms.starting_time', '>=', $start);
         }
         if ($request->end_date) {
             $end = $request->end_date . ' 23:59:59';
-            $query->where('alarm_raw.start_time', '<=', $end);
+            $query->where('idle_alarms.starting_time', '<=', $end);
         }
+
+        // Filter by duration range — pakai kalkulasi real dari starting_time → ending_time
+        // agar konsisten dengan tampilan di tabel (bukan dari kolom duration_seconds yg mungkin stale)
+        if ($request->duration_range) {
+            // Hitung durasi real: TIMESTAMPDIFF(SECOND, starting_time, IFNULL(ending_time, NOW()))
+            $durExpr = 'TIMESTAMPDIFF(SECOND, idle_alarms.starting_time, IFNULL(idle_alarms.ending_time, NOW()))';
+
+            switch ($request->duration_range) {
+                case 'lt5':
+                    // Hijau: 0–299 detik (< 5 menit)
+                    $query->whereRaw("{$durExpr} < 300");
+                    break;
+                case '5to15':
+                    // Kuning: 300–899 detik (5:00–14:59)
+                    $query->whereRaw("{$durExpr} >= 300")->whereRaw("{$durExpr} < 900");
+                    break;
+                case '15to30':
+                    // Oranye: 900–1799 detik (15:00–29:59)
+                    $query->whereRaw("{$durExpr} >= 900")->whereRaw("{$durExpr} < 1800");
+                    break;
+                case 'gt30':
+                    // Merah: 1800+ detik (≥ 30 menit)
+                    $query->whereRaw("{$durExpr} >= 1800");
+                    break;
+            }
+        }
+
 
         return DataTables::of($query)
             ->editColumn('starting_time', function ($alarm) {
-                return $alarm->start_time ? date('Y-m-d H:i:s', strtotime($alarm->start_time)) : '-';
+                return $alarm->starting_time ? date('Y-m-d H:i:s', strtotime($alarm->starting_time)) : '-';
             })
             ->editColumn('ending_time', function ($alarm) {
-                return $alarm->end_time ? date('Y-m-d H:i:s', strtotime($alarm->end_time)) : '-';
+                return $alarm->ending_time ? date('Y-m-d H:i:s', strtotime($alarm->ending_time)) : '-';
             })
             ->editColumn('report_time', function ($alarm) {
                 return $alarm->report_time ? date('Y-m-d H:i:s', strtotime($alarm->report_time)) : '-';
@@ -132,11 +128,11 @@ class IdleAlarmController extends Controller
                 return 'Idle';
             })
             ->addColumn('duration_formatted', function ($alarm) {
-                if (!$alarm->start_time) return '-';
+                if (!$alarm->starting_time) return '-';
 
-                $start = \Carbon\Carbon::parse($alarm->start_time);
-                $end   = $alarm->end_time
-                            ? \Carbon\Carbon::parse($alarm->end_time)
+                $start = \Carbon\Carbon::parse($alarm->starting_time);
+                $end   = $alarm->ending_time
+                            ? \Carbon\Carbon::parse($alarm->ending_time)
                             : now();
 
                 $totalSeconds = max(0, $end->diffInSeconds($start));
@@ -144,10 +140,10 @@ class IdleAlarmController extends Controller
                 return "{$totalSeconds} detik";
             })
             ->addColumn('duration_seconds_calc', function ($alarm) {
-                if (!$alarm->start_time) return 0;
-                $start = \Carbon\Carbon::parse($alarm->start_time);
-                $end   = $alarm->end_time
-                            ? \Carbon\Carbon::parse($alarm->end_time)
+                if (!$alarm->starting_time) return 0;
+                $start = \Carbon\Carbon::parse($alarm->starting_time);
+                $end   = $alarm->ending_time
+                            ? \Carbon\Carbon::parse($alarm->ending_time)
                             : now();
                 return max(0, $end->diffInSeconds($start));
             })
@@ -161,23 +157,8 @@ class IdleAlarmController extends Controller
     /**
      * Show alarm detail (read-only)
      */
-    public function show($id)
+    public function show(IdleAlarm $idleAlarm)
     {
-        $idleAlarm = AlarmRaw::findOrFail($id);
-        
-        // Map raw object properties to simulate IdleAlarm structure for the view
-        $idleAlarm->starting_time = $idleAlarm->start_time;
-        $idleAlarm->ending_time = $idleAlarm->end_time;
-        $idleAlarm->starting_location = $idleAlarm->start_gps;
-        $idleAlarm->ending_location = $idleAlarm->end_gps;
-        $idleAlarm->alarm_status = 'ALARM_END';
-        
-        if ($idleAlarm->start_time && $idleAlarm->end_time) {
-            $idleAlarm->duration_minutes = ceil($idleAlarm->end_time->diffInSeconds($idleAlarm->start_time) / 60);
-        } else {
-            $idleAlarm->duration_minutes = 0;
-        }
-
         return view('frontend.idle-alarm.show', compact('idleAlarm'));
     }
 
@@ -186,10 +167,7 @@ class IdleAlarmController extends Controller
      */
     public function export(Request $request)
     {
-        $query = AlarmRaw::with('device')
-            ->where('alarm_type', 32)
-            ->where('alarm_state', 0)
-            ->whereNotNull('end_time');
+        $query = IdleAlarm::with('device');
 
         // Export Selected Rows
         if ($request->selected_ids && is_array($request->selected_ids)) {
@@ -225,26 +203,25 @@ class IdleAlarmController extends Controller
             }
             if ($request->start_date) {
                 $start = $request->start_date . ' 00:00:00';
-                $query->where('start_time', '>=', $start);
+                $query->where('starting_time', '>=', $start);
             }
             if ($request->end_date) {
                 $end = $request->end_date . ' 23:59:59';
-                $query->where('start_time', '<=', $end);
+                $query->where('starting_time', '<=', $end);
             }
             if ($request->duration_range) {
-                $durExpr = 'TIMESTAMPDIFF(SECOND, alarm_raw.start_time, IFNULL(alarm_raw.end_time, NOW()))';
                 switch ($request->duration_range) {
                     case 'lt5':
-                        $query->whereRaw("{$durExpr} > 0")->whereRaw("{$durExpr} < 300");
+                        $query->where('duration_seconds', '<', 300);
                         break;
                     case '5to15':
-                        $query->whereRaw("{$durExpr} >= 300")->whereRaw("{$durExpr} < 900");
+                        $query->where('duration_seconds', '>=', 300)->where('duration_seconds', '<', 900);
                         break;
                     case '15to30':
-                        $query->whereRaw("{$durExpr} >= 900")->whereRaw("{$durExpr} < 1800");
+                        $query->where('duration_seconds', '>=', 900)->where('duration_seconds', '<', 1800);
                         break;
                     case 'gt30':
-                        $query->whereRaw("{$durExpr} >= 1800");
+                        $query->where('duration_seconds', '>=', 1800);
                         break;
                 }
             }
@@ -290,11 +267,8 @@ class IdleAlarmController extends Controller
                 $serial = 1;
                 foreach ($query->cursor() as $alarm) {
                     $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
-                    
-                    $start = \Carbon\Carbon::parse($alarm->start_time);
-                    $end   = $alarm->end_time ? \Carbon\Carbon::parse($alarm->end_time) : now();
-                    $durationSecs = max(0, $end->diffInSeconds($start));
 
+                    $durationSecs = $alarm->duration_seconds_calculated ?? 0;
                     $durBadgeClass = 'text-center';
                     if ($durationSecs > 0 && $durationSecs < 300) {
                         $durBadgeClass = 'badge-success';
@@ -306,27 +280,24 @@ class IdleAlarmController extends Controller
                         $durBadgeClass = 'badge-danger';
                     }
 
-                    $statusClass = 'badge-success'; // ALARM_END
-                    $alarmStatus = 'ALARM_END';
-
-                    $alarmTypeDisplay = 'Idle';
+                    $statusClass = $alarm->alarm_status === 'ALARM_END' ? 'badge-success' : 'badge-warning';
 
                     fwrite($out, '    <tr class="' . $rowClass . '">' . "\n");
                     fwrite($out, '      <td class="text-center">' . $serial++ . '</td>' . "\n");
                     fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->device_id ?? '-') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-left">' . htmlspecialchars($alarm->device_name ?? '-') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarmTypeDisplay) . '</td>' . "\n");
-                    fwrite($out, '      <td class="' . $statusClass . '">' . htmlspecialchars($alarmStatus) . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . ($alarm->start_time ? date('Y-m-d H:i:s', strtotime($alarm->start_time)) : '-') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->start_gps ?? '-') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . ($alarm->end_time ? date('Y-m-d H:i:s', strtotime($alarm->end_time)) : '-') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->end_gps ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">Idle</td>' . "\n");
+                    fwrite($out, '      <td class="' . $statusClass . '">' . htmlspecialchars($alarm->alarm_status ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . ($alarm->starting_time ? date('Y-m-d H:i:s', strtotime($alarm->starting_time)) : '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->starting_location ?? '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . ($alarm->ending_time ? date('Y-m-d H:i:s', strtotime($alarm->ending_time)) : '-') . '</td>' . "\n");
+                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($alarm->ending_location ?? '-') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-left">' . htmlspecialchars($alarm->start_detail ?? '-') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-left">' . htmlspecialchars($alarm->end_detail ?? '-') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-right">' . htmlspecialchars(($alarm->start_speed ?? 0) . ' km/h') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-right">' . htmlspecialchars(($alarm->end_speed ?? 0) . ' km/h') . '</td>' . "\n");
                     fwrite($out, '      <td class="text-center">' . ($alarm->report_time ? date('Y-m-d H:i:s', strtotime($alarm->report_time)) : '-') . '</td>' . "\n");
-                    fwrite($out, '      <td class="' . $durBadgeClass . '">' . htmlspecialchars("{$durationSecs} detik") . '</td>' . "\n");
+                    fwrite($out, '      <td class="' . $durBadgeClass . '">' . htmlspecialchars($alarm->duration_formatted ?? '-') . '</td>' . "\n");
                     fwrite($out, '    </tr>' . "\n");
                 }
             },

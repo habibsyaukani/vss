@@ -23,12 +23,4 @@ class AlarmRaw extends Model
         'end_time' => 'datetime',
         'report_time' => 'datetime',
     ];
-
-    /**
-     * Get the device associated with this alarm.
-     */
-    public function device()
-    {
-        return $this->belongsTo(Device::class, 'device_id', 'device_id');
-    }
 }

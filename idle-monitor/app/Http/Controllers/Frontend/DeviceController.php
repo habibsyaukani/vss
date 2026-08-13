@@ -55,22 +55,11 @@ class DeviceController extends Controller
     public function show(Device $device)
     {
         // Get idle alarms for this device (last 30 days)
-        $idleAlarms = \App\Models\AlarmRaw::where('device_id', $device->device_id)
-            ->where('alarm_type', 32)
-            ->where('alarm_state', 0)
-            ->whereNotNull('end_time')
-            ->orderBy('start_time', 'desc')
+        $idleAlarms = \App\Models\IdleAlarm::where('device_id', $device->device_id)
+            ->where('alarm_status', 'ALARM_END')
+            ->orderBy('starting_time', 'desc')
             ->limit(10)
             ->get();
-            
-        // Map raw object properties to simulate IdleAlarm structure for the view
-        $idleAlarms->transform(function ($alarm) {
-            $alarm->starting_time = $alarm->start_time;
-            $alarm->ending_time = $alarm->end_time;
-            $alarm->duration_minutes = $alarm->start_time && $alarm->end_time ? ceil($alarm->end_time->diffInSeconds($alarm->start_time) / 60) : 0;
-            $alarm->alarm_status = 'ALARM_END';
-            return $alarm;
-        });
 
         return view('frontend.device.show', compact('device', 'idleAlarms'));
     }

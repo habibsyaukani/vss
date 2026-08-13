@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
-use App\Models\AlarmRaw;
+use App\Models\IdleAlarm;
 use App\Models\GpsTrackRaw;
 use App\Models\Device;
 use Illuminate\Support\Facades\DB;
@@ -23,24 +23,18 @@ class DashboardController extends Controller
         $start = $today . ' 00:00:00';
         $end   = $today . ' 23:59:59';
 
-        // ── Idle stats hari ini (fast query, indexed on start_time) ──
+        // ── Idle stats hari ini (fast query, indexed on starting_time) ──
         $todayIdleCount = Cache::remember("dash_idle_count_{$today}", 60, function () use ($start, $end) {
-            return AlarmRaw::where('alarm_type', 32)
-                ->where('alarm_state', 0)
-                ->whereNotNull('end_time')
-                ->where('start_time', '>=', $start)
-                ->where('start_time', '<=', $end)
+            return IdleAlarm::where('starting_time', '>=', $start)
+                ->where('starting_time', '<=', $end)
                 ->count();
         });
 
         // ── Top 5 idle units hari ini ──
         $topIdleUnits = Cache::remember("dash_top_idle_{$today}", 60, function () use ($start, $end) {
-            return AlarmRaw::select('device_name', 'device_id', DB::raw('COUNT(*) as event_count'))
-                ->where('alarm_type', 32)
-                ->where('alarm_state', 0)
-                ->whereNotNull('end_time')
-                ->where('start_time', '>=', $start)
-                ->where('start_time', '<=', $end)
+            return IdleAlarm::select('device_name', 'device_id', DB::raw('COUNT(*) as event_count'))
+                ->where('starting_time', '>=', $start)
+                ->where('starting_time', '<=', $end)
                 ->groupBy('device_name', 'device_id')
                 ->orderByDesc('event_count')
                 ->limit(5)
@@ -49,12 +43,9 @@ class DashboardController extends Controller
 
         // ── Idle per fleet ──
         $idlePerFleet = Cache::remember("dash_idle_fleet_{$today}", 60, function () use ($start, $end) {
-            $idleRaw = AlarmRaw::select('device_name', DB::raw('COUNT(*) as total'))
-                ->where('alarm_type', 32)
-                ->where('alarm_state', 0)
-                ->whereNotNull('end_time')
-                ->where('start_time', '>=', $start)
-                ->where('start_time', '<=', $end)
+            $idleRaw = IdleAlarm::select('device_name', DB::raw('COUNT(*) as total'))
+                ->where('starting_time', '>=', $start)
+                ->where('starting_time', '<=', $end)
                 ->groupBy('device_name')
                 ->get();
 
@@ -172,11 +163,8 @@ class DashboardController extends Controller
             $start = $date . ' 00:00:00';
             $end   = $date . ' 23:59:59';
             $result['days'][]   = Carbon::parse($date)->format('d/m');
-            $result['counts'][] = (int) AlarmRaw::where('alarm_type', 32)
-                ->where('alarm_state', 0)
-                ->whereNotNull('end_time')
-                ->where('start_time', '>=', $start)
-                ->where('start_time', '<=', $end)->count();
+            $result['counts'][] = (int) IdleAlarm::where('starting_time', '>=', $start)
+                ->where('starting_time', '<=', $end)->count();
         }
         return $result;
     }
