@@ -298,6 +298,10 @@ class HowenWebsocketListenCommand extends Command
 
                 // FIX: Abaikan data historis (backlog sebelum hari ini) agar langsung tarik realtime
                 if ($gpsTime->lessThan(now('Asia/Makassar')->startOfDay())) {
+                    // Cetak log sesekali (tiap 100 data) agar terminal tidak freeze/lag, tapi user bisa lihat progress
+                    if (rand(1, 100) === 1) {
+                        $this->line("⏩ Fast-forward backlog: skipping old data... ({$gpsTimeStr})");
+                    }
                     return;
                 }
                 $gpsTimeStr = $gpsTime->toDateTimeString();
