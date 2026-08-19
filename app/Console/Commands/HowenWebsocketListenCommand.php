@@ -285,6 +285,11 @@ class HowenWebsocketListenCommand extends Command
                     Log::warning("[HowenWS] Future timestamp ignored from device {$deviceId}: {$dtuRaw} → parsed: {$gpsTime}");
                     return;
                 }
+
+                // FIX: Abaikan data historis (backlog sebelum hari ini) agar langsung tarik realtime
+                if ($gpsTime->lessThan(now('Asia/Makassar')->startOfDay())) {
+                    return;
+                }
                 $gpsTimeStr = $gpsTime->toDateTimeString();
             } catch (\Exception $e) {
                 Log::warning("[HowenWS] Failed to parse dtu '{$dtuRaw}' for device {$deviceId}, using now()");
