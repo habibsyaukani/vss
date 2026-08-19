@@ -121,6 +121,16 @@ class HowenWebsocketListenCommand extends Command
             ]);
             $this->info("📤 Sent Login Request (80000)");
 
+            // FIX: Terkadang server Howen nge-bug dan TIDAK membalas request 80000.
+            // Kita langsung kirim Subscribe (80001) 1 detik setelah login untuk memancing data keluar.
+            $loop->addTimer(1, function() use ($conn) {
+                $this->info('📡 Sending Subscribe (80001) immediately...');
+                $conn->send(json_encode([
+                    'action'  => '80001',
+                    'payload' => ['username' => $this->username]
+                ]));
+            });
+
             // 3. Start Heartbeat Timer (Action 80009) - every 60 seconds
             $heartbeatTimer = $loop->addPeriodicTimer(60, function() use ($conn) {
                 $heartbeatPayload = [
