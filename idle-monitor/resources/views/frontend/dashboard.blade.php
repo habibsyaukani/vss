@@ -652,9 +652,9 @@ const speedBarChart = new Chart(speedBarCtx, {
 // ── AJAX: Load speed data setelah halaman tampil ──────────────────────────
 const rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue'];
 
-// Timeout 15 detik agar tidak loading selamanya
+// Timeout 30 detik agar cukup untuk query pertama (cold cache)
 const speedStatsController = new AbortController();
-const speedStatsTimeout = setTimeout(() => speedStatsController.abort(), 15000);
+const speedStatsTimeout = setTimeout(() => speedStatsController.abort(), 30000);
 
 fetch('{{ route("frontend.dashboard.speed-stats") }}', { signal: speedStatsController.signal })
     .then(r => { clearTimeout(speedStatsTimeout); return r.json(); })
