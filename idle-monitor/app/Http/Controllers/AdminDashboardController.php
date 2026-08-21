@@ -27,9 +27,9 @@ class AdminDashboardController extends Controller
                 ->selectRaw('COUNT(*) as total_today, AVG(duration_minutes) as avg_duration')
                 ->first();
 
-            // Restrict to last 30 days to avoid full table scan on huge tables
+            // Restrict to last 7 days to avoid heavy disk I/O on slow SSD
             $allStats = DB::table('idle_alarms')
-                ->where('starting_time', '>=', now()->subDays(30)->startOfDay())
+                ->where('starting_time', '>=', now()->subDays(7)->startOfDay())
                 ->selectRaw('SUM(duration_minutes) as total_idle_min, COUNT(CASE WHEN alarm_status = "ALARM_END" THEN 1 END) as active_idle')
                 ->first();
 
@@ -83,23 +83,18 @@ class AdminDashboardController extends Controller
     {
         $since = now()->subHours(23)->startOfHour()->format('Y-m-d H:i:s');
 
+        // Fetch raw data and group in PHP to prevent MySQL Temporary Table / Filesort on slow SSD
         $rows = DB::table('idle_alarms')
-            ->whereRaw('`starting_time` >= ?', [$since])
-            ->selectRaw(
-                'YEAR(starting_time)  AS yr,' .
-                ' MONTH(starting_time) AS mo,' .
-                ' DAY(starting_time)   AS dy,' .
-                ' HOUR(starting_time)  AS hr,' .
-                ' COUNT(*)             AS cnt'
-            )
-            ->groupByRaw('YEAR(starting_time), MONTH(starting_time), DAY(starting_time), HOUR(starting_time)')
-            ->orderByRaw('YEAR(starting_time), MONTH(starting_time), DAY(starting_time), HOUR(starting_time)')
-            ->get();
+            ->where('starting_time', '>=', $since)
+            ->pluck('starting_time');
 
         $indexed = [];
-        foreach ($rows as $row) {
-            $key = str_pad($row->hr, 2, '0', STR_PAD_LEFT);
-            $indexed[$key] = $row->cnt;
+        foreach ($rows as $time) {
+            $hourKey = \Carbon\Carbon::parse($time)->format('H');
+            if (!isset($indexed[$hourKey])) {
+                $indexed[$hourKey] = 0;
+            }
+            $indexed[$hourKey]++;
         }
 
         $hours  = [];
@@ -122,13 +117,19 @@ class AdminDashboardController extends Controller
     {
         $since = now()->subDays(6)->startOfDay()->format('Y-m-d H:i:s');
 
+        // Fetch raw data and group in PHP to prevent MySQL Temporary Table / Filesort on slow SSD
         $rows = DB::table('idle_alarms')
-            ->whereRaw('`starting_time` >= ?', [$since])
-            ->selectRaw('DATE(starting_time) AS day_date, COUNT(*) AS cnt')
-            ->groupByRaw('DATE(starting_time)')
-            ->orderByRaw('DATE(starting_time)')
-            ->get()
-            ->keyBy('day_date');
+            ->where('starting_time', '>=', $since)
+            ->pluck('starting_time');
+
+        $indexed = [];
+        foreach ($rows as $time) {
+            $dayKey = \Carbon\Carbon::parse($time)->format('Y-m-d');
+            if (!isset($indexed[$dayKey])) {
+                $indexed[$dayKey] = 0;
+            }
+            $indexed[$dayKey]++;
+        }
 
         $days   = [];
         $counts = [];
@@ -136,7 +137,8 @@ class AdminDashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $date     = now()->subDays($i);
             $days[]   = $date->format('D');
-            $counts[] = $rows->get($date->format('Y-m-d'))->cnt ?? 0;
+            $dayKey   = $date->format('Y-m-d');
+            $counts[] = $indexed[$dayKey] ?? 0;
         }
 
         return ['days' => $days, 'counts' => $counts];
@@ -147,7 +149,7 @@ class AdminDashboardController extends Controller
      */
     private function getTopDevices($limit = 10)
     {
-        // Restrict to last 30 days to avoid full table scan
+        // Restrict to last 7 days to avoid heavy disk I/O on slow SSD
         return IdleAlarm::select(
                 'device_name',
                 'device_id',
@@ -155,7 +157,7 @@ class AdminDashboardController extends Controller
                 DB::raw('SUM(duration_minutes) as total_duration'),
                 DB::raw('MAX(starting_time) as last_seen')
             )
-            ->where('starting_time', '>=', now()->subDays(30)->startOfDay())
+            ->where('starting_time', '>=', now()->subDays(7)->startOfDay())
             ->groupBy('device_name', 'device_id')
             ->orderBy('total_idle', 'desc')
             ->limit($limit)
