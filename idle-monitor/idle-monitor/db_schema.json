@@ -1,0 +1,2401 @@
+{
+    "alarm_raw": {
+        "rows_count": 14609,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "guid",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_id",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_name",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_type",
+                "type": "int",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_value",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_state",
+                "type": "tinyint",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "start_time",
+                "type": "datetime",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "end_time",
+                "type": "datetime",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "start_gps",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "end_gps",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "start_speed",
+                "type": "decimal(10,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "end_speed",
+                "type": "decimal(10,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "report_time",
+                "type": "datetime",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "duration_seconds",
+                "type": "int",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "start_detail",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "end_detail",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "raw_json",
+                "type": "json",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "alarm_raw_guid_unique",
+                "column": "guid",
+                "unique": true
+            },
+            {
+                "name": "alarm_raw_device_id_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_start_time_index",
+                "column": "start_time",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_report_time_index",
+                "column": "report_time",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_alarm_type_index",
+                "column": "alarm_type",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_alarm_state_index",
+                "column": "alarm_state",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_device_id_start_time_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_device_id_start_time_index",
+                "column": "start_time",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_alarm_type_start_time_index",
+                "column": "alarm_type",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_alarm_type_start_time_index",
+                "column": "start_time",
+                "unique": false
+            },
+            {
+                "name": "alarm_raw_created_at_index",
+                "column": "created_at",
+                "unique": false
+            }
+        ]
+    },
+    "alarm_types": {
+        "rows_count": 0,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "alarm_code",
+                "type": "int",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_name",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            }
+        ]
+    },
+    "api_tokens": {
+        "rows_count": 255,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "token",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "expires_at",
+                "type": "datetime",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "api_tokens_token_unique",
+                "column": "token",
+                "unique": true
+            }
+        ]
+    },
+    "device_groups": {
+        "rows_count": 0,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "group_code",
+                "type": "varchar(50)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "group_name",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "total_devices",
+                "type": "int",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "device_groups_group_code_unique",
+                "column": "group_code",
+                "unique": true
+            },
+            {
+                "name": "device_groups_group_code_index",
+                "column": "group_code",
+                "unique": false
+            }
+        ]
+    },
+    "devices": {
+        "rows_count": 397,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "device_id",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_name",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "unit_code",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "location",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "series",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "group_name",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "plate_no",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "imei",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "sim_number",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "status",
+                "type": "enum('active','inactive')",
+                "null": "NO",
+                "key": "",
+                "default": "active",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "last_sync_at",
+                "type": "datetime",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "group_id",
+                "type": "bigint unsigned",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "devices_device_id_unique",
+                "column": "device_id",
+                "unique": true
+            },
+            {
+                "name": "devices_group_id_foreign",
+                "column": "group_id",
+                "unique": false
+            }
+        ]
+    },
+    "export_jobs": {
+        "rows_count": 0,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "status",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": "pending",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "file_path",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            }
+        ]
+    },
+    "failed_jobs": {
+        "rows_count": 2,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "uuid",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "connection",
+                "type": "text",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "queue",
+                "type": "text",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "payload",
+                "type": "longtext",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "exception",
+                "type": "longtext",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "failed_at",
+                "type": "timestamp",
+                "null": "NO",
+                "key": "",
+                "default": "CURRENT_TIMESTAMP",
+                "extra": "DEFAULT_GENERATED",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "failed_jobs_uuid_unique",
+                "column": "uuid",
+                "unique": true
+            }
+        ]
+    },
+    "gps_tracks": {
+        "rows_count": 0,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "raw_id",
+                "type": "bigint unsigned",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_id",
+                "type": "varchar(64)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_name",
+                "type": "varchar(128)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "longitude",
+                "type": "decimal(11,7)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "latitude",
+                "type": "decimal(10,7)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "altitude",
+                "type": "smallint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Unit: meter"
+            },
+            {
+                "name": "speed",
+                "type": "smallint unsigned",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": "Unit: km\/h"
+            },
+            {
+                "name": "direction",
+                "type": "smallint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "0-360 degrees"
+            },
+            {
+                "name": "satellites",
+                "type": "tinyint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "gps_time",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "report_time",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "is_acc_on",
+                "type": "tinyint(1)",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "is_overspeed",
+                "type": "tinyint(1)",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "is_emergency",
+                "type": "tinyint(1)",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "is_recording",
+                "type": "tinyint(1)",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": "Derived from record_state"
+            },
+            {
+                "name": "net_type_label",
+                "type": "varchar(16)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "2G\/3G\/4G\/5G\/WiFi"
+            },
+            {
+                "name": "dev_voltage",
+                "type": "double(8,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "driver_name",
+                "type": "varchar(128)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "fleet_id",
+                "type": "varchar(64)",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "fleet_name",
+                "type": "varchar(128)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "today_mileage",
+                "type": "decimal(10,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "km"
+            },
+            {
+                "name": "total_mileage",
+                "type": "decimal(12,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "km"
+            },
+            {
+                "name": "io_state_label",
+                "type": "varchar(64)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Human-readable IO status"
+            },
+            {
+                "name": "input_output_status",
+                "type": "varchar(64)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Formatted input\/output display"
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "gps_tracks_device_id_gps_time_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_device_id_gps_time_index",
+                "column": "gps_time",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_gps_time_index",
+                "column": "gps_time",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_fleet_id_index",
+                "column": "fleet_id",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_raw_id_index",
+                "column": "raw_id",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_device_id_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_speed_index",
+                "column": "speed",
+                "unique": false
+            }
+        ]
+    },
+    "gps_tracks_raw": {
+        "rows_count": 117,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "device_id",
+                "type": "varchar(64)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_name",
+                "type": "varchar(128)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "guid",
+                "type": "varchar(64)",
+                "null": "YES",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "longitude",
+                "type": "decimal(11,7)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "latitude",
+                "type": "decimal(10,7)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "altitude",
+                "type": "smallint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Unit: meter"
+            },
+            {
+                "name": "speed",
+                "type": "smallint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Unit: km\/h"
+            },
+            {
+                "name": "direction",
+                "type": "smallint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "0-360 degrees"
+            },
+            {
+                "name": "satellites",
+                "type": "tinyint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "precision",
+                "type": "smallint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Unit: meter"
+            },
+            {
+                "name": "mode",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "1=GPS, 2=BD, 3=GLONASS"
+            },
+            {
+                "name": "acc_state",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "1=ACC on, 0=ACC off"
+            },
+            {
+                "name": "record_state",
+                "type": "tinyint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Bit flags per channel"
+            },
+            {
+                "name": "video_mask_state",
+                "type": "tinyint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "video_lost_state",
+                "type": "tinyint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "io_state",
+                "type": "smallint unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "urgency",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "1=Yes, 0=No"
+            },
+            {
+                "name": "over_speed",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "1=Yes, 0=No"
+            },
+            {
+                "name": "low_speed",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "1=Yes, 0=No"
+            },
+            {
+                "name": "oil_volume",
+                "type": "double(8,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Fuel amount"
+            },
+            {
+                "name": "net_type",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "signal_value",
+                "type": "tinyint",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "dev_voltage",
+                "type": "double(8,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "bat_voltage",
+                "type": "double(8,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "driver_card_id",
+                "type": "varchar(64)",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "driver_name",
+                "type": "varchar(128)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "gps_time",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": "GPS time (createtime from VSS)"
+            },
+            {
+                "name": "report_time",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Time reported to platform"
+            },
+            {
+                "name": "state_json",
+                "type": "json",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Raw stateJson from VSS"
+            },
+            {
+                "name": "tempe_humidity",
+                "type": "json",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": "Temperature & humidity array"
+            },
+            {
+                "name": "is_later",
+                "type": "tinyint",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": "1=retransmitted data"
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "gps_tracks_raw_guid_unique",
+                "column": "guid",
+                "unique": true
+            },
+            {
+                "name": "gps_tracks_raw_device_id_gps_time_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_raw_device_id_gps_time_index",
+                "column": "gps_time",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_raw_gps_time_index",
+                "column": "gps_time",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_raw_device_id_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_raw_driver_card_id_index",
+                "column": "driver_card_id",
+                "unique": false
+            },
+            {
+                "name": "idx_gps_tracks_raw_gps_time",
+                "column": "gps_time",
+                "unique": false
+            },
+            {
+                "name": "idx_gps_tracks_raw_device_time",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "idx_gps_tracks_raw_device_time",
+                "column": "gps_time",
+                "unique": false
+            },
+            {
+                "name": "gps_tracks_raw_created_at_index",
+                "column": "created_at",
+                "unique": false
+            }
+        ]
+    },
+    "healing_logs": {
+        "rows_count": 2164,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "issue_type",
+                "type": "varchar(50)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "severity",
+                "type": "varchar(20)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "problem_description",
+                "type": "text",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "healing_action",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "status",
+                "type": "enum('attempted','success','failed')",
+                "null": "NO",
+                "key": "",
+                "default": "attempted",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "result_message",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "detected_at",
+                "type": "timestamp",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "healed_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "execution_time_ms",
+                "type": "int",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "healing_logs_issue_type_index",
+                "column": "issue_type",
+                "unique": false
+            }
+        ]
+    },
+    "idle_alarms": {
+        "rows_count": 1578,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "guid",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "serial_no",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_id",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "device_name",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_type",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_status",
+                "type": "varchar(50)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "alarm_state",
+                "type": "tinyint",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": "0=ALARM_END (idle selesai), 1=ALARMING (idle berlangsung)"
+            },
+            {
+                "name": "starting_time",
+                "type": "datetime",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "starting_location",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "ending_time",
+                "type": "datetime",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "ending_location",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "start_detail",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "end_detail",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "start_speed",
+                "type": "decimal(10,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "end_speed",
+                "type": "decimal(10,2)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "report_time",
+                "type": "datetime",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "duration_seconds",
+                "type": "int",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "duration_minutes",
+                "type": "int",
+                "null": "YES",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "latitude_start",
+                "type": "decimal(12,8)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "longitude_start",
+                "type": "decimal(12,8)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "latitude_end",
+                "type": "decimal(12,8)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "longitude_end",
+                "type": "decimal(12,8)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "idle_alarms_guid_unique",
+                "column": "guid",
+                "unique": true
+            },
+            {
+                "name": "idle_alarms_device_id_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_starting_time_index",
+                "column": "starting_time",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_report_time_index",
+                "column": "report_time",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_duration_minutes_index",
+                "column": "duration_minutes",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_alarm_status_index",
+                "column": "alarm_status",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_device_id_alarm_status_starting_time_index",
+                "column": "device_id",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_device_id_alarm_status_starting_time_index",
+                "column": "alarm_status",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_device_id_alarm_status_starting_time_index",
+                "column": "starting_time",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_duration_minutes_starting_time_index",
+                "column": "duration_minutes",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_duration_minutes_starting_time_index",
+                "column": "starting_time",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_alarm_status_end_speed_starting_time_index",
+                "column": "alarm_status",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_alarm_status_end_speed_starting_time_index",
+                "column": "end_speed",
+                "unique": false
+            },
+            {
+                "name": "idle_alarms_alarm_status_end_speed_starting_time_index",
+                "column": "starting_time",
+                "unique": false
+            }
+        ]
+    },
+    "import_logs": {
+        "rows_count": 15195,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "job_name",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "started_at",
+                "type": "datetime",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "finished_at",
+                "type": "datetime",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "total_record",
+                "type": "int",
+                "null": "NO",
+                "key": "",
+                "default": "0",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "status",
+                "type": "varchar(20)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "message",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            }
+        ]
+    },
+    "jobs": {
+        "rows_count": 2,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "queue",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "payload",
+                "type": "longtext",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "attempts",
+                "type": "tinyint unsigned",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "reserved_at",
+                "type": "int unsigned",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "available_at",
+                "type": "int unsigned",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "int unsigned",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "jobs_queue_index",
+                "column": "queue",
+                "unique": false
+            }
+        ]
+    },
+    "migrations": {
+        "rows_count": 31,
+        "columns": [
+            {
+                "name": "id",
+                "type": "int unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "migration",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "batch",
+                "type": "int",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            }
+        ]
+    },
+    "password_reset_tokens": {
+        "rows_count": 0,
+        "columns": [
+            {
+                "name": "email",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "token",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "email",
+                "unique": true
+            }
+        ]
+    },
+    "personal_access_tokens": {
+        "rows_count": 0,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "tokenable_type",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "MUL",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "tokenable_id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "name",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "token",
+                "type": "varchar(64)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "abilities",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "last_used_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "expires_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "personal_access_tokens_token_unique",
+                "column": "token",
+                "unique": true
+            },
+            {
+                "name": "personal_access_tokens_tokenable_type_tokenable_id_index",
+                "column": "tokenable_type",
+                "unique": false
+            },
+            {
+                "name": "personal_access_tokens_tokenable_type_tokenable_id_index",
+                "column": "tokenable_id",
+                "unique": false
+            }
+        ]
+    },
+    "system_settings": {
+        "rows_count": 33,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "key",
+                "type": "varchar(100)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "value",
+                "type": "text",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "type",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": "string",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "description",
+                "type": "varchar(255)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "system_settings_key_unique",
+                "column": "key",
+                "unique": true
+            }
+        ]
+    },
+    "users": {
+        "rows_count": 3,
+        "columns": [
+            {
+                "name": "id",
+                "type": "bigint unsigned",
+                "null": "NO",
+                "key": "PRI",
+                "default": null,
+                "extra": "auto_increment",
+                "comment": ""
+            },
+            {
+                "name": "name",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "username",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "UNI",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "role",
+                "type": "enum('admin','fleet_manager')",
+                "null": "NO",
+                "key": "",
+                "default": "fleet_manager",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "status",
+                "type": "enum('active','inactive')",
+                "null": "NO",
+                "key": "",
+                "default": "active",
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "email_verified_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "password",
+                "type": "varchar(255)",
+                "null": "NO",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "remember_token",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "session_token",
+                "type": "varchar(100)",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "login_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "created_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            },
+            {
+                "name": "updated_at",
+                "type": "timestamp",
+                "null": "YES",
+                "key": "",
+                "default": null,
+                "extra": "",
+                "comment": ""
+            }
+        ],
+        "indexes": [
+            {
+                "name": "PRIMARY",
+                "column": "id",
+                "unique": true
+            },
+            {
+                "name": "users_email_unique",
+                "column": "username",
+                "unique": true
+            }
+        ]
+    }
+}

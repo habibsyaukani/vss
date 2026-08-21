@@ -1,0 +1,144 @@
+═══════════════════════════════════════════════════════════════
+  QUICK CHECKLIST - DEPLOYMENT DENGAN PUTTY
+═══════════════════════════════════════════════════════════════
+
+Target: 10.2.2.18
+GitHub: https://github.com/habibsyaukani/vss
+
+═══════════════════════════════════════════════════════════════
+SEBELUM PUSH KE GITHUB
+═══════════════════════════════════════════════════════════════
+
+[ ] 1. Buka Git Bash di: g:\project\vss\idle-monitor
+[ ] 2. Run: git add .
+[ ] 3. Run: git commit -m "Deploy to production"
+[ ] 4. Run: git push origin main
+[ ] 5. Verifikasi di GitHub: https://github.com/habibsyaukani/vss
+
+═══════════════════════════════════════════════════════════════
+DEPLOYMENT VIA PUTTY (Copy-Paste Command)
+═══════════════════════════════════════════════════════════════
+
+STEP 1: CONNECT PUTTY
+[ ] Host: 10.2.2.18, Port: 22
+[ ] Login as: root
+
+STEP 2: UPDATE SYSTEM
+[ ] apt-get update && apt-get upgrade -y
+
+STEP 3: INSTALL DOCKER
+[ ] curl -fsSL https://get.docker.com -o get-docker.sh
+[ ] sh get-docker.sh
+[ ] systemctl enable docker && systemctl start docker
+[ ] rm get-docker.sh
+
+STEP 4: INSTALL DOCKER COMPOSE
+[ ] curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+[ ] chmod +x /usr/local/bin/docker-compose
+
+STEP 5: INSTALL PHP 8.1
+[ ] add-apt-repository ppa:ondrej/php -y
+[ ] apt-get update
+[ ] apt-get install -y php8.1-fpm php8.1-cli php8.1-mysql php8.1-redis php8.1-xml php8.1-curl php8.1-mbstring php8.1-zip php8.1-bcmath php8.1-gd php8.1-intl
+
+STEP 6: INSTALL COMPOSER
+[ ] curl -sS https://getcomposer.org/installer | php
+[ ] mv composer.phar /usr/local/bin/composer
+[ ] chmod +x /usr/local/bin/composer
+
+STEP 7: INSTALL NGINX & GIT
+[ ] apt-get install -y nginx git
+[ ] systemctl enable nginx && systemctl start nginx
+
+STEP 8: SETUP DOCKER MYSQL & REDIS
+[ ] mkdir -p /opt/idle-monitor-docker
+[ ] cd /opt/idle-monitor-docker
+[ ] Create docker-compose.yml (lihat panduan lengkap)
+[ ] docker-compose up -d
+[ ] sleep 30
+[ ] docker ps (verify containers)
+
+STEP 9: CLONE REPOSITORY
+[ ] cd /var/www
+[ ] rm -rf idle-monitor (jika ada)
+[ ] git clone https://github.com/habibsyaukani/vss.git idle-monitor
+[ ] cd idle-monitor
+
+STEP 10: CONFIGURE APP
+[ ] cp .env.production.example .env
+[ ] php artisan key:generate
+
+STEP 11: INSTALL DEPENDENCIES
+[ ] composer install --no-dev --optimize-autoloader --no-interaction
+
+STEP 12: RUN MIGRATIONS
+[ ] php artisan migrate --force
+[ ] php artisan db:seed --force
+
+STEP 13: SET PERMISSIONS
+[ ] chown -R www-data:www-data storage bootstrap/cache
+[ ] chmod -R 775 storage bootstrap/cache
+
+STEP 14: CONFIGURE NGINX
+[ ] Create /etc/nginx/sites-available/idle-monitor (lihat panduan)
+[ ] ln -sf /etc/nginx/sites-available/idle-monitor /etc/nginx/sites-enabled/
+[ ] rm -f /etc/nginx/sites-enabled/default
+[ ] nginx -t
+[ ] systemctl reload nginx
+
+STEP 15: SETUP CRON
+[ ] crontab -e
+[ ] Add: * * * * * cd /var/www/idle-monitor && php artisan schedule:run >> /dev/null 2>&1
+
+STEP 16: SETUP QUEUE WORKER
+[ ] Create /etc/systemd/system/idle-monitor-queue.service
+[ ] systemctl daemon-reload
+[ ] systemctl enable idle-monitor-queue
+[ ] systemctl start idle-monitor-queue
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+[ ] docker ps (2 containers running)
+[ ] systemctl status nginx
+[ ] systemctl status php8.1-fpm
+[ ] systemctl status idle-monitor-queue
+[ ] Open: http://10.2.2.18
+[ ] Login: http://10.2.2.18/admin/login
+[ ] Test data pull
+
+═══════════════════════════════════════════════════════════════
+DEFAULT CREDENTIALS
+═══════════════════════════════════════════════════════════════
+
+Admin:
+  Email: admin@example.com
+  Password: password
+
+Database:
+  Host: 127.0.0.1
+  Port: 3306
+  Database: vss
+  User: idle_user
+  Password: IdleUser@2026!
+
+═══════════════════════════════════════════════════════════════
+QUICK COMMANDS
+═══════════════════════════════════════════════════════════════
+
+View logs:
+  tail -f /var/www/idle-monitor/storage/logs/laravel.log
+
+Restart services:
+  systemctl restart nginx php8.1-fpm idle-monitor-queue
+
+Update app:
+  cd /var/www/idle-monitor
+  git pull origin main
+  composer install --no-dev
+  php artisan migrate --force
+  php artisan cache:clear
+  systemctl restart idle-monitor-queue
+
+═══════════════════════════════════════════════════════════════

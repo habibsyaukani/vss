@@ -1,0 +1,123 @@
+═══════════════════════════════════════════════════════════════
+  QUICK DEPLOYMENT STEPS - IDLE MONITOR TO 10.2.2.18
+═══════════════════════════════════════════════════════════════
+
+📦 STEP 1: PREPARE GITHUB REPOSITORY
+=====================================
+
+A. Update deploy-to-server.sh:
+   1. Open: deploy-to-server.sh
+   2. Line 27: Change to your GitHub repo URL
+      GITHUB_REPO="https://github.com/YOUR_USERNAME/idle-monitor.git"
+   
+B. Push to GitHub:
+   Option 1 (Windows):
+      Double-click: PUSH_TO_GITHUB.bat
+   
+   Option 2 (Manual):
+      git add .
+      git commit -m "Prepare for production deployment"
+      git push origin main
+
+═══════════════════════════════════════════════════════════════
+
+🚀 STEP 2: DEPLOY TO SERVER
+============================
+
+Option A: AUTOMATIC (Recommended)
+----------------------------------
+From Git Bash or Linux terminal:
+
+   cd g:/project/vss/idle-monitor
+   chmod +x deploy-to-server.sh
+   ./deploy-to-server.sh
+
+Wait 10-15 minutes for completion.
+
+Option B: MANUAL
+----------------
+Follow detailed steps in: DEPLOYMENT_GUIDE.txt
+
+═══════════════════════════════════════════════════════════════
+
+✅ STEP 3: VERIFY DEPLOYMENT
+=============================
+
+1. Open browser:
+   http://10.2.2.18
+
+2. Login to admin panel:
+   http://10.2.2.18/admin/login
+   Email: admin@example.com
+   Password: password
+
+3. Check System Health:
+   http://10.2.2.18/admin/system-health
+
+4. Test manual data pull:
+   http://10.2.2.18/admin/data-pull
+
+═══════════════════════════════════════════════════════════════
+
+🔧 COMMON COMMANDS ON SERVER
+==============================
+
+SSH to server:
+   ssh root@10.2.2.18
+
+Check services:
+   systemctl status nginx
+   systemctl status php8.1-fpm
+   systemctl status idle-monitor-queue
+   docker ps
+
+View logs:
+   tail -f /var/www/idle-monitor/storage/logs/laravel.log
+   docker logs idle-monitor-mysql
+   journalctl -u idle-monitor-queue -f
+
+Restart services:
+   systemctl restart nginx
+   systemctl restart idle-monitor-queue
+   docker-compose restart
+
+Update application:
+   cd /var/www/idle-monitor
+   git pull origin main
+   composer install --no-dev
+   php artisan migrate --force
+   php artisan cache:clear
+   systemctl restart idle-monitor-queue
+
+═══════════════════════════════════════════════════════════════
+
+🆘 TROUBLESHOOTING
+===================
+
+Problem: Cannot SSH to server
+Solution:
+   - Check server is running: ping 10.2.2.18
+   - Check SSH is enabled: telnet 10.2.2.18 22
+   - Verify SSH credentials
+
+Problem: Website not accessible
+Solution:
+   - Check Nginx: systemctl status nginx
+   - Check firewall: ufw allow 80
+   - Check application logs
+
+Problem: Database connection error
+Solution:
+   - Check Docker: docker ps
+   - Verify .env DB credentials
+   - Check MySQL logs: docker logs idle-monitor-mysql
+
+═══════════════════════════════════════════════════════════════
+
+📞 NEED HELP?
+==============
+
+Full Documentation: DEPLOYMENT_GUIDE.txt
+Development Docs: DEVELOPMENT_PROGRESS.md
+
+═══════════════════════════════════════════════════════════════

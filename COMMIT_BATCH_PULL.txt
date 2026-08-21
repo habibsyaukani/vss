@@ -1,0 +1,51 @@
+feat: Implement Batch Auto-Split & Real-time Progress for Data Pull
+
+PROBLEM SOLVED:
+- 504 Gateway Timeout saat pull data range tanggal
+- Tidak ada progress tracking
+- Beban besar ke API Howen dalam satu request
+- Jika gagal harus retry semua dari awal
+
+SOLUTION:
+- User pilih 1 tanggal → Backend otomatis split jadi 8 batch (3 jam per batch)
+- Browser langsung dapat response (< 1 detik) - NO MORE TIMEOUT!
+- Progress real-time dengan polling setiap 3 detik
+- Batch retry capability (jika batch ke-5 gagal, hanya retry batch itu)
+- API friendly (request kecil-kecil, spread across time)
+
+IMPLEMENTATION:
+1. NEW: Table `data_pull_batches` untuk tracking batch progress
+2. NEW: DataPullOrchestratorJob - split 1 hari jadi 8 batch
+3. NEW: DataPullBatchJob - execute 1 batch (3 jam)
+4. MODIFIED: DataPullController - dispatch orchestrator & add progress endpoint
+5. MODIFIED: View & JS - display real-time batch progress
+
+FILES CHANGED:
+NEW:
+- database/migrations/2026_07_16_100000_create_data_pull_batches_table.php
+- app/Models/DataPullBatch.php
+- app/Jobs/DataPullOrchestratorJob.php
+- app/Jobs/DataPullBatchJob.php
+- BATCH_DATA_PULL_IMPLEMENTATION.md
+- BATCH_PULL_QUICK_START.md
+
+MODIFIED:
+- app/Http/Controllers/DataPullController.php
+- routes/admin.php
+- resources/views/admin/data-pull.blade.php
+- public/js/data-pull.js
+
+DEPLOYMENT:
+1. Run: php artisan migrate
+2. Ensure queue:work is running
+3. Test: http://127.0.0.1:8000/admin/data-pull
+
+BACKWARD COMPATIBILITY:
+- ✅ Command CLI tetap berfungsi (howen:pull-alarms-date-range)
+- ✅ Port 9097 & 8088 tidak berubah
+- ✅ No data loss (hanya tambah table baru)
+- ✅ Easy rollback
+
+RISK LEVEL: 🟢 GREEN (Very Low Risk)
+
+See BATCH_DATA_PULL_IMPLEMENTATION.md for full documentation.

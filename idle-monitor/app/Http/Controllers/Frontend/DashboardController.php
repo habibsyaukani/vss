@@ -94,9 +94,6 @@ class DashboardController extends Controller
 
         $data = Cache::remember("dash_speed_all_{$today}", 120, function () use ($start, $end, $today) {
             try {
-                // Set query timeout 10 detik agar tidak hang
-                DB::statement('SET SESSION MAX_EXECUTION_TIME=10000');
-
                 // One combined query for today's data using the optimized hourly stats table
                 // Since this runs during the day, we still need to grab the current hour's raw data
                 // Or we can just rely on the rollup table, which might be up to 1 hour behind.

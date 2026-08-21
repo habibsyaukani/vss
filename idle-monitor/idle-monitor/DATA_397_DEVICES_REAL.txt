@@ -1,0 +1,65 @@
+GPE-B-806	-	Area Operasional	DOZER
+GPE-B-807	-	Area Operasional	DOZER
+GPE-B-808	-	Area Operasional	DOZER
+GPE-B-809	-	Area Operasional	DOZER
+GPE-B-811	-	Area Operasional	DOZER
+GPE-B-812	-	Area Operasional	DOZER
+GPE-B-813	-	Area Operasional	DOZER
+GPE-B-815	-	Area Operasional	DOZER
+GPE-B-816	-	Area Operasional	DOZER
+GPE-B-818	-	Area Operasional	DOZER
+GPE-B-819	-	Area Operasional	DOZER
+GPE-B-820	-	Area Operasional	DOZER
+GPE-B-821	-	Area Operasional	DOZER
+GPE-B-822	-	Area Operasional	DOZER
+GPE-B-825	-	Area Operasional	DOZER
+GPE-B-826	-	Area Operasional	DOZER
+GPE-B-827	-	Area Operasional	DOZER
+GPE-B-828	-	Area Operasional	DOZER
+GPE-B-829	-	Area Operasional	DOZER
+GPE-B-830	-	Area Operasional	DOZER
+GPE-B-831	-	Area Operasional	DOZER
+GPE-B-832	-	Area Operasional	DOZER
+GPE-B-833	-	Area Operasional	DOZER
+GPE-B-835	-	Area Operasional	DOZER
+GPE-B-836	-	Area Operasional	DOZER
+GPE-B-837	-	Area Operasional	DOZER
+GPE-B-838	-	Area Operasional	DOZER
+GPE-B-839	-	Area Operasional	DOZER
+GPE-B-856	-	Area Operasional	DOZER
+GPE-B-857	-	Area Operasional	DOZER
+GPE-B-860	-	Area Operasional	DOZER
+GPE-B-866	-	Area Operasional	DOZER
+GPE-B-867	-	Area Operasional	DOZER
+GPE-B-871	-	Area Operasional	DOZER
+GPE-B-873	-	Area Operasional	DOZER
+GPE-B-876	-	Area Operasional	DOZER
+GPE-B-877	-	Area Operasional	DOZER
+GPE-B-878	-	Area Operasional	DOZER
+GPE-B-879	-	Area Operasional	DOZER
+GPE-B-880	-	Area Operasional	DOZER
+GPE-B-881	-	Area Operasional	DOZER
+GPE-B-882	-	Area Operasional	DOZER
+GPE-B-883	-	Area Operasional	DOZER
+GPE-B-885	-	Area Operasional	DOZER
+GPE-B-886	-	Area Operasional	DOZER
+GPE-B-887	-	Area Operasional	DOZER
+GPE-FT-815	-	SELATAN	FUEL TRUCK
+GPE-FT-860	-	JO SELATAN	FUEL TRUCK
+GPE-FT-861	-	JO SELATAN	FUEL TRUCK
+GPE-FT-865	-	JO UTARA	FUEL TRUCK
+GPE-FT-866	-	SELATAN	FUEL TRUCK
+GPE-FT-867	-	UTARA	FUEL TRUCK
+GPE-FT-868	-	SELATAN	FUEL TRUCK
+GPE-FT-869	-	UTARA	FUEL TRUCK
+GPE-FT-870	-	UTARA	FUEL TRUCK
+GPE-FT-871	-	M.SERVICE	FUEL TRUCK
+GPE-FT-872	-	SELATAN	FUEL TRUCK
+GPE-FT-873	-	JO SELATAN	FUEL TRUCK
+GPE-GFTH-875	-	M.SERVICE	FUEL TRUCK
+GPE-LV-890	-	SELATAN	LIGHT VEHICLE
+GPE-LV-891	-	UTARA	LIGHT VEHICLE
+GPE-LV-892	-	UTARA	LIGHT VEHICLE
+GPE-LV-910	-	JO SELATAN	LIGHT VEHICLE
+GPE-WT-836	-	SELATAN	WATER TRUCK
+GPE-WT-855	-	SELATAN	WATER TRUCK
