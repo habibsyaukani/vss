@@ -42,21 +42,21 @@ class Kernel extends ConsoleKernel
         // 🚨 ALARM DATA PULL (REAL-TIME)
         // ========================================
         
-        // [DISABLED] HOWEN ALARMS
-        // $schedule->command('howen:pull-alarms-realtime', [
-        //     '--hours' => 2,
-        // ])
-        //     ->everyThreeMinutes()
-        //     ->withoutOverlapping(5)
-        //     ->runInBackground()
-        //     ->description('Pull alarm data (real-time, last 2 hours)');
+        // ✅ HOWEN: Pull alarm data every 3 minutes (last 2 hours)
+        $schedule->command('howen:pull-alarms-realtime', [
+            '--hours' => 2,
+        ])
+            ->everyThreeMinutes()
+            ->withoutOverlapping(5)
+            ->runInBackground()
+            ->description('Pull Howen alarm data (real-time, last 2 hours)');
 
-        // [DISABLED] HOWEN PROCESS IDLE ALARMS
-        // $schedule->command('howen:process-idle-alarms')
-        //     ->everyThreeMinutes()
-        //     ->withoutOverlapping(5)
-        //     ->runInBackground()
-        //     ->description('Process idle alarms (analyze duration)');
+        // ✅ HOWEN: Process idle alarms every 3 minutes
+        $schedule->command('howen:process-idle-alarms')
+            ->everyThreeMinutes()
+            ->withoutOverlapping(5)
+            ->runInBackground()
+            ->description('Process Howen idle alarms (analyze duration)');
 
         // ✅ PRIMARY: Pull Tracksolid alarms every 3 minutes (last 1 day)
         $schedule->command('pull:tracksolid-alarms', [
