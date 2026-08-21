@@ -37,7 +37,13 @@ class IdleAlarmController extends Controller
 
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
         $query = IdleAlarm::select('idle_alarms.*')
-            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id');
+            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id')
+            ->where(function($q) {
+                // Sembunyikan idle alarm dengan end_speed = 0 (data tidak valid)
+                $q->whereNull('idle_alarms.end_speed')
+                  ->orWhere('idle_alarms.end_speed', '>', 0);
+            });
+
 
         // Filter by status
         if ($request->status) {
@@ -169,7 +175,13 @@ class IdleAlarmController extends Controller
      */
     public function export(Request $request)
     {
-        $query = IdleAlarm::with('device');
+        $query = IdleAlarm::with('device')
+            ->where(function($q) {
+                // Sembunyikan idle alarm dengan end_speed = 0 (data tidak valid)
+                $q->whereNull('end_speed')
+                  ->orWhere('end_speed', '>', 0);
+            });
+
 
         // Export Selected Rows
         if ($request->selected_ids && is_array($request->selected_ids)) {
