@@ -124,6 +124,8 @@ class TracksolidSyncService
         $allGuids    = array_keys($validRecords);
         $rawIdByGuid = GpsTrackRaw::whereIn('guid', $allGuids)->pluck('id', 'guid')->toArray();
 
+        /*
+        // --- DEPRECATED: gps_tracks is no longer used, saving 50% SSD space ---
         // 3. Find which ones are missing in gps_tracks
         $existingTrackRawIds = GpsTrack::whereIn('raw_id', array_values($rawIdByGuid))
             ->pluck('raw_id')
@@ -167,6 +169,7 @@ class TracksolidSyncService
                 }
             }
         }
+        */
 
         return count($validRecords);
     }
