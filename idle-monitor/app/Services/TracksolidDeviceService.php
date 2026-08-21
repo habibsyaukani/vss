@@ -55,10 +55,15 @@ class TracksolidDeviceService
                 // Cek apakah device sudah ada di database
                 $existingDevice = Device::where('imei', $imei)->orWhere('device_id', $imei)->first();
 
+                $deviceName = $device['deviceName'] ?? $imei;
+                if ($deviceName !== $imei) {
+                    $deviceName = trim(str_ireplace([' BU GPE', ' BU-GPE'], '', $deviceName));
+                }
+
                 $deviceData = [
                     'device_id'   => $imei, // Kita set device_id sama dengan IMEI
                     'imei'        => $imei,
-                    'device_name' => $device['deviceName'] ?? $imei,
+                    'device_name' => $deviceName,
                     'plate_no'    => $device['vehicleNumber'] ?? null,
                     'sim_number'  => $device['sim'] ?? null,
                     'group_name'  => $device['deviceGroup'] ?? null,

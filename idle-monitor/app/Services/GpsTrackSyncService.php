@@ -462,9 +462,14 @@ class GpsTrackSyncService
 
     private function mapToRaw(array $item, ?string $deviceId): array
     {
+        $deviceName = $item['deviceName'] ?? null;
+        if ($deviceName) {
+            $deviceName = trim(str_ireplace([' BU GPE', ' BU-GPE'], '', $deviceName));
+        }
+
         return [
             'device_id'        => $deviceId ?? ($item['_injected_device_id'] ?? null),
-            'device_name'      => $item['deviceName'] ?? null,
+            'device_name'      => $deviceName,
             'guid'             => $item['guid'] ?? null,
             'longitude'        => $item['longitude'] ?? null,
             'latitude'         => $item['latitude']  ?? null,
@@ -509,10 +514,15 @@ class GpsTrackSyncService
 
     private function mapToDisplay(array $item, ?string $deviceId, int $rawId): array
     {
+        $deviceName = $item['deviceName'] ?? null;
+        if ($deviceName) {
+            $deviceName = trim(str_ireplace([' BU GPE', ' BU-GPE'], '', $deviceName));
+        }
+
         return [
             'raw_id'             => $rawId,
             'device_id'          => $deviceId ?? ($item['_injected_device_id'] ?? null),
-            'device_name'        => $item['deviceName'] ?? null,
+            'device_name'        => $deviceName,
             'longitude'          => $item['longitude']  ?? null,
             'latitude'           => $item['latitude']   ?? null,
             'altitude'           => isset($item['altitude'])   ? (int) $item['altitude']   : null,
@@ -541,9 +551,14 @@ class GpsTrackSyncService
 
     public function mapForDisplay(array $item): array
     {
+        $deviceName = $item['deviceName'] ?? null;
+        if ($deviceName) {
+            $deviceName = trim(str_ireplace([' BU GPE', ' BU-GPE'], '', $deviceName));
+        }
+
         return [
             'device_id'     => $item['deviceguid']  ?? $item['deviceName'] ?? null,
-            'device_name'   => $item['deviceName']  ?? null,
+            'device_name'   => $deviceName,
             'longitude'     => $item['longitude']   ?? null,
             'latitude'      => $item['latitude']    ?? null,
             'speed'         => isset($item['speed'])     ? (int) $item['speed']     : null,
