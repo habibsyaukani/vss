@@ -93,8 +93,8 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Archive/delete old raw GPS tracks to save space');
 
-        // ✅ AUTO-PRUNE: Delete heavy gps_tracks_raw older than 14 days
-        $schedule->command('vss:clean-old-gps-data --days=14')
+        // ✅ AUTO-PRUNE: Delete heavy gps_tracks_raw older than 30 days
+        $schedule->command('vss:clean-old-gps-data --days=30')
             ->dailyAt('01:15')
             ->withoutOverlapping(120)
             ->runInBackground()
