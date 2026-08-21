@@ -118,7 +118,8 @@ class DashboardController extends Controller
                     ->get();
                     
                 // 2. Merge with real-time current hour data from raw
-                $realtimeStats = GpsTrackRaw::select(
+                $realtimeStats = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
+                    ->select(
                         'device_id',
                         'device_name',
                         DB::raw('MAX(speed) as max_speed'),
@@ -253,7 +254,8 @@ class DashboardController extends Controller
                 // Jika hari ini, tambah max speed dari real-time jam terakhir
                 if ($i === 0) {
                     $currentHourStart = Carbon::now()->startOfHour()->format('Y-m-d H:i:s');
-                    $rawMax = GpsTrackRaw::where('gps_time', '>=', $currentHourStart)
+                    $rawMax = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
+                                         ->where('gps_time', '>=', $currentHourStart)
                                          ->where('speed', '>', 0)
                                          ->max('speed') ?? 0;
                     $maxSpeed = max($maxSpeed, $rawMax);

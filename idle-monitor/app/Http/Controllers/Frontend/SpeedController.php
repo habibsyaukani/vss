@@ -42,7 +42,8 @@ class SpeedController extends Controller
         });
 
         // ⚡ Fast indexed query purely on gps_tracks_raw (NO SQL JOINs)
-        $query = GpsTrackRaw::select(
+        $query = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
+            ->select(
                 'id',
                 'device_id',
                 'device_name',
