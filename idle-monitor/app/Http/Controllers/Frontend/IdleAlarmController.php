@@ -33,13 +33,11 @@ class IdleAlarmController extends Controller
         // ✅ RELEASE SESSION LOCK EARLY!
         session()->save();
 
+        \Illuminate\Support\Facades\Log::info("AJAX Request: ", $request->all());
+
         // ✅ OPTIMIZED: Use JOIN instead of whereHas for better performance
         $query = IdleAlarm::select('idle_alarms.*')
-            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id')
-            ->where(function($q) {
-                $q->whereNull('idle_alarms.end_speed')
-                  ->orWhere('idle_alarms.end_speed', '>', 0);
-            });
+            ->leftJoin('devices', 'idle_alarms.device_id', '=', 'devices.device_id');
 
         // Filter by status
         if ($request->status) {
@@ -171,11 +169,7 @@ class IdleAlarmController extends Controller
      */
     public function export(Request $request)
     {
-        $query = IdleAlarm::with('device')
-            ->where(function($q) {
-                $q->whereNull('end_speed')
-                  ->orWhere('end_speed', '>', 0);
-            });
+        $query = IdleAlarm::with('device');
 
         // Export Selected Rows
         if ($request->selected_ids && is_array($request->selected_ids)) {

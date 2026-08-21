@@ -43,20 +43,28 @@ class PullIdleAlarmsRealtimeLoopCommand extends Command
             $this->info(str_repeat('=', 60));
             
             try {
-                // Call the date range pull command for last 48 hours
-                $this->call('howen:pull-alarms-date-range', [
-                    '--from' => now()->subHours(48)->format('Y-m-d'),
-                    '--to' => now()->format('Y-m-d'),
-                    '--concurrency' => 5,
-                    '--parallel' => null  // Boolean flag, no value needed
+                // --- HOWEN SYNC (DISABLED FOR TRACKSOLID TESTING) ---
+                // $this->info("🔄 Pulling Howen Alarms (last 48 hours)...");
+                // $this->call('howen:pull-alarms-date-range', [
+                //     '--from' => now()->subHours(48)->format('Y-m-d'),
+                //     '--to' => now()->format('Y-m-d'),
+                //     '--concurrency' => 5,
+                //     '--parallel' => null  // Boolean flag, no value needed
+                // ]);
+                
+                // --- TRACKSOLID SYNC ---
+                $this->info("🚀 Pulling Tracksolid Alarms (last 48 hours)...");
+                $this->call('pull:tracksolid-alarms', [
+                    '--days' => 2
                 ]);
+                // -----------------------
                 
-                // --- GPS TRACK SYNC ---
-                $this->info("🛰️ Pulling GPS Tracks (last 2 hours)...");
-                \App\Jobs\ImportGpsTrackJob::dispatchSync(2, 500);
+                // --- GPS TRACK SYNC (DISABLED FOR TRACKSOLID TESTING) ---
+                // $this->info("🛰️ Pulling GPS Tracks (last 2 hours)...");
+                // \App\Jobs\ImportGpsTrackJob::dispatchSync(2, 500);
                 
-                $this->info("🗺️ Processing GPS Tracks mapping...");
-                \App\Jobs\ProcessGpsTrackJob::dispatchSync();
+                // $this->info("🗺️ Processing GPS Tracks mapping...");
+                // \App\Jobs\ProcessGpsTrackJob::dispatchSync();
                 // ----------------------
                 
                 $endTime = now();

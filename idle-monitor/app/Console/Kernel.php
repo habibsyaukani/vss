@@ -42,33 +42,39 @@ class Kernel extends ConsoleKernel
         // 🚨 ALARM DATA PULL (REAL-TIME)
         // ========================================
         
-        // ✅ PRIMARY: Pull alarms every 3 minutes (last 2 hours)
-        $schedule->command('howen:pull-alarms-realtime', [
-            '--hours' => 2,
+        // [DISABLED] HOWEN ALARMS
+        // $schedule->command('howen:pull-alarms-realtime', [
+        //     '--hours' => 2,
+        // ])
+        //     ->everyThreeMinutes()
+        //     ->withoutOverlapping(5)
+        //     ->runInBackground()
+        //     ->description('Pull alarm data (real-time, last 2 hours)');
+
+        // [DISABLED] HOWEN PROCESS IDLE ALARMS
+        // $schedule->command('howen:process-idle-alarms')
+        //     ->everyThreeMinutes()
+        //     ->withoutOverlapping(5)
+        //     ->runInBackground()
+        //     ->description('Process idle alarms (analyze duration)');
+
+        // ✅ PRIMARY: Pull Tracksolid alarms every 3 minutes (last 1 day)
+        $schedule->command('pull:tracksolid-alarms', [
+            '--days' => 1,
         ])
             ->everyThreeMinutes()
             ->withoutOverlapping(5)
             ->runInBackground()
-            ->description('Pull alarm data (real-time, last 2 hours)');
+            ->description('Pull Tracksolid alarm data (real-time, last 1 day)');
 
-        // ✅ SECONDARY: Process idle alarms every 3 minutes (direct command, no queue delay)
-        $schedule->command('howen:process-idle-alarms')
-            ->everyThreeMinutes()
-            ->withoutOverlapping(5)
-            ->runInBackground()
-            ->description('Process idle alarms (analyze duration)');
-
-        // ✅ PRIMARY: Pull GPS tracks every 3 minutes (last 1 hour, fast concurrent)
-        // [DISABLED] Karena sekarang sudah menggunakan Real-time WebSocket (HowenWebsocketListenCommand)
-        /*
-        $schedule->command('vss:pull-gps-tracks', [
+        // ✅ PRIMARY: Pull Tracksolid GPS tracks every 3 minutes (last 1 hour)
+        $schedule->command('vss:pull-tracksolid-tracks', [
             '--hours' => 1,
         ])
             ->everyThreeMinutes()
             ->withoutOverlapping(10)
             ->runInBackground()
-            ->description('Pull GPS track data (fast concurrent, last 1 hour)');
-        */
+            ->description('Pull Tracksolid GPS track data (real-time, last 1 hour)');
 
         // Process GPS tracks every 3 minutes (dispatch to queue)
         // [DISABLED] Sama, ini sudah tidak perlu lagi karena WebSocket memproses secara instan.
@@ -89,22 +95,19 @@ class Kernel extends ConsoleKernel
         // Cleanup old raw data - Schedule berdasarkan setting di database
         // Setting bisa diubah di System Control Center
         // Default: Monthly pada tanggal 1 jam 02:00 AM
-        $schedule->call(function () {
-            try {
-                // Check jika tabel system_settings ada
-                if (!DB::getSchemaBuilder()->hasTable('system_settings')) {
-                    return; // Skip jika tabel belum ada
-                }
-
-                // Dispatch job hanya jika cleanup enabled
-                if (\App\Models\SystemSetting::isCleanupEnabled()) {
-                    \App\Jobs\CleanupOldRawDataJob::dispatch();
-                }
-            } catch (\Exception $e) {
-                // Silent fail - jangan break scheduler
-                \Log::error('Cleanup scheduler error: ' . $e->getMessage());
-            }
-        })->cron($this->getCleanupCron())->description('Cleanup old raw data (based on system settings)');
+        // [DISABLED] Per permintaan, raw data tidak boleh dihapus karena digunakan untuk UI Speed Monitoring.
+        // $schedule->call(function () {
+        //     try {
+        //         if (!DB::getSchemaBuilder()->hasTable('system_settings')) {
+        //             return; 
+        //         }
+        //         if (\App\Models\SystemSetting::isCleanupEnabled()) {
+        //             \App\Jobs\CleanupOldRawDataJob::dispatch();
+        //         }
+        //     } catch (\Exception $e) {
+        //         \Log::error('Cleanup scheduler error: ' . $e->getMessage());
+        //     }
+        // })->cron($this->getCleanupCron())->description('Cleanup old raw data (based on system settings)');
 
         // ========================================
         // ⚙️ AUTO QUEUE WORKER (FAILSAFE)

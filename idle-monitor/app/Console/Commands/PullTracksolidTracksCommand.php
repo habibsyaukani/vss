@@ -32,7 +32,8 @@ class PullTracksolidTracksCommand extends Command
         $imei = $this->argument('imei');
         $hours = (int) $this->option('hours');
 
-        $endTime = Carbon::now();
+        // Tracksolid track API usually expects UTC time
+        $endTime = Carbon::now('UTC');
         $beginTime = $endTime->copy()->subHours($hours);
 
         $endTimeStr = $endTime->format('Y-m-d H:i:s');

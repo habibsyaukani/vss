@@ -56,8 +56,11 @@ class TracksolidTrackService
         
         foreach ($tracks as $track) {
             try {
-                $gpsTime = $track['gpsTime'] ?? null;
-                if (!$gpsTime) continue;
+                $gpsTimeRaw = $track['gpsTime'] ?? null;
+                if (!$gpsTimeRaw) continue;
+
+                // Tracksolid returns track list time in UTC. We need to convert it to WITA.
+                $gpsTime = Carbon::createFromFormat('Y-m-d H:i:s', $gpsTimeRaw, 'UTC')->setTimezone('Asia/Makassar')->format('Y-m-d H:i:s');
 
                 // Prepare data for batch insert
                 $insertData[] = [

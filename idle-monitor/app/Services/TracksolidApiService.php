@@ -79,6 +79,7 @@ class TracksolidApiService
             return [
                 'success' => true,
                 'result'  => $body['result'] ?? null,
+                'data'    => $body['data'] ?? null,
             ];
 
         } catch (\Exception $e) {

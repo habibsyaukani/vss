@@ -648,7 +648,7 @@ $(function() {
                     return `<span class="speed-badge ${cls}">${spd} Km/h</span>`;
                 }
             },
-            { data: 'altitude', name: 'altitude', render: function(data) { return data || '0'; } },
+            { data: 'altitude', name: 'altitude', render: function(data) { return data ? data : '-'; } },
             { data: 'gps_time', name: 'gps_time' },
             {
                 data: 'latitude',
@@ -661,11 +661,11 @@ $(function() {
                             </a>`;
                 }
             },
-            { data: null, searchable: false, orderable: false, render: function() { return '0'; } },
+            { data: null, searchable: false, orderable: false, render: function() { return '-'; } }, // Accuracy
             { data: 'direction', name: 'direction', render: function(data) { return data || '0'; } },
-            { data: 'satellites', name: 'satellites', render: function(data) { return data || '0'; } },
-            { data: 'input_output_status', name: 'input_output_status', render: function(data) { return data || ''; } },
-            { data: 'is_emergency', name: 'is_emergency', render: function(data) { return data ? '1' : '0'; } },
+            { data: 'satellites', name: 'satellites', render: function(data) { return data ? data : '-'; } },
+            { data: 'input_output_status', name: 'input_output_status', render: function(data) { return data ? data : '-'; } },
+            { data: 'is_emergency', name: 'is_emergency', render: function(data) { return data ? '1' : '-'; } },
             {
                 data: 'is_acc_on',
                 name: 'is_acc_on',

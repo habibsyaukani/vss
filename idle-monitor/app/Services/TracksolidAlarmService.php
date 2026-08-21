@@ -28,15 +28,16 @@ class TracksolidAlarmService
             'errors' => []
         ];
 
-        Log::info("[Tracksolid Alarm Sync] Fetching alarms for IMEI: {$imei} from {$beginTime} to {$endTime}");
+        Log::info("[Tracksolid Alarm Sync] Fetching idling report for IMEI: {$imei} from {$beginTime} to {$endTime}");
 
-        // Call the API
-        $response = $this->apiService->callApi('jimi.device.alarm.list', [
+        $response = $this->apiService->callApi('jimi.open.platform.report.parking', [
+            'account' => env('TRACKSOLID_USERNAME'),
             'imeis' => $imei,
-            'begin_time' => $beginTime,
+            'start_time' => $beginTime,
             'end_time' => $endTime,
-            'page_no' => 1,
+            'start_row' => 0,
             'page_size' => 200,
+            'acc_type' => 'on'
         ]);
 
         if (!$response['success']) {
@@ -44,49 +45,57 @@ class TracksolidAlarmService
             return $stats;
         }
 
-        $alarms = $response['result'] ?? [];
+        $alarms = $response['data']['rows'] ?? [];
 
         if (empty($alarms)) {
             return $stats;
         }
 
         $stats['total_fetched'] = count($alarms);
-        $device = Device::where('imei', $imei)->orWhere('device_id', $imei)->first();
 
         foreach ($alarms as $alarm) {
             try {
                 $alarmImei = $alarm['imei'] ?? null;
-                $alertTime = $alarm['alertTime'] ?? null;
+                $alertTime = $alarm['startTime'] ?? null;
                 if (!$alertTime || !$alarmImei) continue;
 
-                // Cek duplikasi berdasarkan waktu dan imei
+                $parsedStartingTime = Carbon::parse($alertTime)->setTimezone('Asia/Makassar')->format('Y-m-d H:i:s');
+
                 $existing = IdleAlarm::where('device_id', $alarmImei)
-                                     ->where('starting_time', $alertTime)
-                                     ->where('alarm_type', $alarm['alertTypeId'] ?? 'Unknown')
+                                     ->where('starting_time', $parsedStartingTime)
+                                     ->where('alarm_type', 'Idle')
                                      ->first();
 
                 if (!$existing) {
+                    $durationSeconds = (int)($alarm['durSecond'] ?? 0);
+                    $durationMinutes = floor($durationSeconds / 60);
+
                     IdleAlarm::create([
                         'guid'              => Str::uuid(),
                         'device_id'         => $alarmImei,
                         'device_name'       => $alarm['deviceName'] ?? $alarmImei,
-                        'alarm_type'        => $alarm['alertTypeId'] ?? 'Unknown',
-                        'start_detail'      => $alarm['alarmTypeName'] ?? 'Tracksolid Alarm',
-                        'starting_time'     => $alertTime,
-                        'ending_time'       => $alertTime, // Tracksolid alarm list generally returns point-in-time events
-                        'duration_seconds'  => 0,
-                        'duration_minutes'  => 0,
-                        'latitude_start'    => $alarm['lat'] ?? 0,
-                        'longitude_start'   => $alarm['lng'] ?? 0,
-                        'start_speed'       => $alarm['speed'] ?? 0,
-                        'alarm_status'      => $alarm['status'] ?? 0,
-                        'report_time'       => $alarm['pushTime'] ?? $alertTime,
+                        'alarm_type'        => 'Idle',
+                        'alarm_status'      => 'on',
+                        'alarm_state'       => 0,
+                        'starting_time'     => Carbon::parse($alarm['startTime'] ?? now())->setTimezone('Asia/Makassar')->format('Y-m-d H:i:s'),
+                        'ending_time'       => Carbon::parse($alarm['endTime'] ?? now())->setTimezone('Asia/Makassar')->format('Y-m-d H:i:s'),
+                        'starting_location' => (isset($alarm['lng']) && isset($alarm['lat'])) ? $alarm['lng'] . ',' . $alarm['lat'] : null,
+                        'ending_location'   => null,
+                        'start_detail'      => $alarm['addr'] ?? null,
+                        'latitude_start'    => $alarm['lat'] ?? null,
+                        'longitude_start'   => $alarm['lng'] ?? null,
+                        'latitude_end'      => null,
+                        'longitude_end'     => null,
+                        'duration_seconds'  => $durationSeconds,
+                        'duration_minutes'  => $durationMinutes,
+                        'report_time'       => Carbon::parse($alarm['startTime'] ?? now())->setTimezone('Asia/Makassar')->format('Y-m-d H:i:s'),
+                        'start_speed'       => null, // Null to display as '-'
                     ]);
                     $stats['total_inserted']++;
                 }
 
             } catch (\Exception $e) {
-                Log::error("[Tracksolid Alarm Sync] Error saving alarm for IMEI {$imei}: " . $e->getMessage());
+                Log::error("[Tracksolid Alarm Sync] Error saving idling for IMEI {$imei}: " . $e->getMessage());
                 $stats['errors'][] = "IMEI {$imei}: " . $e->getMessage();
             }
         }

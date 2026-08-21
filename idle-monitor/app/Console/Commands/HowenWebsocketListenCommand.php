@@ -12,6 +12,7 @@ use App\Models\IdleAlarm;
 use App\Models\Device;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class HowenWebsocketListenCommand extends Command
 {
@@ -22,15 +23,21 @@ class HowenWebsocketListenCommand extends Command
     private $authData;
     private $reconnectDelay = 5;
     private $username;
-    
+
     // Track last heartbeat time for logging to avoid spam
     private $lastHeartbeatLog = 0;
+
+    // FIX: Lacak apakah login gagal agar bisa force refresh token pada reconnect
+    private $loginFailed = false;
+
+    // FIX: Counter reconnect untuk backoff bertahap
+    private $reconnectAttempt = 0;
 
     public function handle()
     {
         $this->authService = new VssAuthService();
         $this->username = config('vss.username');
-        
+
         $this->info('Starting Howen WebSocket Listener Daemon...');
         Log::info('[HowenWS] Starting WebSocket Listener');
 
@@ -45,25 +52,32 @@ class HowenWebsocketListenCommand extends Command
         $connector = new Connector($loop, $reactConnector);
 
         $this->connect($connector, $loop);
-        
+
         // Block and listen forever
         $loop->run();
     }
-    
+
     private function connect($connector, $loop, bool $isReconnect = false)
     {
         // 1. Get token and pid
-        // HANYA refresh token saat pertama kali connect, BUKAN saat reconnect
-        // agar tidak spam login ke server (bisa rate-limited)
         try {
-            if ($isReconnect && $this->authData) {
-                // Reuse token yang sudah ada saat reconnect
+            if ($isReconnect && $this->authData && !$this->loginFailed) {
+                // Reuse token yang sudah ada saat reconnect HANYA jika login sebelumnya sukses
                 Log::info('[HowenWS] Reconnect: reusing cached auth data');
             } else {
-                // First connect: ambil data auth fresh
+                // FIX: Jika login gagal sebelumnya, paksa clear cache dan ambil token baru
+                if ($this->loginFailed) {
+                    Log::warning('[HowenWS] Previous login failed — forcing fresh token from server...');
+                    Cache::forget('vss_auth_data');
+                    Cache::forget('vss_auth_refresh_lock');
+                    $this->loginFailed = false;
+                }
+
+                // Ambil data auth fresh
                 $this->authData = $this->authService->getAuthData();
                 Log::info('[HowenWS] Fresh auth data obtained', [
                     'has_pid' => !empty($this->authData['pid']),
+                    'token_prefix' => substr($this->authData['token'] ?? '', 0, 10) . '...',
                 ]);
             }
         } catch (\Exception $e) {
@@ -75,31 +89,37 @@ class HowenWebsocketListenCommand extends Command
 
         $host = parse_url(config('vss.base_url', 'http://vss.ptdigital.co.id'), PHP_URL_HOST);
         $wsUrl = "ws://{$host}:36300";
-        
+
         $this->info("Connecting to {$wsUrl} as {$this->username}...");
 
         $connector($wsUrl)->then(function (WebSocket $conn) use ($connector, $loop) {
             $this->info("✅ Connected successfully to WebSocket server!");
             Log::info("[HowenWS] Connected to WebSocket server");
-            
-            // 2. Send Login (Action 80000)
-        // Hanya kirim pid jika ada nilainya (pid opsional di beberapa versi Howen)
-        $loginPayloadData = [
-            'username' => $this->username,
-            'token'    => $this->authData['token'],
-        ];
-        if (!empty($this->authData['pid'])) {
-            $loginPayloadData['pid'] = $this->authData['pid'];
-        }
 
-        $loginPayload = [
-            'action'  => '80000',
-            'payload' => $loginPayloadData,
-        ];
-        
-        $conn->send(json_encode($loginPayload));
-        Log::info('[HowenWS] Login sent', ['username' => $this->username, 'has_pid' => !empty($this->authData['pid'])]);
-        $this->info("📤 Sent Login Request (80000)");
+            // Reset reconnect counter saat berhasil connect
+            $this->reconnectAttempt = 0;
+
+            // 2. Send Login (Action 80000)
+            // Hanya kirim pid jika ada nilainya (pid opsional di beberapa versi Howen)
+            $loginPayloadData = [
+                'username' => $this->username,
+                'token'    => $this->authData['token'],
+            ];
+            if (!empty($this->authData['pid'])) {
+                $loginPayloadData['pid'] = $this->authData['pid'];
+            }
+
+            $loginPayload = [
+                'action'  => '80000',
+                'payload' => $loginPayloadData,
+            ];
+
+            $conn->send(json_encode($loginPayload));
+            Log::info('[HowenWS] Login sent', [
+                'username' => $this->username,
+                'has_pid'  => !empty($this->authData['pid']),
+            ]);
+            $this->info("📤 Sent Login Request (80000)");
 
             // 3. Start Heartbeat Timer (Action 80009) - every 60 seconds
             $heartbeatTimer = $loop->addPeriodicTimer(60, function() use ($conn) {
@@ -107,11 +127,11 @@ class HowenWebsocketListenCommand extends Command
                     'action' => '80009',
                     'payload' => [
                         'username' => $this->username,
-                        'token' => $this->authData['token']
+                        'token'    => $this->authData['token']
                     ]
                 ];
                 $conn->send(json_encode($heartbeatPayload));
-                
+
                 // Only log heartbeat every 5 minutes to avoid log spam
                 $now = time();
                 if ($now - $this->lastHeartbeatLog > 300) {
@@ -121,7 +141,7 @@ class HowenWebsocketListenCommand extends Command
             });
 
             // 4. Handle Incoming Messages
-            $conn->on('message', function ($msg) use ($conn) {
+            $conn->on('message', function ($msg) use ($conn, $connector, $loop, $heartbeatTimer) {
                 $rawPayload = $msg->getPayload();
                 $data = json_decode($rawPayload, true);
                 if (!$data) return;
@@ -130,7 +150,7 @@ class HowenWebsocketListenCommand extends Command
 
                 // Log ALL incoming messages for debugging
                 Log::debug("[HowenWS] RAW IN action={$action}: " . substr($rawPayload, 0, 300));
-                
+
                 // Handle Login Response
                 if ($action === '80000') {
                     Log::info('[HowenWS] Login response: ' . $rawPayload);
@@ -152,6 +172,12 @@ class HowenWebsocketListenCommand extends Command
                     } else {
                         $this->error('❌ Login failed: ' . $rawPayload);
                         Log::error('[HowenWS] Login FAILED: ' . $rawPayload);
+
+                        // FIX: Tandai loginFailed = true agar reconnect berikutnya paksa refresh token
+                        $this->loginFailed = true;
+
+                        // FIX: Batalkan heartbeat timer sebelum tutup koneksi
+                        $loop->cancelTimer($heartbeatTimer);
                         $conn->close();
                     }
                     return;
@@ -175,7 +201,7 @@ class HowenWebsocketListenCommand extends Command
                 $loop->cancelTimer($heartbeatTimer);
                 $this->reconnect($connector, $loop);
             });
-            
+
         }, function (\Exception $e) use ($connector, $loop) {
             $this->error("❌ Could not connect: {$e->getMessage()}");
             Log::error("[HowenWS] Connect error: {$e->getMessage()}");
@@ -185,8 +211,14 @@ class HowenWebsocketListenCommand extends Command
 
     private function reconnect($connector, $loop)
     {
-        $this->info("🔄 Reconnecting in {$this->reconnectDelay} seconds...");
-        $loop->addTimer($this->reconnectDelay, function() use ($connector, $loop) {
+        // FIX: Backoff bertahap - semakin sering gagal, semakin lama tunggu (max 60 detik)
+        $this->reconnectAttempt++;
+        $delay = min($this->reconnectDelay * $this->reconnectAttempt, 60);
+
+        $this->info("🔄 Reconnecting in {$delay} seconds... (attempt #{$this->reconnectAttempt})");
+        Log::info("[HowenWS] Scheduling reconnect in {$delay}s (attempt #{$this->reconnectAttempt})");
+
+        $loop->addTimer($delay, function() use ($connector, $loop) {
             $this->connect($connector, $loop, isReconnect: true);
         });
     }
@@ -212,7 +244,9 @@ class HowenWebsocketListenCommand extends Command
                     break;
             }
         } catch (\Exception $e) {
-            Log::error("[HowenWS] Error handling message action {$action}: " . $e->getMessage());
+            Log::error("[HowenWS] Error handling message action {$action}: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 
@@ -225,25 +259,48 @@ class HowenWebsocketListenCommand extends Command
         if (empty($loc)) return;
 
         $speed = (float)($loc['speed'] ?? 0);
-        if ($speed <= 0) return; // Skip jika speed = 0 (tidak bergerak)
 
-        // dtu dari WebSocket push sudah dalam WITA (UTC+8) — BERBEDA dengan HTTP API yang pakai WIB
-        // Jangan dikonversi! Parse langsung sebagai WITA.
+        // FIX: Hapus filter speed <= 0. GPS push saat diam tetap perlu disimpan
+        // agar history posisi kendaraan lengkap (tidak ada gap saat parkir/idle)
+        // Sebelumnya: if ($speed <= 0) return;
+
+        // FIX: Tangani timezone dtu dengan lebih robust
+        // Server Howen bisa kirim dtu tanpa timezone info (bare datetime string)
+        // Toleransi masa depan diperbesar ke 30 menit untuk menghindari false positive
         $dtuRaw = $loc['dtu'] ?? null;
         if ($dtuRaw) {
             try {
-                $gpsTime = \Carbon\Carbon::parse($dtuRaw, 'Asia/Makassar'); // Already WITA
-                // Tolak timestamp masa depan (toleransi 2 menit untuk clock drift kecil)
-                if ($gpsTime->greaterThan(now()->addMinutes(2))) {
-                    Log::warning("[HowenWS] Future timestamp ignored from device {$deviceId}: {$dtuRaw}");
+                // Coba parse — jika dtu tidak punya offset eksplisit, anggap sebagai WITA
+                $gpsTime = \Carbon\Carbon::parse($dtuRaw);
+                if (!str_contains($dtuRaw, '+') && !str_contains($dtuRaw, 'Z')) {
+                    // Tidak ada timezone info → asumsikan WITA (UTC+8)
+                    $gpsTime = \Carbon\Carbon::parse($dtuRaw, 'Asia/Makassar');
+                } else {
+                    // Ada timezone eksplisit → konversi ke WITA
+                    $gpsTime = $gpsTime->setTimezone('Asia/Makassar');
+                }
+
+                // FIX: Toleransi 30 menit (bukan 2 menit) untuk clock drift server
+                if ($gpsTime->greaterThan(now('Asia/Makassar')->addMinutes(30))) {
+                    Log::warning("[HowenWS] Future timestamp ignored from device {$deviceId}: {$dtuRaw} → parsed: {$gpsTime}");
+                    return;
+                }
+
+                // FIX: Abaikan data historis (backlog sebelum hari ini) agar langsung tarik realtime
+                if ($gpsTime->lessThan(now('Asia/Makassar')->startOfDay())) {
+                    // Cetak log sesekali (tiap 100 data) agar terminal tidak freeze/lag, tapi user bisa lihat progress
+                    if (rand(1, 100) === 1) {
+                        $this->line("⏩ Fast-forward backlog: skipping old data... ({$gpsTimeStr})");
+                    }
                     return;
                 }
                 $gpsTimeStr = $gpsTime->toDateTimeString();
             } catch (\Exception $e) {
-                $gpsTimeStr = now()->toDateTimeString();
+                Log::warning("[HowenWS] Failed to parse dtu '{$dtuRaw}' for device {$deviceId}, using now()");
+                $gpsTimeStr = now('Asia/Makassar')->toDateTimeString();
             }
         } else {
-            $gpsTimeStr = now()->toDateTimeString();
+            $gpsTimeStr = now('Asia/Makassar')->toDateTimeString();
         }
 
         $lat = (float)($loc['latitude'] ?? 0);
@@ -257,8 +314,7 @@ class HowenWebsocketListenCommand extends Command
         $acc = (isset($payload['basic']['key']) && $payload['basic']['key'] == 1);
 
         try {
-            // 1. Simpan ke gps_tracks_raw agar struktur sama dengan metode HTTP Polling
-            // Web VAMS kemungkinan melakukan JOIN atau membutuhkan raw_id
+            // 1. Simpan ke gps_tracks_raw
             $guid = 'ws_' . $deviceId . '_' . time() . '_' . rand(100, 999);
             $raw = \App\Models\GpsTrackRaw::create([
                 'device_id'   => $deviceId,
@@ -296,14 +352,13 @@ class HowenWebsocketListenCommand extends Command
                 ]
             );
 
-            // Kita hapus update 'devices' location karena HTTP polling juga tidak melakukannya
-            // Biarkan backend VAMS membaca dari gps_tracks
-
-            Log::info("[HowenWS] GPS: {$deviceName} ({$deviceId}) | Speed: {$speed} | Time: {$gpsTimeStr}");
+            Log::info("[HowenWS] GPS: {$deviceName} ({$deviceId}) | Speed: {$speed} | ACC: " . ($acc ? 'ON' : 'OFF') . " | Time: {$gpsTimeStr}");
             $this->line("📍 GPS: {$deviceName} | Speed: {$speed} km/h | {$gpsTimeStr}");
 
         } catch (\Exception $e) {
-            Log::error("[HowenWS] GPS save error for {$deviceId}: " . $e->getMessage());
+            Log::error("[HowenWS] GPS save error for {$deviceId}: " . $e->getMessage(), [
+                'payload' => $payload,
+            ]);
         }
     }
 
@@ -345,7 +400,7 @@ class HowenWebsocketListenCommand extends Command
 
         $device     = Device::where('device_id', $deviceId)->select('id', 'device_name', 'imei')->first();
         $deviceName = $device ? $device->device_name : null;
-        $serialNo   = $device ? $device->imei        : null; // Fallback ke imei karena serial_no tidak ada di tabel devices
+        $serialNo   = $device ? $device->imei        : null;
 
         $lat = (float)($loc['latitude']  ?? 0);
         $lon = (float)($loc['longitude'] ?? 0);
@@ -354,14 +409,13 @@ class HowenWebsocketListenCommand extends Command
         $alarmTypeName = $payload['alarmTypeName'] ?? ('AlarmCode-' . $ec);
 
         try {
-            // 1. Simpan ke alarm_raw (sesuai schema yang ada)
-            // alarm_type = integer (ec code), alarm_state = tinyint (1=alarming, 0=end)
+            // 1. Simpan ke alarm_raw
             \App\Models\AlarmRaw::updateOrCreate(
                 ['guid' => $alarmId],
                 [
                     'device_id'        => $deviceId,
                     'device_name'      => $deviceName ?? '',
-                    'alarm_type'       => (int)$ec,    // integer di DB
+                    'alarm_type'       => (int)$ec,
                     'alarm_value'      => $alarmTypeName,
                     'alarm_state'      => 0,           // 0 = ALARM_END (selesai)
                     'start_time'       => $startTimeWita ?? now()->toDateTimeString(),
@@ -372,7 +426,7 @@ class HowenWebsocketListenCommand extends Command
                     'end_speed'        => (float)($loc['speed'] ?? 0),
                     'report_time'      => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
                     'duration_seconds' => $durationSeconds,
-                    'raw_json'         => json_encode($payload), // simpan payload asli untuk debug
+                    'raw_json'         => json_encode($payload),
                 ]
             );
 
@@ -381,24 +435,24 @@ class HowenWebsocketListenCommand extends Command
                 \App\Models\IdleAlarm::updateOrCreate(
                     ['guid' => $alarmId],
                     [
-                        'serial_no'        => $serialNo,
-                        'device_id'        => $deviceId,
-                        'device_name'      => $deviceName,
-                        'alarm_type'       => 'Idle',
-                        'alarm_status'     => 'ALARM_END',
-                        'starting_time'    => $startTimeWita,
-                        'ending_time'      => $endTimeWita,
-                        'duration_seconds' => $durationSeconds,
-                        'duration_minutes' => $durationMinutes,
-                        'latitude_start'   => $lat ?: null,
-                        'longitude_start'  => $lon ?: null,
-                        'latitude_end'     => $lat ?: null,
-                        'longitude_end'    => $lon ?: null,
-                        'starting_location'=> $gpsString,
-                        'ending_location'  => $gpsString,
-                        'start_speed'      => 0,
-                        'end_speed'        => (float)($loc['speed'] ?? 0),
-                        'report_time'      => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
+                        'serial_no'         => $serialNo,
+                        'device_id'         => $deviceId,
+                        'device_name'       => $deviceName,
+                        'alarm_type'        => 'Idle',
+                        'alarm_status'      => 'ALARM_END',
+                        'starting_time'     => $startTimeWita,
+                        'ending_time'       => $endTimeWita,
+                        'duration_seconds'  => $durationSeconds,
+                        'duration_minutes'  => $durationMinutes,
+                        'latitude_start'    => $lat ?: null,
+                        'longitude_start'   => $lon ?: null,
+                        'latitude_end'      => $lat ?: null,
+                        'longitude_end'     => $lon ?: null,
+                        'starting_location' => $gpsString,
+                        'ending_location'   => $gpsString,
+                        'start_speed'       => 0,
+                        'end_speed'         => (float)($loc['speed'] ?? 0),
+                        'report_time'       => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
                     ]
                 );
                 $this->info("🚨 Idle Alarm: {$deviceName} durasi {$durationMinutes} menit");
@@ -407,7 +461,9 @@ class HowenWebsocketListenCommand extends Command
             Log::info("[HowenWS] Alarm ec={$ec} ({$alarmTypeName}) device {$deviceId} disimpan.");
 
         } catch (\Exception $e) {
-            Log::error("[HowenWS] Alarm save error for {$deviceId}: " . $e->getMessage());
+            Log::error("[HowenWS] Alarm save error for {$deviceId}: " . $e->getMessage(), [
+                'payload' => $payload,
+            ]);
         }
     }
 }
