@@ -76,6 +76,23 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Pull Tracksolid GPS track data (real-time, last 1 hour)');
 
+        // 📊 DATA AGGREGATION & CLEANUP
+        // ========================================
+
+        // ✅ ROLLUP: Aggregate GPS tracks into hourly summary (every hour at minute 05)
+        $schedule->command('gps:rollup')
+            ->hourlyAt(5)
+            ->withoutOverlapping(15)
+            ->runInBackground()
+            ->description('Rollup GPS tracks into hourly summary table');
+
+        // ✅ ARCHIVE: Delete GPS tracks older than 3 months (every day at 01:00 AM)
+        $schedule->command('gps:archive --months=3')
+            ->dailyAt('01:00')
+            ->withoutOverlapping(120)
+            ->runInBackground()
+            ->description('Archive/delete old raw GPS tracks to save space');
+
         // Process GPS tracks every 3 minutes (dispatch to queue)
         // [DISABLED] Sama, ini sudah tidak perlu lagi karena WebSocket memproses secara instan.
         /*

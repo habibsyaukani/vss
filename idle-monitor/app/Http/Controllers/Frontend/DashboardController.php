@@ -97,20 +97,77 @@ class DashboardController extends Controller
                 // Set query timeout 10 detik agar tidak hang
                 DB::statement('SET SESSION MAX_EXECUTION_TIME=10000');
 
-                // One combined query for today's data
-                $deviceStats = GpsTrackRaw::select(
+                // One combined query for today's data using the optimized hourly stats table
+                // Since this runs during the day, we still need to grab the current hour's raw data
+                // Or we can just rely on the rollup table, which might be up to 1 hour behind.
+                // For a dashboard, 1 hour behind for speed max is usually acceptable.
+                // Alternatively, we query the rollup for past hours + raw for current hour.
+                // Let's keep it simple and query the raw data only for the current hour, 
+                // and the rollup for the rest. Actually, wait. It's much simpler to just
+                // query GpsHourlyStat for the whole day. Since rollup runs hourly, it's fast.
+                // To get real-time max speed, we can query raw data ONLY for >= start of current hour.
+                $currentHourStart = Carbon::now()->startOfHour()->format('Y-m-d H:i:s');
+
+                // 1. Get from Hourly Stats
+                $deviceStats = \App\Models\GpsHourlyStat::select(
+                        'device_id',
+                        'device_name',
+                        DB::raw('MAX(max_speed) as max_speed'),
+                        DB::raw('SUM(sum_speed) as sum_speed'),
+                        DB::raw('SUM(total_records) as row_count')
+                    )
+                    ->where('record_date', $today)
+                    ->groupBy('device_id', 'device_name')
+                    ->get();
+                    
+                // 2. Merge with real-time current hour data from raw
+                $realtimeStats = GpsTrackRaw::select(
                         'device_id',
                         'device_name',
                         DB::raw('MAX(speed) as max_speed'),
                         DB::raw('SUM(speed) as sum_speed'),
                         DB::raw('COUNT(*) as row_count')
                     )
-                    ->where('gps_time', '>=', $start)   // index-friendly range
-                    ->where('gps_time', '<=', $end)
+                    ->where('gps_time', '>=', $currentHourStart)
                     ->where('speed', '>', 0)
                     ->groupBy('device_id', 'device_name')
-                    ->limit(500)  // limit agar tidak ambil terlalu banyak
                     ->get();
+                
+                // Combine them
+                $combined = [];
+                foreach ($deviceStats as $d) {
+                    $combined[$d->device_id] = [
+                        'device_name' => $d->device_name,
+                        'max_speed' => (float)$d->max_speed,
+                        'sum_speed' => (float)$d->sum_speed,
+                        'row_count' => (int)$d->row_count,
+                    ];
+                }
+                foreach ($realtimeStats as $r) {
+                    if (isset($combined[$r->device_id])) {
+                        $combined[$r->device_id]['max_speed'] = max($combined[$r->device_id]['max_speed'], (float)$r->max_speed);
+                        $combined[$r->device_id]['sum_speed'] += (float)$r->sum_speed;
+                        $combined[$r->device_id]['row_count'] += (int)$r->row_count;
+                    } else {
+                        $combined[$r->device_id] = [
+                            'device_name' => $r->device_name,
+                            'max_speed' => (float)$r->max_speed,
+                            'sum_speed' => (float)$r->sum_speed,
+                            'row_count' => (int)$r->row_count,
+                        ];
+                    }
+                }
+                
+                // Convert back to collection
+                $deviceStats = collect($combined)->map(function ($item, $key) {
+                    return (object)[
+                        'device_id' => $key,
+                        'device_name' => $item['device_name'],
+                        'max_speed' => $item['max_speed'],
+                        'sum_speed' => $item['sum_speed'],
+                        'row_count' => $item['row_count'],
+                    ];
+                });
 
                 // Stats
                 $overallMaxSpeed = $deviceStats->max('max_speed') ?? 0;
@@ -181,31 +238,28 @@ class DashboardController extends Controller
     }
 
     /**
-     * Build speed-per-day chart data (skip empty historical dates).
+     * Build speed-per-day chart data.
      */
     private function getSpeedPerDayChart(): array
     {
         $result  = ['days' => [], 'counts' => []];
         $minDate = '2026-08-07';
         for ($i = 6; $i >= 0; $i--) {
-            $date     = Carbon::today()->subDays($i)->toDateString();
+            $date = Carbon::today()->subDays($i)->toDateString();
             $maxSpeed = 0;
             
             if ($date >= $minDate) {
-                if ($i > 0) {
-                    // Cache historical data forever since it will not change
-                    $maxSpeed = Cache::rememberForever("dash_max_speed_{$date}", function () use ($date) {
-                        return GpsTrackRaw::where('gps_time', '>=', $date . ' 00:00:00')
-                            ->where('gps_time', '<=', $date . ' 23:59:59')
-                            ->where('speed', '>', 0)
-                            ->max('speed') ?? 0;
-                    });
-                } else {
-                    // Today's data (not cached forever)
-                    $maxSpeed = GpsTrackRaw::where('gps_time', '>=', $date . ' 00:00:00')
-                        ->where('gps_time', '<=', $date . ' 23:59:59')
-                        ->where('speed', '>', 0)
-                        ->max('speed') ?? 0;
+                // Sangat cepat karena hanya baca 1 data max dari puluhan baris per hari
+                $maxSpeed = \App\Models\GpsHourlyStat::where('record_date', $date)
+                                ->max('max_speed') ?? 0;
+                
+                // Jika hari ini, tambah max speed dari real-time jam terakhir
+                if ($i === 0) {
+                    $currentHourStart = Carbon::now()->startOfHour()->format('Y-m-d H:i:s');
+                    $rawMax = GpsTrackRaw::where('gps_time', '>=', $currentHourStart)
+                                         ->where('speed', '>', 0)
+                                         ->max('speed') ?? 0;
+                    $maxSpeed = max($maxSpeed, $rawMax);
                 }
             }
             
