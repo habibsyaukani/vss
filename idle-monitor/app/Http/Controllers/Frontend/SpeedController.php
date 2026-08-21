@@ -136,9 +136,10 @@ class SpeedController extends Controller
             $query->where('gps_tracks_raw.speed', '>', 0);
         }
 
-        \Illuminate\Support\Facades\Log::info('[SpeedDebug] DataTables Query: ' . $query->toSql(), $query->getBindings());
+        // Limit data to prevent hanging on millions of rows when selecting ALL devices
+        $data = $query->limit(2000)->get();
 
-        return DataTables::of($query)
+        return DataTables::of($data)
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
             })
