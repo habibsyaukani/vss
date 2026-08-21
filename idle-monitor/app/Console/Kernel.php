@@ -93,6 +93,13 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Archive/delete old raw GPS tracks to save space');
 
+        // ✅ AUTO-PRUNE: Delete heavy gps_tracks_raw older than 14 days
+        $schedule->command('vss:clean-old-gps-data --days=14')
+            ->dailyAt('01:15')
+            ->withoutOverlapping(120)
+            ->runInBackground()
+            ->description('Delete heavy raw GPS tracks to prevent SSD exhaustion');
+
         // Process GPS tracks every 3 minutes (dispatch to queue)
         // [DISABLED] Sama, ini sudah tidak perlu lagi karena WebSocket memproses secara instan.
         /*
