@@ -27,7 +27,9 @@ class AdminDashboardController extends Controller
                 ->selectRaw('COUNT(*) as total_today, AVG(duration_minutes) as avg_duration')
                 ->first();
 
+            // Restrict to last 30 days to avoid full table scan on huge tables
             $allStats = DB::table('idle_alarms')
+                ->where('starting_time', '>=', now()->subDays(30)->startOfDay())
                 ->selectRaw('SUM(duration_minutes) as total_idle_min, COUNT(CASE WHEN alarm_status = "ALARM_END" THEN 1 END) as active_idle')
                 ->first();
 
@@ -145,6 +147,7 @@ class AdminDashboardController extends Controller
      */
     private function getTopDevices($limit = 10)
     {
+        // Restrict to last 30 days to avoid full table scan
         return IdleAlarm::select(
                 'device_name',
                 'device_id',
@@ -152,6 +155,7 @@ class AdminDashboardController extends Controller
                 DB::raw('SUM(duration_minutes) as total_duration'),
                 DB::raw('MAX(starting_time) as last_seen')
             )
+            ->where('starting_time', '>=', now()->subDays(30)->startOfDay())
             ->groupBy('device_name', 'device_id')
             ->orderBy('total_idle', 'desc')
             ->limit($limit)
