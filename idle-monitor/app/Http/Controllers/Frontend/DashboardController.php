@@ -93,60 +93,71 @@ class DashboardController extends Controller
         $end   = $today . ' 23:59:59';
 
         $data = Cache::remember("dash_speed_all_{$today}", 120, function () use ($start, $end, $today) {
-            // One combined query for today's data to drastically improve performance
-            $deviceStats = GpsTrackRaw::select(
-                    'device_id', 
-                    'device_name', 
-                    DB::raw('MAX(speed) as max_speed'), 
-                    DB::raw('SUM(speed) as sum_speed'),
-                    DB::raw('COUNT(*) as row_count')
-                )
-                ->where('gps_time', '>=', $start)
-                ->where('gps_time', '<=', $end)
-                ->where('speed', '>', 0)
-                ->groupBy('device_id', 'device_name')
-                ->get();
+            try {
+                // Set query timeout 10 detik agar tidak hang
+                DB::statement('SET SESSION MAX_EXECUTION_TIME=10000');
 
-            // Stats
-            $overallMaxSpeed = $deviceStats->max('max_speed') ?? 0;
-            $totalSpeed = $deviceStats->sum('sum_speed');
-            $totalCount = $deviceStats->sum('row_count');
-            $overallAvgSpeed = $totalCount > 0 ? ($totalSpeed / $totalCount) : 0;
-            
-            $speedStats = (object)[
-                'max_speed' => $overallMaxSpeed,
-                'avg_speed' => $overallAvgSpeed
-            ];
+                // One combined query for today's data
+                $deviceStats = GpsTrackRaw::select(
+                        'device_id',
+                        'device_name',
+                        DB::raw('MAX(speed) as max_speed'),
+                        DB::raw('SUM(speed) as sum_speed'),
+                        DB::raw('COUNT(*) as row_count')
+                    )
+                    ->where('gps_time', '>=', $start)   // index-friendly range
+                    ->where('gps_time', '<=', $end)
+                    ->where('speed', '>', 0)
+                    ->groupBy('device_id', 'device_name')
+                    ->limit(500)  // limit agar tidak ambil terlalu banyak
+                    ->get();
 
-            // Top 5 speed units
-            $topSpeedUnits = $deviceStats->sortByDesc('max_speed')->take(5)->values();
+                // Stats
+                $overallMaxSpeed = $deviceStats->max('max_speed') ?? 0;
+                $totalSpeed      = $deviceStats->sum('sum_speed');
+                $totalCount      = $deviceStats->sum('row_count');
+                $overallAvgSpeed = $totalCount > 0 ? ($totalSpeed / $totalCount) : 0;
 
-            // Speed per fleet
-            $speedFleetMap = [];
-            foreach ($deviceStats as $r) {
-                if (empty($r->device_name)) continue;
-                $parts = explode('-', $r->device_name);
-                $fleet = isset($parts[1]) ? trim($parts[1]) : 'Unknown';
-                $maxSpd = (float) $r->max_speed;
-                if (!isset($speedFleetMap[$fleet]) || $maxSpd > $speedFleetMap[$fleet]) {
-                    $speedFleetMap[$fleet] = $maxSpd;
+                // Top 5 speed units
+                $topSpeedUnits = $deviceStats->sortByDesc('max_speed')->take(5)->values();
+
+                // Speed per fleet
+                $speedFleetMap = [];
+                foreach ($deviceStats as $r) {
+                    if (empty($r->device_name)) continue;
+                    $parts = explode('-', $r->device_name);
+                    $fleet = isset($parts[1]) ? trim($parts[1]) : 'Unknown';
+                    $maxSpd = (float) $r->max_speed;
+                    if (!isset($speedFleetMap[$fleet]) || $maxSpd > $speedFleetMap[$fleet]) {
+                        $speedFleetMap[$fleet] = $maxSpd;
+                    }
                 }
+                arsort($speedFleetMap);
+
+                // Speed per day 7 hari
+                $speedPerDay = $this->getSpeedPerDayChart();
+
+                return [
+                    'max_speed'     => number_format($overallMaxSpeed ?? 0, 1),
+                    'avg_speed'     => number_format($overallAvgSpeed ?? 0, 1),
+                    'topSpeedUnits' => $topSpeedUnits,
+                    'speedPerFleet' => [
+                        'labels' => array_map(fn($f) => $f . ' - GPE', array_keys($speedFleetMap)),
+                        'counts' => array_map(fn($v) => round($v, 1), array_values($speedFleetMap)),
+                    ],
+                    'speedPerDay'   => $speedPerDay,
+                ];
+            } catch (\Exception $e) {
+                \Log::warning('[Dashboard speedStats] Query timeout or error: ' . $e->getMessage());
+                // Return empty data agar tidak loading selamanya
+                return [
+                    'max_speed'     => '—',
+                    'avg_speed'     => '—',
+                    'topSpeedUnits' => [],
+                    'speedPerFleet' => ['labels' => [], 'counts' => []],
+                    'speedPerDay'   => ['days' => [], 'counts' => []],
+                ];
             }
-            arsort($speedFleetMap);
-
-            // Speed per day 7 hari
-            $speedPerDay = $this->getSpeedPerDayChart();
-
-            return [
-                'max_speed'     => number_format($speedStats->max_speed ?? 0, 1),
-                'avg_speed'     => number_format($speedStats->avg_speed ?? 0, 1),
-                'topSpeedUnits' => $topSpeedUnits,
-                'speedPerFleet' => [
-                    'labels' => array_map(fn($f) => $f . ' - GPE', array_keys($speedFleetMap)),
-                    'counts' => array_map(fn($v) => round($v, 1), array_values($speedFleetMap)),
-                ],
-                'speedPerDay'   => $speedPerDay,
-            ];
         });
 
         return response()->json($data);

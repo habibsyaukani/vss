@@ -651,8 +651,13 @@ const speedBarChart = new Chart(speedBarCtx, {
 
 // ── AJAX: Load speed data setelah halaman tampil ──────────────────────────
 const rankColors = ['rank-gold','rank-silver','rank-bronze','rank-blue','rank-blue'];
-fetch('{{ route("frontend.dashboard.speed-stats") }}')
-    .then(r => r.json())
+
+// Timeout 15 detik agar tidak loading selamanya
+const speedStatsController = new AbortController();
+const speedStatsTimeout = setTimeout(() => speedStatsController.abort(), 15000);
+
+fetch('{{ route("frontend.dashboard.speed-stats") }}', { signal: speedStatsController.signal })
+    .then(r => { clearTimeout(speedStatsTimeout); return r.json(); })
     .then(d => {
         // Update stat cards
         document.getElementById('statMaxSpeed').textContent = d.max_speed;
