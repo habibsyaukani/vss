@@ -58,7 +58,7 @@ class AdminDashboardController extends Controller
 
         // Recent data tidak perlu cache — selalu fresh
         $recentAlarms = IdleAlarm::with('device')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('starting_time', 'desc')
             ->limit(10)
             ->get();
 
