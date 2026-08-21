@@ -86,12 +86,7 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Rollup GPS tracks into hourly summary table');
 
-        // ✅ ARCHIVE: Delete GPS tracks older than 3 months (every day at 01:00 AM)
-        $schedule->command('gps:archive --months=3')
-            ->dailyAt('01:00')
-            ->withoutOverlapping(120)
-            ->runInBackground()
-            ->description('Archive/delete old raw GPS tracks to save space');
+        // (gps:archive command has been replaced by vss:clean-old-gps-data)
 
         // ✅ AUTO-PRUNE: Delete heavy gps_tracks_raw older than 30 days
         $schedule->command('vss:clean-old-gps-data --days=30')
