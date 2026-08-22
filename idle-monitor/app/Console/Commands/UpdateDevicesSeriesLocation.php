@@ -29,8 +29,8 @@ class UpdateDevicesSeriesLocation extends Command
         $countBefore = Device::count();
         $this->info("📊 Devices count BEFORE: {$countBefore}");
         
-        if ($countBefore !== 397) {
-            $this->error("❌ ERROR: Expected 397 devices, found {$countBefore}");
+        if ($countBefore === 0) {
+            $this->error("❌ ERROR: No devices found in the database");
             $this->error('❌ Aborting to prevent data issues');
             return 1;
         }
@@ -81,8 +81,8 @@ class UpdateDevicesSeriesLocation extends Command
             $countAfter = Device::count();
             $this->info("📊 Devices count AFTER: {$countAfter}");
             
-            if ($countAfter !== 397) {
-                $this->error("❌ ERROR: Count changed from 397 to {$countAfter}!");
+            if ($countAfter < $countBefore) {
+                $this->error("❌ ERROR: Count dropped from {$countBefore} to {$countAfter}!");
                 $this->error('❌ Rolling back transaction...');
                 DB::rollBack();
                 return 1;
