@@ -63,6 +63,7 @@ class UpdateDevicesSeriesLocation extends Command
                 if ($device) {
                     $device->series = $data['series'];
                     $device->location = $data['location'];
+                    $device->lokasi = $data['location']; // Isi juga kolom 'lokasi' agar seragam
                     $device->save();
                     $updated++;
                 } else {
