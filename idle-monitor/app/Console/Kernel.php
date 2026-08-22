@@ -88,8 +88,19 @@ class Kernel extends ConsoleKernel
 
         // (gps:archive command has been replaced by vss:clean-old-gps-data)
 
-        // ✅ AUTO-PRUNE: Delete heavy gps_tracks_raw older than 30 days
-        $schedule->command('vss:clean-old-gps-data --days=30')
+        // ========================================
+        // 💾 MYSQL BACKUP (EVERY 2 WEEKS TO HDD)
+        // ========================================
+
+        // ✅ BACKUP: Dump MySQL database to /data/backups every 2 weeks (Monday 02:00 AM)
+        $schedule->command('vss:backup-mysql')
+            ->cron('0 2 1,15 * *') // Run on 1st and 15th of every month at 02:00 AM
+            ->withoutOverlapping(120)
+            ->runInBackground()
+            ->description('Backup MySQL database to /data/backups (HDD) every 2 weeks');
+
+        // ✅ AUTO-PRUNE: Delete heavy gps_tracks_raw older than 60 days (2 months)
+        $schedule->command('vss:clean-old-gps-data --days=60')
             ->dailyAt('01:15')
             ->withoutOverlapping(120)
             ->runInBackground()
