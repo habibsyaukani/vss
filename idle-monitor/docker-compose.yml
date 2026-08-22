@@ -25,6 +25,7 @@ services:
     restart: unless-stopped
     ports:
       - "8088:80" # Maps server port 8088 to container port 80
+      - "9097:80" # Maps server port 9097 to container port 80 (for external Nginx)
     environment:
       TZ: Asia/Makassar
     volumes:
