@@ -182,11 +182,12 @@ class UpdateDevicesSeriesLocation extends Command
             
             $parts = str_getcsv($line);
             if (count($parts) >= 4) {
+                // Perhatikan format CSV: device_name,unit_code,location,series
                 $data[] = [
                     'device_code' => trim($parts[0]),
                     'unit_code' => trim($parts[1]),
-                    'series' => trim($parts[2]),
-                    'location' => trim($parts[3]),
+                    'location' => trim($parts[2]), // location ada di index 2
+                    'series' => trim($parts[3]),   // series ada di index 3
                 ];
             }
         }
@@ -261,11 +262,12 @@ CSV;
             
             $parts = str_getcsv($line);
             if (count($parts) >= 4) {
+                // Perhatikan format CSV: device_name,unit_code,location,series
                 $data[] = [
                     'device_code' => trim($parts[0]),
                     'unit_code' => trim($parts[1]),
-                    'series' => trim($parts[2]),
-                    'location' => trim($parts[3]),
+                    'location' => trim($parts[2]), // location ada di index 2
+                    'series' => trim($parts[3]),   // series ada di index 3
                 ];
             }
         }
