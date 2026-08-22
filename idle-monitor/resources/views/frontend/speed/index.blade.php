@@ -902,21 +902,29 @@ $(function() {
         // Tampilkan hanya device yang cocok dengan filter
         $('.tree-child').each(function() {
             let $treeChild = $(this);
-            let deviceLocation = $treeChild.data('location') || '';
-            let deviceSeries = $treeChild.data('series') || '';
+            let deviceLocation = $treeChild.attr('data-location') || '';
+            let deviceSeries = $treeChild.attr('data-series') || '';
             let shouldShow = true;
             
-            // Cek filter location — jika filter kosong, semua location lolos
-            if (selectedLocation && deviceLocation !== selectedLocation) shouldShow = false;
+            // Cek filter location — case insensitive & trim
+            if (selectedLocation) {
+                let normLoc = selectedLocation.trim().toUpperCase();
+                let normDevLoc = deviceLocation.trim().toUpperCase();
+                if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
+                    shouldShow = false;
+                }
+            }
             
-            // Cek filter series — jika filter kosong, semua series lolos
+            // Cek filter series — case insensitive & trim
             if (selectedSeries && shouldShow) {
                 let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/\s+/g, ' ');
                 if (selectedSeries === 'VOLVO') {
                     if (normalizedDevice !== 'VOLVO') shouldShow = false;
                 } else {
-                    if (normalizedDevice !== normalizedSelected && !normalizedDevice.includes(normalizedSelected)) shouldShow = false;
+                    if (normalizedDevice !== normalizedSelected && !normalizedDevice.includes(normalizedSelected)) {
+                        shouldShow = false;
+                    }
                 }
             }
             
