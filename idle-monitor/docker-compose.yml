@@ -15,6 +15,7 @@ services:
     volumes:
       - ./:/var/www
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - /data/backups:/data/backups  # Mount HDD backup folder into container
     networks:
       - idle-network
 
