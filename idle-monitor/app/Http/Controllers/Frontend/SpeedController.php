@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\ExcelExportService;
+use App\Models\ExportJob;
+use App\Jobs\ProcessSpeedExportJob;
 
 class SpeedController extends Controller
 {
@@ -165,167 +167,63 @@ class SpeedController extends Controller
     /**
      * Export speed data to Excel (.xls)
      */
+    /**
+     * Dispatch background export job for speed data
+     */
     public function export(Request $request)
     {
-        $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
-            return Device::all()->keyBy(function($item) {
-                return (string) $item->device_id;
-            });
-        });
+        $exportJob = ExportJob::create([
+            'status' => 'pending'
+        ]);
 
-        $query = GpsTrackRaw::select(
-                'id',
-                'device_id',
-                'device_name',
-                'longitude',
-                'latitude',
-                'altitude',
-                'speed',
-                'direction',
-                'satellites',
-                'gps_time',
-                'acc_state as is_acc_on',
-                'over_speed as is_overspeed',
-                'urgency as is_emergency'
-            )
-            ->latest('gps_tracks_raw.gps_time');
+        $filters = $request->only([
+            'start_date', 'end_date', 'speed_filter', 'location', 'series', 'device_ids', 'selected_ids'
+        ]);
 
-        // Export Selected Rows
-        $selectedIds = $request->selected_ids;
-        if (is_string($selectedIds)) {
-            $selectedIds = json_decode($selectedIds, true);
+        if (is_string($filters['selected_ids'] ?? null)) {
+            $filters['selected_ids'] = json_decode($filters['selected_ids'], true);
+        }
+        if (is_string($filters['device_ids'] ?? null)) {
+            $filters['device_ids'] = json_decode($filters['device_ids'], true);
+        }
+
+        ProcessSpeedExportJob::dispatch($exportJob->id, $filters);
+
+        return response()->json([
+            'use_queue' => true,
+            'job_id' => $exportJob->id
+        ]);
+    }
+
+    /**
+     * Check export job status
+     */
+    public function exportStatus($jobId)
+    {
+        $job = ExportJob::find($jobId);
+        if (!$job) return response()->json(['status' => 'failed']);
+        
+        return response()->json([
+            'status' => $job->status,
+            'download_url' => $job->status === 'completed' ? route('speed.export.download', $job->id) : null
+        ]);
+    }
+
+    /**
+     * Download completed export file
+     */
+    public function exportDownload($jobId)
+    {
+        $job = ExportJob::findOrFail($jobId);
+        if ($job->status !== 'completed' || !$job->file_path) {
+            abort(404, 'Export is not ready or failed.');
         }
         
-        if ($selectedIds && is_array($selectedIds)) {
-            $query->whereIn('gps_tracks_raw.id', $selectedIds);
-        } else {
-            // Filter by specific device IDs
-            $deviceIds = $request->device_ids;
-            if (is_string($deviceIds)) {
-                $deviceIds = json_decode($deviceIds, true);
-            }
-            if ($deviceIds && is_array($deviceIds)) {
-                $totalDevices = count($deviceMap);
-                if (count($deviceIds) < $totalDevices) {
-                    $cleanIds = array_map(function($id) {
-                        return ltrim((string)$id, '0');
-                    }, $deviceIds);
-                    $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
-                }
-            }
-
-            // Filter by location or series
-            if ($request->filled('location') || $request->filled('series')) {
-                $filteredDevices = $deviceMap;
-                if ($request->filled('location')) {
-                    $filteredDevices = $filteredDevices->where('lokasi', $request->location);
-                }
-                if ($request->filled('series')) {
-                    if (strtoupper($request->series) === 'VOLVO') {
-                        $filteredDevices = $filteredDevices->filter(function($d) {
-                            return stripos($d->series, 'FMX') !== false;
-                        });
-                    } else {
-                        $filteredDevices = $filteredDevices->where('series', $request->series);
-                    }
-                }
-                $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
-            }
-
-            // Filter by date range
-            if ($request->filled('start_date')) {
-                $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
-            } else {
-                $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
-            }
-            if ($request->filled('end_date')) {
-                $query->where('gps_tracks_raw.gps_time', '<=', $request->end_date . ' 23:59:59');
-            }
-
-            // Filter by speed mode
-            if ($request->filled('speed_filter')) {
-                switch ($request->speed_filter) {
-                    case 'low':
-                        $query->where('gps_tracks_raw.speed', '>', 0)
-                              ->where('gps_tracks_raw.speed', '<', 15);
-                        break;
-                    case 'high':
-                        $query->where('gps_tracks_raw.speed', '>=', 41);
-                        break;
-                }
-            } else {
-                $query->where('gps_tracks_raw.speed', '>', 0);
-            }
+        $fullPath = storage_path('app/' . $job->file_path);
+        if (!file_exists($fullPath)) {
+            abort(404, 'Export file not found on disk.');
         }
 
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['use_queue' => false]);
-        }
-
-        $metadata = [
-            'Mode Export' => ($request->selected_ids && is_array($request->selected_ids)) ? 'Selected Rows (' . count($request->selected_ids) . ' items)' : 'All Filtered Rows',
-            'Start Date' => $request->start_date ?? '-',
-            'End Date' => $request->end_date ?? '-',
-            'Speed Filter' => $request->speed_filter ? strtoupper($request->speed_filter) . ' SPEED' : 'Semua',
-            'Location' => $request->location ?? 'Semua',
-            'Series' => $request->series ?? 'Semua',
-        ];
-
-        $headers = [
-            'NO',
-            'DEVICE NAME (ID)',
-            'FLEET',
-            'SPEED',
-            'ALTITUDE',
-            'TIME',
-            'LOCATION',
-            'ACCURACY',
-            'DIRECTION',
-            'SATELLITES',
-            'I/O STATUS',
-            'EMERGENCY',
-            'IGNITION (ACC)'
-        ];
-
-        return ExcelExportService::streamCsv(
-            'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.csv',
-            $headers,
-            function ($out) use ($query, $deviceMap) {
-                $serial = 1;
-                foreach ($query->cursor() as $track) {
-                    $master = $deviceMap->get((string)$track->device_id);
-                    $realDevName = $track->device_name ?: ($master ? $master->device_name : null);
-                    $deviceName = ($realDevName ?? '-') . ' (' . $track->device_id . ')';
-                    
-                    $fleetName = '-';
-                    if ($realDevName) {
-                        $parts = explode('-', $realDevName);
-                        $fleetName = isset($parts[1]) ? $parts[1] : 'Unknown';
-                    }
-
-                    $location = ($track->latitude && $track->longitude) ? $track->latitude . ',' . $track->longitude : '-';
-                    $time = $track->gps_time ? date('Y-m-d H:i:s', strtotime($track->gps_time)) : '-';
-                    $speed = $track->speed . ' Km/h';
-                    $emergency = $track->is_emergency ? '1' : '0';
-                    $ignition = $track->is_acc_on ? 'ON' : 'OFF';
-
-                    fputcsv($out, [
-                        $serial++,
-                        $deviceName,
-                        $fleetName,
-                        $speed,
-                        $track->altitude ?? '0',
-                        $time,
-                        $location,
-                        '0',
-                        $track->direction ?? '0',
-                        $track->satellites ?? '0',
-                        $track->input_output_status ?? '',
-                        $emergency,
-                        $ignition
-                    ]);
-                }
-            }
-        );
+        return response()->download($fullPath)->deleteFileAfterSend(true);
     }
 }

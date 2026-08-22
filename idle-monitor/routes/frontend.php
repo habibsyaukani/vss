@@ -24,6 +24,8 @@ Route::middleware(['auth', 'fleet_manager', 'single_session'])->prefix('')->name
     Route::get('/speed', [SpeedController::class, 'index'])->name('speed.index');
     Route::match(['get', 'post'], '/speed/data', [SpeedController::class, 'getData'])->name('speed.data');
     Route::post('/speed/export', [SpeedController::class, 'export'])->name('speed.export');
+    Route::get('/speed/export-status/{jobId}', [SpeedController::class, 'exportStatus'])->name('speed.export-status');
+    Route::get('/speed/download-export/{jobId}', [SpeedController::class, 'exportDownload'])->name('speed.export.download');
     
     // Speed Performance
     Route::get('/speed-performance', [App\Http\Controllers\Frontend\SpeedPerformanceController::class, 'index'])->name('speed-performance.index');

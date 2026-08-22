@@ -973,6 +973,8 @@ $(function() {
 
     // ---- Export Logic ----
     function triggerExport(extraData) {
+        let loadingMsg = $('#exportLoading .text-muted.small');
+        loadingMsg.text('Memulai proses export...');
         $('#exportLoading').css('display', 'flex');
         
         let url = "{{ route('frontend.speed.export') }}";
@@ -997,27 +999,12 @@ $(function() {
             data: data,
             dataType: 'json',
             success: function(response) {
-                if (response.use_queue) {
-                    $('#exportLoading').hide();
-                    alert('Export data terlalu besar, akan diproses di background. Notifikasi akan muncul saat file siap.');
+                if (response.use_queue && response.job_id) {
+                    loadingMsg.text('Data sedang diproses di background. Mohon tunggu...');
+                    pollExportStatus(response.job_id);
                 } else {
                     $('#exportLoading').hide();
-                    let form = $('<form>', { action: url, method: 'POST' })
-                        .append($('<input>', { name: '_token', value: $('meta[name="csrf-token"]').attr('content'), type: 'hidden' }));
-                    
-                    $.each(data, function(key, value) {
-                        if (Array.isArray(value)) {
-                            $.each(value, function(i, v) {
-                                form.append($('<input>', { name: key, value: JSON.stringify(value), type: 'hidden' }));
-                            });
-                        } else if (value !== null && value !== undefined && key !== '_token') {
-                            form.append($('<input>', { name: key, value: value, type: 'hidden' }));
-                        }
-                    });
-                    
-                    $('body').append(form);
-                    form.submit();
-                    form.remove();
+                    alert('Gagal memulai background job.');
                 }
             },
             error: function(xhr) {
@@ -1025,6 +1012,42 @@ $(function() {
                 alert('Terjadi kesalahan saat memulai export.');
             }
         });
+    }
+
+    function pollExportStatus(jobId) {
+        let statusUrl = "{{ url('/speed/export-status') }}/" + jobId;
+        let loadingMsg = $('#exportLoading .text-muted.small');
+        
+        let pollInterval = setInterval(function() {
+            $.ajax({
+                url: statusUrl,
+                type: 'GET',
+                success: function(res) {
+                    if (res.status === 'completed') {
+                        clearInterval(pollInterval);
+                        loadingMsg.text('Selesai! Mendownload file...');
+                        setTimeout(function() {
+                            $('#exportLoading').hide();
+                            window.location.href = res.download_url;
+                        }, 1000);
+                    } else if (res.status === 'failed') {
+                        clearInterval(pollInterval);
+                        $('#exportLoading').hide();
+                        alert('Proses export gagal. Silakan coba lagi.');
+                    } else {
+                        // pending or processing
+                        let dots = loadingMsg.text().split('.').length - 1;
+                        let nextDots = (dots % 3) + 1;
+                        loadingMsg.text('Data sedang diproses di background' + '.'.repeat(nextDots));
+                    }
+                },
+                error: function() {
+                    clearInterval(pollInterval);
+                    $('#exportLoading').hide();
+                    alert('Koneksi terputus saat mengecek status.');
+                }
+            });
+        }, 3000);
     }
 
     $('.btn-export-all').click(function() {
