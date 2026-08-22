@@ -43,12 +43,14 @@ class ProcessSpeedExportJob implements ShouldQueue
             $exportJob->update(['status' => 'processing']);
 
             // 1. Build Query
-            $query = GpsTrackRaw::select(
+            // ⚡ Fast indexed query purely on gps_tracks_raw (NO SQL JOINs)
+            $query = GpsTrackRaw::from(\Illuminate\Support\Facades\DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
+                ->select(
                 'id', 'device_id', 'device_name', 'longitude', 'latitude',
                 'altitude', 'speed', 'direction', 'satellites', 'gps_time',
                 'acc_state as is_acc_on', 'over_speed as is_overspeed', 'urgency as is_emergency',
                 'input_output_status'
-            )->latest('gps_tracks_raw.gps_time');
+            )->orderBy('gps_tracks_raw.gps_time', 'desc');
 
             $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
                 return Device::all()->keyBy(function($item) {
@@ -70,7 +72,9 @@ class ProcessSpeedExportJob implements ShouldQueue
                 if (!empty($this->filters['location']) || !empty($this->filters['series'])) {
                     $filteredDevices = collect($deviceMap->values());
                     if (!empty($this->filters['location'])) {
-                        $filteredDevices = $filteredDevices->where('lokasi', $this->filters['location']);
+                        $filteredDevices = $filteredDevices->filter(function($d) {
+                            return $d->location === $this->filters['location'] || $d->lokasi === $this->filters['location'];
+                        });
                     }
                     if (!empty($this->filters['series'])) {
                         if (strtoupper($this->filters['series']) === 'VOLVO') {
@@ -128,13 +132,16 @@ class ProcessSpeedExportJob implements ShouldQueue
                 'I/O STATUS', 'EMERGENCY', 'IGNITION (ACC)'
             ]);
 
-            // Count total rows for progress tracking
-            $totalRows = $query->count();
-            \Illuminate\Support\Facades\Cache::put('export_job_total_' . $this->exportJobId, $totalRows, 3600);
+            // We do NOT use count() because it is extremely slow on 9 million rows
+            // We just update progress with the number of rows exported so far
+            \Illuminate\Support\Facades\Cache::put('export_job_total_' . $this->exportJobId, -1, 3600);
             \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, 0, 3600);
 
             // 3. Stream Data
             $serial = 1;
+            // Limit to 200,000 rows to prevent infinite exports crashing the server
+            $query->limit(200000);
+            
             foreach ($query->cursor() as $track) {
                 $master = $deviceMap->get((string)$track->device_id);
                 $realDevName = $track->device_name ?: ($master ? $master->device_name : null);
@@ -165,9 +172,9 @@ class ProcessSpeedExportJob implements ShouldQueue
                     $track->is_acc_on ? 'ON' : 'OFF'
                 ]);
 
-                if ($serial % 2000 === 0 && $totalRows > 0) {
-                    $progress = round(($serial / $totalRows) * 100);
-                    \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, $progress, 3600);
+                // Update progress every 2000 rows
+                if ($serial % 2000 === 0) {
+                    \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, $serial, 3600);
                 }
                 
                 $serial++;
