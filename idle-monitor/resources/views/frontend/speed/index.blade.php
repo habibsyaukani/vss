@@ -1038,7 +1038,13 @@ $(function() {
                         // pending or processing
                         let dots = loadingMsg.text().split('.').length - 1;
                         let nextDots = (dots % 3) + 1;
-                        loadingMsg.text('Data sedang diproses di background' + '.'.repeat(nextDots));
+                        
+                        let progressText = 'Data sedang diproses di background' + '.'.repeat(nextDots);
+                        if (res.total > 0) {
+                            progressText += '<br><span style="color: #16a34a; font-weight: bold; font-size: 1.1em;">Progress: ' + res.progress + '% (' + res.total.toLocaleString('id-ID') + ' baris)</span>';
+                        }
+                        
+                        loadingMsg.html(progressText);
                     }
                 },
                 error: function() {

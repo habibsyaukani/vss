@@ -113,7 +113,7 @@ class ProcessSpeedExportJob implements ShouldQueue
             $filePath = 'exports/' . $filename;
             
             // Ensure directory exists
-            Storage::disk('local')->makeDirectory('exports');
+            \Illuminate\Support\Facades\Storage::disk('local')->makeDirectory('exports');
             $fullPath = storage_path('app/' . $filePath);
             
             $out = fopen($fullPath, 'w');
@@ -127,6 +127,11 @@ class ProcessSpeedExportJob implements ShouldQueue
                 'TIME', 'LOCATION', 'ACCURACY', 'DIRECTION', 'SATELLITES', 
                 'I/O STATUS', 'EMERGENCY', 'IGNITION (ACC)'
             ]);
+
+            // Count total rows for progress tracking
+            $totalRows = $query->count();
+            \Illuminate\Support\Facades\Cache::put('export_job_total_' . $this->exportJobId, $totalRows, 3600);
+            \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, 0, 3600);
 
             // 3. Stream Data
             $serial = 1;
@@ -145,7 +150,7 @@ class ProcessSpeedExportJob implements ShouldQueue
                 $time = $track->gps_time ? date('Y-m-d H:i:s', strtotime($track->gps_time)) : '-';
                 
                 fputcsv($out, [
-                    $serial++,
+                    $serial,
                     $deviceName,
                     $fleetName,
                     $track->speed . ' Km/h',
@@ -159,6 +164,13 @@ class ProcessSpeedExportJob implements ShouldQueue
                     $track->is_emergency ? '1' : '0',
                     $track->is_acc_on ? 'ON' : 'OFF'
                 ]);
+
+                if ($serial % 2000 === 0 && $totalRows > 0) {
+                    $progress = round(($serial / $totalRows) * 100);
+                    \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, $progress, 3600);
+                }
+                
+                $serial++;
             }
             
             fclose($out);

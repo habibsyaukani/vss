@@ -195,16 +195,18 @@ class SpeedController extends Controller
         ]);
     }
 
-    /**
-     * Check export job status
-     */
     public function exportStatus($jobId)
     {
         $job = ExportJob::find($jobId);
         if (!$job) return response()->json(['status' => 'failed']);
         
+        $progress = \Illuminate\Support\Facades\Cache::get('export_job_progress_' . $jobId, 0);
+        $total = \Illuminate\Support\Facades\Cache::get('export_job_total_' . $jobId, 0);
+
         return response()->json([
             'status' => $job->status,
+            'progress' => $progress,
+            'total' => $total,
             'download_url' => $job->status === 'completed' ? route('speed.export.download', $job->id) : null
         ]);
     }
