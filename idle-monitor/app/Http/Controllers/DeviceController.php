@@ -57,7 +57,8 @@ class DeviceController extends Controller
                 return $device->unit_code ?? '<span class="text-muted">(NULL)</span>';
             })
             ->addColumn('location', function ($device) {
-                return $device->lokasi ?? '<span class="text-muted">(NULL)</span>';
+                $loc = $device->lokasi ?: $device->location;
+                return $loc ?? '<span class="text-muted">(NULL)</span>';
             })
             ->addColumn('series', function ($device) {
                 return $device->series ?? '<span class="text-muted">(NULL)</span>';
