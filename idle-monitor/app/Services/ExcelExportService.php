@@ -114,4 +114,42 @@ class ExcelExportService
         fwrite($out, '</body>' . "\n");
         fwrite($out, '</html>' . "\n");
     }
+
+    /**
+     * Stream a true CSV file. 
+     * Extremely fast and memory efficient for huge datasets (100k+ rows) compared to HTML-based XLS.
+     *
+     * @param string $filename File name for download (e.g. export.csv)
+     * @param array $headers List of flat string headers, e.g. ['NO', 'DEVICE ID', 'SPEED']
+     * @param \Closure $dataCallback Function receiving resource $output to write fputcsv() rows
+     * @return StreamedResponse
+     */
+    public static function streamCsv(
+        string $filename,
+        array $headers,
+        \Closure $dataCallback
+    ): StreamedResponse {
+        if (!str_ends_with(strtolower($filename), '.csv')) {
+            $filename = pathinfo($filename, PATHINFO_FILENAME) . '.csv';
+        }
+
+        $responseHeaders = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0, no-cache, must-revalidate',
+            'Pragma' => 'public',
+        ];
+
+        return response()->streamDownload(function () use ($headers, $dataCallback) {
+            $out = fopen('php://output', 'w');
+            
+            // UTF-8 BOM so Excel opens CSV cleanly
+            fwrite($out, "\xEF\xBB\xBF");
+            
+            fputcsv($out, $headers);
+            $dataCallback($out);
+            
+            fclose($out);
+        }, $filename, $responseHeaders);
+    }
 }

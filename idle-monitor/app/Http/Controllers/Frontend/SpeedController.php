@@ -272,30 +272,27 @@ class SpeedController extends Controller
         ];
 
         $headers = [
-            ['label' => 'NO', 'align' => 'center'],
-            ['label' => 'DEVICE NAME (ID)', 'align' => 'left'],
-            ['label' => 'FLEET', 'align' => 'left'],
-            ['label' => 'SPEED', 'align' => 'right'],
-            ['label' => 'ALTITUDE', 'align' => 'right'],
-            ['label' => 'TIME', 'align' => 'center'],
-            ['label' => 'LOCATION', 'align' => 'center'],
-            ['label' => 'ACCURACY', 'align' => 'center'],
-            ['label' => 'DIRECTION', 'align' => 'center'],
-            ['label' => 'SATELLITES', 'align' => 'center'],
-            ['label' => 'I/O STATUS', 'align' => 'center'],
-            ['label' => 'EMERGENCY', 'align' => 'center'],
-            ['label' => 'IGNITION (ACC)', 'align' => 'center'],
+            'NO',
+            'DEVICE NAME (ID)',
+            'FLEET',
+            'SPEED',
+            'ALTITUDE',
+            'TIME',
+            'LOCATION',
+            'ACCURACY',
+            'DIRECTION',
+            'SATELLITES',
+            'I/O STATUS',
+            'EMERGENCY',
+            'IGNITION (ACC)'
         ];
 
-        return ExcelExportService::streamXls(
-            'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.xls',
-            'GPS SPEED MONITORING REPORT',
+        return ExcelExportService::streamCsv(
+            'export-speed-monitoring-' . date('Y-m-d_H-i-s') . '.csv',
             $headers,
             function ($out) use ($query, $deviceMap) {
                 $serial = 1;
                 foreach ($query->cursor() as $track) {
-                    $rowClass = ($serial % 2 === 0) ? 'row-even' : 'row-odd';
-                    
                     $master = $deviceMap->get((string)$track->device_id);
                     $realDevName = $track->device_name ?: ($master ? $master->device_name : null);
                     $deviceName = ($realDevName ?? '-') . ' (' . $track->device_id . ')';
@@ -312,37 +309,23 @@ class SpeedController extends Controller
                     $emergency = $track->is_emergency ? '1' : '0';
                     $ignition = $track->is_acc_on ? 'ON' : 'OFF';
 
-                    $spd = (int) $track->speed;
-                    $spdBadgeClass = 'text-right';
-                    if ($spd >= 41) {
-                        $spdBadgeClass = 'badge-danger';
-                    } elseif ($spd >= 15) {
-                        $spdBadgeClass = 'badge-warning';
-                    } else {
-                        $spdBadgeClass = 'text-right';
-                    }
-
-                    $emgClass = $track->is_emergency ? 'badge-danger' : 'text-center';
-                    $accClass = $track->is_acc_on ? 'badge-success' : 'text-center';
-
-                    fwrite($out, '    <tr class="' . $rowClass . '">' . "\n");
-                    fwrite($out, '      <td class="text-center">' . $serial++ . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($deviceName) . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-left">' . htmlspecialchars($fleetName) . '</td>' . "\n");
-                    fwrite($out, '      <td class="' . $spdBadgeClass . '">' . htmlspecialchars($speed) . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-right">' . htmlspecialchars($track->altitude ?? '0') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($time) . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($location) . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">0</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($track->direction ?? '0') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($track->satellites ?? '0') . '</td>' . "\n");
-                    fwrite($out, '      <td class="text-center">' . htmlspecialchars($track->input_output_status ?? '') . '</td>' . "\n");
-                    fwrite($out, '      <td class="' . $emgClass . '">' . htmlspecialchars($emergency) . '</td>' . "\n");
-                    fwrite($out, '      <td class="' . $accClass . '">' . htmlspecialchars($ignition) . '</td>' . "\n");
-                    fwrite($out, '    </tr>' . "\n");
+                    fputcsv($out, [
+                        $serial++,
+                        $deviceName,
+                        $fleetName,
+                        $speed,
+                        $track->altitude ?? '0',
+                        $time,
+                        $location,
+                        '0',
+                        $track->direction ?? '0',
+                        $track->satellites ?? '0',
+                        $track->input_output_status ?? '',
+                        $emergency,
+                        $ignition
+                    ]);
                 }
-            },
-            $metadata
+            }
         );
     }
 }
