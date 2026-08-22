@@ -82,7 +82,9 @@ class SpeedController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
+                $filteredDevices = $filteredDevices->filter(function($d) use ($request) {
+                    return $d->location === $request->location || $d->lokasi === $request->location;
+                });
             }
             if ($request->filled('series')) {
                 if (strtoupper($request->series) === 'VOLVO') {
