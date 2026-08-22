@@ -22,6 +22,9 @@ class SpeedController extends Controller
      */
     public function index()
     {
+        // Force clear cache to fix the "0 devices" filter issue
+        \Illuminate\Support\Facades\Cache::forget('frontend_device_sidebar');
+
         // ✅ All device sidebar data is cached for 5 minutes (trait)
         $sidebar = $this->getDeviceSidebarData();
 
