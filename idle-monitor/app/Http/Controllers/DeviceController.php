@@ -25,9 +25,33 @@ class DeviceController extends Controller
     {
         $query = Device::query();
 
-        // Filter by group_name (DT - GPE, BUS - GPE, etc)
+        // Filter by group_name (dynamically inferred from device_name like in frontend)
         if ($request->filled('group_name') && $request->group_name !== 'all') {
-            $query->where('group_name', $request->group_name);
+            $query->where(function ($q) use ($request) {
+                switch ($request->group_name) {
+                    case 'BUS - GPE':
+                        $q->where('device_name', 'LIKE', '%-B-%')->orWhere('device_name', 'LIKE', '%-BUS-%');
+                        break;
+                    case 'DT - GPE':
+                        $q->where('device_name', 'LIKE', '%-DT-%');
+                        break;
+                    case 'FT - GPE':
+                        $q->where('device_name', 'LIKE', '%-FT-%')->orWhere('device_name', 'LIKE', '%-GFTH-%');
+                        break;
+                    case 'HD - GPE':
+                        $q->where('device_name', 'LIKE', '%-HD-%');
+                        break;
+                    case 'PATROL - GPE':
+                        $q->where('device_name', 'LIKE', '%-LV-%');
+                        break;
+                    case 'WT - GPE':
+                        $q->where('device_name', 'LIKE', '%-WT-%');
+                        break;
+                    default:
+                        $q->where('group_name', $request->group_name);
+                        break;
+                }
+            });
         }
 
         // Filter by series (DT BARU FMX 400, HD 465, etc)
@@ -64,7 +88,22 @@ class DeviceController extends Controller
                 return $device->series ?? '<span class="text-muted">(NULL)</span>';
             })
             ->editColumn('group_name', function ($device) {
-                return $device->group_name ?? '<span class="text-muted">(NULL)</span>';
+                if ($device->group_name) return $device->group_name;
+                
+                // Dynamically infer from device_name if NULL
+                $parts = explode('-', $device->device_name);
+                $group = 'OTHER - GPE';
+
+                if (count($parts) >= 2) {
+                    $type = $parts[1];
+                    if ($type === 'B'  || $type === 'BUS')       $group = 'BUS - GPE';
+                    elseif ($type === 'DT')                      $group = 'DT - GPE';
+                    elseif ($type === 'FT' || $type === 'GFTH')  $group = 'FT - GPE';
+                    elseif ($type === 'HD')                      $group = 'HD - GPE';
+                    elseif ($type === 'LV')                      $group = 'PATROL - GPE';
+                    elseif ($type === 'WT')                      $group = 'WT - GPE';
+                }
+                return '<span class="text-primary">' . $group . ' (Auto)</span>';
             })
             ->editColumn('plate_no', function ($device) {
                 return $device->plate_no ?? '<span class="text-muted">(NULL)</span>';
