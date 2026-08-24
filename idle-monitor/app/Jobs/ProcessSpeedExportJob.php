@@ -132,7 +132,7 @@ class ProcessSpeedExportJob implements ShouldQueue
                 'NO', 'DEVICE NAME (ID)', 'FLEET', 'SPEED', 'ALTITUDE', 
                 'TIME', 'LOCATION', 'ACCURACY', 'DIRECTION', 'SATELLITES', 
                 'I/O STATUS', 'EMERGENCY', 'IGNITION (ACC)'
-            ]);
+            ], ';');
 
             // We do NOT use count() because it is extremely slow on 9 million rows
             // We just update progress with the number of rows exported so far
@@ -172,7 +172,7 @@ class ProcessSpeedExportJob implements ShouldQueue
                     $track->input_output_status ?? '',
                     $track->is_emergency ? '1' : '0',
                     $track->is_acc_on ? 'ON' : 'OFF'
-                ]);
+                ], ';');
 
                 // Update progress every 500 rows
                 if ($serial % 500 === 0) {
