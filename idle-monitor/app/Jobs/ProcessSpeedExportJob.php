@@ -51,7 +51,7 @@ class ProcessSpeedExportJob implements ShouldQueue
                 'id', 'device_id', 'device_name', 'longitude', 'latitude',
                 'altitude', 'speed', 'direction', 'satellites', 'gps_time',
                 'acc_state as is_acc_on', 'over_speed as is_overspeed', 'urgency as is_emergency',
-                'input_output_status'
+                'io_state as input_output_status'
             )->orderBy('gps_time', 'desc');
 
             $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
