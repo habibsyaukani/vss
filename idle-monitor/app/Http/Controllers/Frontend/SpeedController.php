@@ -212,7 +212,7 @@ class SpeedController extends Controller
             'status' => $job->status,
             'progress' => $progress,
             'total' => $total,
-            'download_url' => $job->status === 'completed' ? route('speed.export.download', $job->id) : null
+            'download_url' => $job->status === 'completed' ? route('frontend.speed.export.download', $job->id) : null
         ]);
     }
 
