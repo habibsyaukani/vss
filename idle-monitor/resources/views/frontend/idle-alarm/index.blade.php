@@ -575,7 +575,7 @@
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
-                                <li class="tree-child" data-location="{{ $device->lokasi ?? '' }}" data-series="{{ $device->series ?? '' }}">
+                                <li class="tree-child" data-location="{{ strtoupper(trim($device->lokasi ?: ($device->location ?? ''))) }}" data-series="{{ strtoupper(trim($device->series ?? '')) }}">
                                     <input type="checkbox" class="tree-checkbox device-checkbox" value="{{ $device->device_id }}" checked data-group="{{ Str::slug($groupName) }}">
                                     @php
                                         $deviceIcon = 'fa-car';
@@ -797,18 +797,26 @@ $(document).ready(function() {
             let nameMatches = deviceName.includes(searchQuery);
             
             // Check location filter
-            let locationMatches = !selectedLocation || deviceLocation === selectedLocation.toString().trim();
+            let locationMatches = true;
+            if (selectedLocation) {
+                let normLoc = selectedLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
+                    locationMatches = false;
+                }
+            }
             
             // Check series filter
             let seriesMatches = true;
             if (selectedSeries) {
-                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
-                
-                if (selectedSeries === 'VOLVO') {
-                    seriesMatches = normalizedDevice === 'VOLVO';
+                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normalizedSelected === 'VOLVO' || normalizedSelected === 'DTVOLVO') {
+                    if (!normalizedDevice.includes('VOLVO')) seriesMatches = false;
                 } else {
-                    seriesMatches = normalizedDevice === normalizedSelected || normalizedDevice.includes(normalizedSelected);
+                    if (normalizedDevice !== normalizedSelected && !normalizedDevice.includes(normalizedSelected)) {
+                        seriesMatches = false;
+                    }
                 }
             }
             
@@ -1048,18 +1056,21 @@ $(document).ready(function() {
             let shouldShow = true;
             
             // Check location match
-            if (selectedLocation && deviceLocation !== selectedLocation.toString().trim()) {
-                shouldShow = false;
+            if (selectedLocation) {
+                let normLoc = selectedLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
+                    shouldShow = false;
+                }
             }
             
             // Check series match
             if (selectedSeries && shouldShow) {
-                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
+                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
                 
-                if (selectedSeries === 'VOLVO') {
-                    // Only show devices that have VOLVO series (exactly 8 devices)
-                    if (normalizedDevice !== 'VOLVO') {
+                if (normalizedSelected === 'VOLVO' || normalizedSelected === 'DTVOLVO') {
+                    if (!normalizedDevice.includes('VOLVO')) {
                         shouldShow = false;
                     }
                 } else {

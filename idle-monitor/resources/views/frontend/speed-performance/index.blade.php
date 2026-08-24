@@ -372,7 +372,7 @@
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
-                                <li class="tree-child" data-device-name="{{ strtolower($device->device_name) }}" data-location="{{ $device->lokasi ?? '' }}" data-series="{{ $device->series ?? '' }}">
+                                <li class="tree-child" data-device-name="{{ strtolower($device->device_name) }}" data-location="{{ strtoupper(trim($device->lokasi ?: ($device->location ?? ''))) }}" data-series="{{ strtoupper(trim($device->series ?? '')) }}">
                                     <input type="checkbox" class="tree-checkbox device-checkbox" value="{{ $device->device_id }}" checked data-group="{{ Str::slug($groupName) }}">
                                     @php
                                         $dIcon = 'fa-car';
@@ -738,17 +738,21 @@ $(document).ready(function() {
             let shouldShow = true;
             
             // Check location match
-            if (location && deviceLocation !== location) {
-                shouldShow = false;
+            if (location) {
+                let normLoc = location.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
+                    shouldShow = false;
+                }
             }
             
             // Check series match  
             if (series && shouldShow) {
-                let normalizedSelected = series.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
+                let normalizedSelected = series.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
                 
-                if (series.toUpperCase() === 'VOLVO') {
-                    if (normalizedDevice !== 'VOLVO') {
+                if (normalizedSelected === 'VOLVO' || normalizedSelected === 'DTVOLVO') {
+                    if (!normalizedDevice.includes('VOLVO')) {
                         shouldShow = false;
                     }
                 } else {
