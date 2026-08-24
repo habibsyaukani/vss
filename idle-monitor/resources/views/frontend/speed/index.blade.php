@@ -1050,6 +1050,8 @@ $(function() {
                         let progressText = 'Data sedang diproses di background' + '.'.repeat(nextDots);
                         if (res.total > 0) {
                             progressText += '<br><span style="color: #16a34a; font-weight: bold; font-size: 1.1em;">Progress: ' + res.progress + '% (' + res.total.toLocaleString('id-ID') + ' baris)</span>';
+                        } else if (res.progress > 0) {
+                            progressText += '<br><span style="color: #1963f2; font-weight: bold; font-size: 1.1em;">Sedang mengekspor: ' + res.progress.toLocaleString('id-ID') + ' baris...</span>';
                         }
                         
                         loadingMsg.html(progressText);
