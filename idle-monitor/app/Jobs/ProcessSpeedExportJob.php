@@ -132,9 +132,13 @@ class ProcessSpeedExportJob implements ShouldQueue
                 'I/O STATUS', 'EMERGENCY', 'IGNITION (ACC)'
             ]);
 
-            // We do NOT use count() because it is extremely slow on 9 million rows
-            // We just update progress with the number of rows exported so far
-            \Illuminate\Support\Facades\Cache::put('export_job_total_' . $this->exportJobId, -1, 3600);
+            // Calculate total for percentage display (capped at 200,000 to match the limit)
+            $totalCount = $query->count();
+            if ($totalCount > 200000) {
+                $totalCount = 200000;
+            }
+            
+            \Illuminate\Support\Facades\Cache::put('export_job_total_' . $this->exportJobId, $totalCount, 3600);
             \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, 0, 3600);
 
             // 3. Stream Data

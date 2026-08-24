@@ -208,9 +208,15 @@ class SpeedController extends Controller
         $progress = \Illuminate\Support\Facades\Cache::get('export_job_progress_' . $jobId, 0);
         $total = \Illuminate\Support\Facades\Cache::get('export_job_total_' . $jobId, 0);
 
+        $percentage = 0;
+        if ($total > 0) {
+            $percentage = round(($progress / $total) * 100);
+            if ($percentage > 100) $percentage = 100;
+        }
+
         return response()->json([
             'status' => $job->status,
-            'progress' => $progress,
+            'progress' => $percentage,
             'total' => $total,
             'download_url' => $job->status === 'completed' ? route('speed.export.download', $job->id) : null
         ]);
