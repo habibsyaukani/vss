@@ -50,18 +50,26 @@ class IdleAlarmController extends Controller
             $query->where('idle_alarms.alarm_status', $request->status);
         }
 
-        // Filter by location (direct JOIN filter - much faster)
+        // Filter by location
         if ($request->location) {
-            $query->where('devices.lokasi', $request->location);
+            $loc = str_replace([' ', '.', '-'], '', strtoupper(trim($request->location)));
+            $query->where(function($q) use ($loc) {
+                $q->whereRaw("REPLACE(REPLACE(REPLACE(UPPER(devices.lokasi), ' ', ''), '.', ''), '-', '') LIKE ?", ['%' . $loc . '%'])
+                  ->orWhereRaw("REPLACE(REPLACE(REPLACE(UPPER(devices.location), ' ', ''), '.', ''), '-', '') LIKE ?", ['%' . $loc . '%']);
+            });
         }
 
-        // Filter by series (direct JOIN filter - much faster)
+        // Filter by series
         if ($request->series) {
-            if (strtoupper($request->series) === 'VOLVO') {
-                $query->where('devices.series', 'LIKE', '%FMX%');
-            } else {
-                $query->where('devices.series', $request->series);
-            }
+            $series = trim($request->series);
+            $query->where(function($q) use ($series) {
+                if (strtoupper($series) === 'VOLVO' || strtoupper($series) === 'DT VOLVO') {
+                    $q->where('devices.series', 'LIKE', '%VOLVO%')
+                      ->orWhere('devices.series', 'LIKE', '%FMX%');
+                } else {
+                    $q->where('devices.series', 'LIKE', '%' . $series . '%');
+                }
+            });
         }
 
         // Filter by specific devices (from tree view) - Optimized to skip when all devices are selected
@@ -189,16 +197,24 @@ class IdleAlarmController extends Controller
         } else {
             // Apply sidebar and top filters
             if ($request->location) {
-                $query->whereHas('device', function($q) use ($request) {
-                    $q->where('lokasi', $request->location);
+                $loc = str_replace([' ', '.', '-'], '', strtoupper(trim($request->location)));
+                $query->whereHas('device', function($q) use ($loc) {
+                    $q->where(function($sq) use ($loc) {
+                        $sq->whereRaw("REPLACE(REPLACE(REPLACE(UPPER(lokasi), ' ', ''), '.', ''), '-', '') LIKE ?", ['%' . $loc . '%'])
+                           ->orWhereRaw("REPLACE(REPLACE(REPLACE(UPPER(location), ' ', ''), '.', ''), '-', '') LIKE ?", ['%' . $loc . '%']);
+                    });
                 });
             }
             if ($request->series) {
-                $query->whereHas('device', function($q) use ($request) {
-                    if (strtoupper($request->series) === 'VOLVO') {
-                        $q->where('series', 'LIKE', '%FMX%');
+                $series = trim($request->series);
+                $query->whereHas('device', function($q) use ($series) {
+                    if (strtoupper($series) === 'VOLVO' || strtoupper($series) === 'DT VOLVO') {
+                        $q->where(function($sq) {
+                            $sq->where('series', 'LIKE', '%VOLVO%')
+                               ->orWhere('series', 'LIKE', '%FMX%');
+                        });
                     } else {
-                        $q->where('series', $request->series);
+                        $q->where('series', 'LIKE', '%' . $series . '%');
                     }
                 });
             }

@@ -61,14 +61,23 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
+                $loc = trim(strtoupper($request->location));
+                $filteredDevices = $filteredDevices->filter(function($d) use ($loc) {
+                    $dLoc = strtoupper($d->location ?? '');
+                    $dLok = strtoupper($d->lokasi ?? '');
+                    return str_contains($dLoc, $loc) || str_contains($dLok, $loc);
+                });
             }
             if ($request->filled('series')) {
-                $seriesParam = strtoupper($request->series);
-                if ($seriesParam === 'VOLVO') {
-                    $filteredDevices = $filteredDevices->filter(fn($d) => stripos($d->series, 'FMX') !== false);
+                $series = trim(strtoupper($request->series));
+                if ($series === 'VOLVO' || $series === 'DT VOLVO') {
+                    $filteredDevices = $filteredDevices->filter(function($d) {
+                        return stripos($d->series, 'FMX') !== false || stripos($d->series, 'VOLVO') !== false;
+                    });
                 } else {
-                    $filteredDevices = $filteredDevices->where('series', $request->series);
+                    $filteredDevices = $filteredDevices->filter(function($d) use ($series) {
+                        return stripos($d->series, $series) !== false;
+                    });
                 }
             }
             $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
@@ -180,14 +189,23 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
+                $loc = trim(strtoupper($request->location));
+                $filteredDevices = $filteredDevices->filter(function($d) use ($loc) {
+                    $dLoc = strtoupper($d->location ?? '');
+                    $dLok = strtoupper($d->lokasi ?? '');
+                    return str_contains($dLoc, $loc) || str_contains($dLok, $loc);
+                });
             }
             if ($request->filled('series')) {
-                $seriesParam = strtoupper($request->series);
-                if ($seriesParam === 'VOLVO') {
-                    $filteredDevices = $filteredDevices->filter(fn($d) => stripos($d->series, 'FMX') !== false);
+                $series = trim(strtoupper($request->series));
+                if ($series === 'VOLVO' || $series === 'DT VOLVO') {
+                    $filteredDevices = $filteredDevices->filter(function($d) {
+                        return stripos($d->series, 'FMX') !== false || stripos($d->series, 'VOLVO') !== false;
+                    });
                 } else {
-                    $filteredDevices = $filteredDevices->where('series', $request->series);
+                    $filteredDevices = $filteredDevices->filter(function($d) use ($series) {
+                        return stripos($d->series, $series) !== false;
+                    });
                 }
             }
             $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());

@@ -1,17 +1,24 @@
 <?php
+require 'vendor/autoload.php';
+$app = require_once 'bootstrap/app.php';
+$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, "http://localhost:8000/idle-alarm/data");
-curl_setopt($ch, CURLOPT_POST, 1);
-// Pass start_date, end_date
-$data = [
-    'start_date' => '2026-08-18',
-    'end_date' => '2026-08-18',
-    // We don't need CSRF token if we just disable VerifyCsrfToken middleware for testing, 
-    // but instead let's just query the DB directly the same way the controller does.
-];
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$response = curl_exec($ch);
-curl_close($ch);
-echo $response;
+$request = Illuminate\Http\Request::create('/idle-alarm/data', 'POST', [
+    'start_date' => '2026-08-24',
+    'end_date' => '2026-08-24',
+    'location' => 'SELATAN',
+    'series' => '',
+    'device_ids' => ['1','2','3'],
+    'draw' => 1,
+    'start' => 0,
+    'length' => 10,
+    'columns' => [
+        ['data' => 'id', 'name' => 'id', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']]
+    ],
+    'order' => [
+        ['column' => 0, 'dir' => 'asc']
+    ]
+]);
+
+$controller = app()->make(App\Http\Controllers\Frontend\IdleAlarmController::class);
+echo substr($controller->data($request)->getContent(), 0, 500);
