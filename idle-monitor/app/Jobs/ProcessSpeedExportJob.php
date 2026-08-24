@@ -39,6 +39,8 @@ class ProcessSpeedExportJob implements ShouldQueue
         $exportJob = ExportJob::find($this->exportJobId);
         if (!$exportJob) return;
 
+        \Illuminate\Support\Facades\Log::info("[ProcessSpeedExportJob] START: Job ID {$this->exportJobId}");
+
         try {
             $exportJob->update(['status' => 'processing']);
 
@@ -187,8 +189,11 @@ class ProcessSpeedExportJob implements ShouldQueue
                 'status' => 'completed',
                 'file_path' => $filePath
             ]);
+            
+            \Illuminate\Support\Facades\Log::info("[ProcessSpeedExportJob] FINISHED: Job ID {$this->exportJobId}. Total processed: " . ($serial - 1));
 
         } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('[ProcessSpeedExportJob] Failed: ' . $e->getMessage());
             $exportJob->update([
                 'status' => 'failed',
                 'file_path' => $e->getMessage() // Store error message for debugging
