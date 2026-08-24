@@ -142,7 +142,7 @@ class ProcessSpeedExportJob implements ShouldQueue
             // Limit to 200,000 rows to prevent infinite exports crashing the server
             $query->limit(200000);
             
-            foreach ($query->cursor() as $track) {
+            foreach ($query->toBase()->cursor() as $track) {
                 $master = $deviceMap->get((string)$track->device_id);
                 $realDevName = $track->device_name ?: ($master ? $master->device_name : null);
                 $deviceName = ($realDevName ?? '-') . ' (' . $track->device_id . ')';
