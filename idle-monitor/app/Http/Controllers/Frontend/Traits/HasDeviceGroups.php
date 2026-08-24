@@ -38,8 +38,8 @@ trait HasDeviceGroups
 
             // ── Series ────────────────────────────────────────────────
             $seriesList = collect([
-                'OHT', 
-                'HD 467', 
+                'OHT 773', 
+                'HD 465', 
                 'HD 785', 
                 'DT VOLVO', 
                 'DT HINO'
