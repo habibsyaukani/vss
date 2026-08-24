@@ -699,38 +699,7 @@
                 });
             }, 30 * 60 * 1000); // 30 minutes
             
-            // Also refresh before form submit to ensure token is fresh
-            $('form').on('submit', function(e) {
-                e.preventDefault();
-                const form = this;
-                
-                console.log('[Login] Refreshing CSRF token before submit...');
-                
-                $.ajax({
-                    url: '/refresh-csrf',
-                    method: 'GET',
-                    success: function(data) {
-                        if (data.token) {
-                            // Update form token with fresh one
-                            $(form).find('input[name="_token"]').val(data.token);
-                            console.log('[Login] Fresh token obtained, submitting form...');
-                            
-                            // Submit form with fresh token
-                            setTimeout(() => {
-                                form.submit();
-                            }, 100);
-                        } else {
-                            // No token received, submit anyway
-                            form.submit();
-                        }
-                    },
-                    error: function() {
-                        console.warn('[Login] Token refresh failed, submitting anyway...');
-                        // Submit anyway
-                        form.submit();
-                    }
-                });
-            });
+            // Note: Removed the pre-submit CSRF refresh because it causes significant delay when logging in.
         });
         
         // Fix "Page Expired" error after logout by reloading page once
