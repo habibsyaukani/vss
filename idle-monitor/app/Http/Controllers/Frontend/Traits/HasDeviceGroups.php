@@ -27,14 +27,23 @@ trait HasDeviceGroups
                 ->get(['device_id', 'device_name', 'status', 'location', 'lokasi', 'series']);
 
             // ── Locations ─────────────────────────────────────────────
-            $locations = $devices->map(function ($device) {
-                return strtoupper(trim($device->lokasi ?: ($device->location ?? '')));
-            })->filter()->unique()->sort()->values();
+            $locations = collect([
+                'JO SELATAN', 
+                'SELATAN', 
+                'UTARA', 
+                'JO UTARA', 
+                'MUD', 
+                'M. SERVICE'
+            ]);
 
             // ── Series ────────────────────────────────────────────────
-            $seriesList = $devices->map(function ($device) {
-                return strtoupper(trim($device->series ?? ''));
-            })->filter()->unique()->sort()->values();
+            $seriesList = collect([
+                'OHT', 
+                'HD 467', 
+                'HD 785', 
+                'DT VOLVO', 
+                'DT HINO'
+            ]);
 
             // ── Device Groups (tree view) ──────────────────────────────
             $deviceGroups = [];

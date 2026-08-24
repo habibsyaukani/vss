@@ -782,16 +782,26 @@ $(function() {
             let deviceSeries = $device.data('series') || '';
             
             let nameMatches = deviceName.includes(searchQuery);
-            let locationMatches = !selectedLocation || deviceLocation === selectedLocation;
+            let locationMatches = true;
             let seriesMatches = true;
             
+            if (selectedLocation) {
+                let normLoc = selectedLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
+                    locationMatches = false;
+                }
+            }
+            
             if (selectedSeries) {
-                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
-                if (selectedSeries === 'VOLVO') {
-                    seriesMatches = normalizedDevice === 'VOLVO';
+                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normalizedSelected === 'VOLVO' || normalizedSelected === 'DTVOLVO') {
+                    if (!normalizedDevice.includes('VOLVO')) seriesMatches = false;
                 } else {
-                    seriesMatches = normalizedDevice === normalizedSelected || normalizedDevice.includes(normalizedSelected);
+                    if (normalizedDevice !== normalizedSelected && !normalizedDevice.includes(normalizedSelected)) {
+                        seriesMatches = false;
+                    }
                 }
             }
             
@@ -906,21 +916,21 @@ $(function() {
             let deviceSeries = $treeChild.attr('data-series') || '';
             let shouldShow = true;
             
-            // Cek filter location — case insensitive & trim
+            // Cek filter location — robust matching (ignore spaces and dots)
             if (selectedLocation) {
-                let normLoc = selectedLocation.trim().toUpperCase();
-                let normDevLoc = deviceLocation.trim().toUpperCase();
+                let normLoc = selectedLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
                 if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
                     shouldShow = false;
                 }
             }
             
-            // Cek filter series — case insensitive & trim
+            // Cek filter series — robust matching
             if (selectedSeries && shouldShow) {
-                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/\s+/g, ' ');
-                if (selectedSeries === 'VOLVO') {
-                    if (normalizedDevice !== 'VOLVO') shouldShow = false;
+                let normalizedSelected = selectedSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normalizedSelected === 'VOLVO' || normalizedSelected === 'DTVOLVO') {
+                    if (!normalizedDevice.includes('VOLVO')) shouldShow = false;
                 } else {
                     if (normalizedDevice !== normalizedSelected && !normalizedDevice.includes(normalizedSelected)) {
                         shouldShow = false;
