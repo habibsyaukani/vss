@@ -43,14 +43,14 @@ class ProcessSpeedExportJob implements ShouldQueue
             $exportJob->update(['status' => 'processing']);
 
             // 1. Build Query
-            // ⚡ Fast indexed query purely on gps_tracks_raw (NO SQL JOINs)
-            $query = GpsTrackRaw::from(\Illuminate\Support\Facades\DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
+            // ⚡ Fast query purely on gps_tracks_raw (NO SQL JOINs)
+            $query = GpsTrackRaw::query()
                 ->select(
                 'id', 'device_id', 'device_name', 'longitude', 'latitude',
                 'altitude', 'speed', 'direction', 'satellites', 'gps_time',
                 'acc_state as is_acc_on', 'over_speed as is_overspeed', 'urgency as is_emergency',
                 'input_output_status'
-            )->orderBy('gps_tracks_raw.gps_time', 'desc');
+            )->orderBy('gps_time', 'desc');
 
             $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
                 return Device::all()->keyBy(function($item) {
@@ -59,13 +59,13 @@ class ProcessSpeedExportJob implements ShouldQueue
             });
 
             if (!empty($this->filters['selected_ids']) && is_array($this->filters['selected_ids'])) {
-                $query->whereIn('gps_tracks_raw.id', $this->filters['selected_ids']);
+                $query->whereIn('id', $this->filters['selected_ids']);
             } else {
                 if (!empty($this->filters['device_ids']) && is_array($this->filters['device_ids'])) {
                     $totalDevices = count($deviceMap);
                     if (count($this->filters['device_ids']) < $totalDevices) {
                         $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $this->filters['device_ids']);
-                        $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
+                        $query->whereIn('device_id', $cleanIds);
                     }
                 }
 
@@ -85,30 +85,30 @@ class ProcessSpeedExportJob implements ShouldQueue
                             $filteredDevices = $filteredDevices->where('series', $this->filters['series']);
                         }
                     }
-                    $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+                    $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
                 }
 
                 if (!empty($this->filters['start_date'])) {
-                    $query->where('gps_tracks_raw.gps_time', '>=', $this->filters['start_date'] . ' 00:00:00');
+                    $query->where('gps_time', '>=', $this->filters['start_date'] . ' 00:00:00');
                 } else {
-                    $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
+                    $query->where('gps_time', '>=', now()->startOfDay());
                 }
                 
                 if (!empty($this->filters['end_date'])) {
-                    $query->where('gps_tracks_raw.gps_time', '<=', $this->filters['end_date'] . ' 23:59:59');
+                    $query->where('gps_time', '<=', $this->filters['end_date'] . ' 23:59:59');
                 }
 
                 if (!empty($this->filters['speed_filter'])) {
                     switch ($this->filters['speed_filter']) {
                         case 'low':
-                            $query->where('gps_tracks_raw.speed', '>', 0)->where('gps_tracks_raw.speed', '<', 15);
+                            $query->where('speed', '>', 0)->where('speed', '<', 15);
                             break;
                         case 'high':
-                            $query->where('gps_tracks_raw.speed', '>=', 41);
+                            $query->where('speed', '>=', 41);
                             break;
                     }
                 } else {
-                    $query->where('gps_tracks_raw.speed', '>', 0);
+                    $query->where('speed', '>', 0);
                 }
             }
 
@@ -135,7 +135,7 @@ class ProcessSpeedExportJob implements ShouldQueue
             // We do NOT use count() because it is extremely slow on 9 million rows
             // We just update progress with the number of rows exported so far
             \Illuminate\Support\Facades\Cache::put('export_job_total_' . $this->exportJobId, -1, 3600);
-            \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, 0, 3600);
+            \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, 1, 3600); // Set to 1 so frontend immediately shows "Sedang mengekspor: 1 baris..."
 
             // 3. Stream Data
             $serial = 1;
@@ -172,8 +172,8 @@ class ProcessSpeedExportJob implements ShouldQueue
                     $track->is_acc_on ? 'ON' : 'OFF'
                 ]);
 
-                // Update progress every 2000 rows
-                if ($serial % 2000 === 0) {
+                // Update progress every 500 rows
+                if ($serial % 500 === 0) {
                     \Illuminate\Support\Facades\Cache::put('export_job_progress_' . $this->exportJobId, $serial, 3600);
                 }
                 
