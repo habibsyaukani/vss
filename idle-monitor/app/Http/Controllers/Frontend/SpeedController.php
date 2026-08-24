@@ -192,7 +192,7 @@ class SpeedController extends Controller
             $filters['device_ids'] = json_decode($filters['device_ids'], true);
         }
 
-        ProcessSpeedExportJob::dispatch($exportJob->id, $filters);
+        ProcessSpeedExportJob::dispatch($exportJob->id, $filters)->onQueue('exports');
 
         return response()->json([
             'use_queue' => true,

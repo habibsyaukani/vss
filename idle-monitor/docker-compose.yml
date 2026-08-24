@@ -73,7 +73,7 @@ services:
     working_dir: /var/www
     environment:
       TZ: Asia/Makassar
-    command: php artisan queue:work --sleep=3 --tries=3 --timeout=600
+    command: php artisan queue:work --queue=exports,default --sleep=3 --tries=3 --timeout=600
     volumes:
       - ./:/var/www
     networks:
