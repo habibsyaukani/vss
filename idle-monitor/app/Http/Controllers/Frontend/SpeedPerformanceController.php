@@ -42,6 +42,7 @@ class SpeedPerformanceController extends Controller
         $query = \App\Models\GpsHourlyStat::select(
                 'device_id',
                 'device_name',
+                DB::raw('SUM(total_records) as total_gps_records'),
                 DB::raw('CASE WHEN SUM(total_records) > 0 THEN SUM(sum_speed) / SUM(total_records) ELSE 0 END as avg_speed'),
                 DB::raw('MAX(max_speed) as max_speed')
             )
@@ -53,7 +54,7 @@ class SpeedPerformanceController extends Controller
             $totalDevices = count($deviceMap);
             if (count($request->device_ids) < $totalDevices) {
                 $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
-                $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
+                $query->whereIn('device_id', $cleanIds);
             }
         }
 
@@ -80,7 +81,7 @@ class SpeedPerformanceController extends Controller
                     });
                 }
             }
-            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+            $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
         // Date and Shift Filter
@@ -121,6 +122,8 @@ class SpeedPerformanceController extends Controller
         $summary = $summaryQuery->get();
         $overallAvg = $summary->avg('avg_speed') ?? 0;
         $overallMax = $summary->max('max_speed') ?? 0;
+        $totalGpsRecords = $summary->sum('total_gps_records') ?? 0;
+        $totalMatchingDevices = $summary->count();
 
         return DataTables::of($query)
             ->addColumn('checkbox', function($row){
@@ -143,7 +146,8 @@ class SpeedPerformanceController extends Controller
             ->with([
                 'summaryAvg' => round($overallAvg, 1),
                 'summaryMax' => round($overallMax, 1),
-                'totalRecords' => $summary->count()
+                'totalRecords' => $totalGpsRecords,
+                'totalDevices' => $totalMatchingDevices,
             ])
             ->make(true);
     }
@@ -172,7 +176,7 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('export_type') && $request->export_type === 'selected' && $request->filled('row_ids')) {
             $rowIds = explode(',', $request->row_ids);
             if (!empty($rowIds)) {
-                $query->whereIn('gps_tracks_raw.device_id', $rowIds);
+                $query->whereIn('device_id', $rowIds);
                 $isExportSelected = true;
             }
         } else {
@@ -181,7 +185,7 @@ class SpeedPerformanceController extends Controller
                 $totalDevices = count($deviceMap);
                 if (count($deviceIds) < $totalDevices) {
                     $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $deviceIds);
-                    $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
+                    $query->whereIn('device_id', $cleanIds);
                 }
             }
         }
@@ -208,7 +212,7 @@ class SpeedPerformanceController extends Controller
                     });
                 }
             }
-            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+            $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
         $date = $request->input('date', date('Y-m-d'));

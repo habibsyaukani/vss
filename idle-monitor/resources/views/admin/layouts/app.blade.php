@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
-    <title>@yield('title', 'Admin Dashboard') - Idle Monitor System</title>
+    <title>@yield('title', 'Admin Dashboard') - G-VAMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -254,7 +254,7 @@
 
 
         <div style="font-size: 11px; color: #9ca3af; padding: 10px 20px; text-align: center;">
-            &copy; {{ date('Y') }} Idle Monitor Backend
+            &copy; {{ date('Y') }} G-VAMS (GPE Vehicle Activity Monitoring System)
         </div>
     </div>
 

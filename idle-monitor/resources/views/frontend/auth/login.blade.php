@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
-    <title>Login - Fleet Monitoring System</title>
+    <title>G-VAMS - GPE Vehicle Activity Monitoring System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -397,8 +397,8 @@
         <!-- Header -->
         <div class="page-header">
             <div class="header-title-container">
-                <h1 class="header-title">Fleet Monitoring System</h1>
-                <p class="header-subtitle">Production & Equipment Performance Monitoring</p>
+                <h1 class="header-title">G-VAMS</h1>
+                <p class="header-subtitle">GPE Vehicle Activity Monitoring System</p>
             </div>
         </div>
 
@@ -450,8 +450,8 @@
                             <div class="logo-divider"></div>
                             <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
                         </div>
-                        <h2 class="login-title">Fleet Monitoring System</h2>
-                        <p class="login-subtitle">Fleet Dashboard</p>
+                        <h2 class="login-title">G-VAMS</h2>
+                        <p class="login-subtitle">GPE Vehicle Activity Monitoring System</p>
                     </div>
 
                     @if ($errors->any())

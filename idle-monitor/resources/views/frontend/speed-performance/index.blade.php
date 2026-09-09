@@ -564,6 +564,11 @@ $(document).ready(function() {
                     }
                     if(json.totalRecords !== undefined) {
                         $('#cardTotalRecords').text(json.totalRecords.toLocaleString());
+                    }
+                    if(json.totalDevices !== undefined) {
+                        $('#cardDevices').text(json.totalDevices.toLocaleString());
+                        $('#unitCountBadge').text(json.totalDevices + ' unit');
+                    } else if(json.data) {
                         $('#cardDevices').text(json.data.length.toLocaleString());
                         $('#unitCountBadge').text(json.data.length + ' unit');
                     }

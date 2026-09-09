@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
-    <title>Admin Portal - Idle Monitor System</title>
+    <title>G-VAMS - GPE Vehicle Activity Monitoring System (Admin)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -546,7 +546,8 @@
                 <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
             </div>
             
-            <h1>Admin Portal</h1>
+            <h1 style="margin-bottom: 2px;">G-VAMS</h1>
+            <div class="brand-co-text">GPE Vehicle Activity Monitoring System</div>
 
             @if ($errors->any())
                 <div class="alert alert-danger">

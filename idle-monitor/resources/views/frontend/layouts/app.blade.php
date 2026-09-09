@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/gpe-logo-transparent.png') }}">
-    <title>@yield('title', 'Fleet Monitoring System')</title>
+    <title>@yield('title', 'G-VAMS - GPE Vehicle Activity Monitoring System')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -292,8 +292,8 @@
         <a href="{{ route('frontend.dashboard') }}" class="navbar-brand-area">
             <div class="navbar-brand-icon"><i class="fas fa-bolt"></i></div>
             <div class="navbar-brand-text">
-                <h1>Fleet Monitoring System</h1>
-                <p>Production & Equipment Performance Monitoring</p>
+                <h1>G-VAMS</h1>
+                <p>GPE Vehicle Activity Monitoring System</p>
             </div>
         </a>
 
@@ -317,7 +317,7 @@
         <div class="navbar-right">
             <div class="navbar-right-item"><i class="far fa-calendar-alt"></i> {{ date('d M Y') }}</div>
             <div class="navbar-right-item"><i class="far fa-clock"></i> <span id="clockTop"></span> WITA</div>
-            <div class="navbar-right-item d-none d-xl-flex">VSS Fleet Monitoring</div>
+            <div class="navbar-right-item d-none d-xl-flex">G-VAMS</div>
             
             <div class="dropdown">
                 <div class="user-profile" data-bs-toggle="dropdown">
