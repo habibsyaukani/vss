@@ -102,6 +102,7 @@ class SystemHealthController extends Controller
                 'api_token' => $healer->healAPIToken(),
                 'queue_worker_inactive' => $healer->healQueueWorker(),
                 'failed_jobs' => $healer->healFailedJobs(),
+                'system_memory' => $healer->healMemoryUsage(),
                 default => [
                     'success' => false,
                     'message' => 'Unknown issue type or not healable automatically'

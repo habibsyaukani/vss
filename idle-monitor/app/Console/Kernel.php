@@ -106,6 +106,13 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Delete heavy raw GPS tracks to prevent SSD exhaustion');
 
+        // ✅ AUTO-FREE RAM: Flush Linux Page Cache & release PHP memory daily at 03:00 AM
+        $schedule->command('vss:free-memory')
+            ->dailyAt('03:00')
+            ->withoutOverlapping(30)
+            ->runInBackground()
+            ->description('Auto-free system RAM, flush Linux Page Cache, and cycle PHP workers');
+
         // Process GPS tracks every 3 minutes (dispatch to queue)
         // [DISABLED] Sama, ini sudah tidak perlu lagi karena WebSocket memproses secara instan.
         /*

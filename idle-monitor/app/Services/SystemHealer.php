@@ -210,6 +210,64 @@ class SystemHealer
     }
 
     /**
+     * Auto-heal / free system memory and Linux Page Cache
+     */
+    public function healMemoryUsage(): array
+    {
+        $startTime = microtime(true);
+        $detectedAt = now();
+
+        $healingLog = HealingLog::create([
+            'issue_type' => 'system_memory',
+            'severity' => 'warning',
+            'problem_description' => 'High RAM or Linux page cache usage detected',
+            'healing_action' => 'free_system_memory',
+            'status' => 'attempted',
+            'detected_at' => $detectedAt,
+        ]);
+
+        try {
+            Artisan::call('vss:free-memory', ['--force' => true]);
+            $output = Artisan::output();
+
+            $executionTime = (int)((microtime(true) - $startTime) * 1000);
+
+            $healingLog->update([
+                'status' => 'success',
+                'result_message' => 'System RAM and Page Cache auto-freed successfully. ' . trim($output),
+                'healed_at' => now(),
+                'execution_time_ms' => $executionTime,
+            ]);
+
+            SystemLogger::success('HEALING', 'Auto-freed system memory & page cache', [
+                'execution_time_ms' => $executionTime,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'System memory and page cache freed successfully',
+                'execution_time_ms' => $executionTime,
+            ];
+
+        } catch (\Exception $e) {
+            $executionTime = (int)((microtime(true) - $startTime) * 1000);
+
+            $healingLog->update([
+                'status' => 'failed',
+                'result_message' => 'Failed to free memory: ' . $e->getMessage(),
+                'healed_at' => now(),
+                'execution_time_ms' => $executionTime,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to free memory: ' . $e->getMessage(),
+                'execution_time_ms' => $executionTime,
+            ];
+        }
+    }
+
+    /**
      * Log manual healing attempt (for issues that require manual intervention)
      */
     public function logManualHealing(string $issueType, string $problem, string $suggestion): HealingLog
