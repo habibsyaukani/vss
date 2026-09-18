@@ -31,117 +31,104 @@
 
         body {
             font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-            background: #edf2f7;
+            background: #ffffff;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px 20px;
-            color: #0f172a;
-            position: relative;
+            width: 100vw;
             overflow-x: hidden;
+            position: relative;
+            color: #0f172a;
         }
 
-        /* Subtle Background Mesh Decor */
-        body::before {
+        /* ═══════════════════════════════════════════════════════════════
+           1. FULL PAGE BACKGROUND SHOWCASE (No Card Wrapper)
+              The entire background is the artwork (GPE|MAPAN, G-VAMS, 7 Icons)
+           ═══════════════════════════════════════════════════════════════ */
+        .bg-showcase-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 40px 60px;
+            pointer-events: none;
+            background: #ffffff;
+        }
+
+        /* Subtle radial background glow */
+        .bg-showcase-layer::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             background-image: 
-                radial-gradient(circle at 5% 15%, rgba(37, 99, 235, 0.06) 0%, transparent 45%),
-                radial-gradient(circle at 95% 85%, rgba(37, 99, 235, 0.06) 0%, transparent 45%);
-            z-index: 0;
-            pointer-events: none;
+                radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 85% 80%, rgba(37, 99, 235, 0.04) 0%, transparent 50%);
+            z-index: -1;
         }
 
-        /* Main Flex Wrapper: Showcase on Left, Login Card on Right (Zero Overlap) */
-        .page-container {
-            width: 100%;
-            max-width: 1420px;
+        /* Top Header: Partner Logos (GPE | MAPAN) */
+        .bg-header-logos {
             display: flex;
-            align-items: stretch;
-            justify-content: center;
-            gap: 32px;
-            position: relative;
-            z-index: 1;
-            margin: auto;
-        }
-
-        /* ═══════════════════════════════════════════════════════════════
-           LEFT SECTION: Full Background Showcase Card (Uncovered)
-           ═══════════════════════════════════════════════════════════════ */
-        .showcase-section {
-            flex: 1.3;
-            min-height: 620px;
-            background: #ffffff;
-            border-radius: 28px;
-            padding: 32px 40px 28px 40px;
-            box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.07);
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            overflow: hidden;
-        }
-
-        /* Top Right Header: Partner Logos (GPE | MAPAN) */
-        .showcase-header {
-            display: flex;
-            justify-content: flex-end;
             align-items: center;
+            justify-content: flex-start;
             gap: 16px;
+            padding-left: 20px;
         }
 
-        .showcase-header img.logo-gpe {
-            height: 40px;
+        .bg-header-logos img.logo-gpe {
+            height: 44px;
             width: auto;
             object-fit: contain;
         }
 
-        .showcase-header img.logo-mapan {
-            height: 40px;
+        .bg-header-logos img.logo-mapan {
+            height: 44px;
             width: auto;
             object-fit: contain;
         }
 
         .logo-divider {
             width: 1.5px;
-            height: 26px;
+            height: 28px;
             background: #cbd5e1;
             border-radius: 1px;
         }
 
-        /* Center Artwork: Large G-VAMS Logo Emblem (Fully Visible, High Res) */
-        .showcase-hero {
+        /* Center Artwork: Large G-VAMS Logo Emblem */
+        .bg-center-hero {
             flex: 1;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px 10px;
+            justify-content: flex-start;
+            padding-left: 60px;
         }
 
-        .showcase-hero img {
-            max-width: 640px;
+        .bg-center-hero img {
+            max-width: 650px;
             width: 100%;
             height: auto;
-            max-height: 370px;
+            max-height: 400px;
             object-fit: contain;
-            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.04));
+            filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.04));
         }
 
-        /* Bottom 7 Feature Icons Bar */
-        .features-bar {
+        /* Bottom 7 Features Bar (Full Width Footer Bar) */
+        .bg-features-bar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
+            gap: 6px;
             border-top: 1px solid #e2e8f0;
             padding-top: 22px;
-            margin-top: 10px;
+            max-width: 920px;
+            margin-left: 20px;
         }
 
         .feature-box {
             text-align: center;
-            padding: 4px 6px;
+            padding: 4px;
             position: relative;
         }
 
@@ -156,21 +143,16 @@
         }
 
         .feature-box-icon {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             margin: 0 auto 8px auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 17px;
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease;
-        }
-
-        .feature-box:hover .feature-box-icon {
-            transform: translateY(-2px);
         }
 
         .icon-fleet { background: #2563eb; }
@@ -191,20 +173,29 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           RIGHT SECTION: Distinct Login Card (Side-by-Side, No Overlap)
+           2. FLOATING RIGHT LOGIN CARD (The ONLY card on the screen)
            ═══════════════════════════════════════════════════════════════ */
+        .page-wrapper {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 40px 80px;
+        }
+
         .login-card {
-            width: 390px;
-            min-height: 620px;
+            width: 410px;
+            min-height: 580px;
             background: #ffffff;
             border-radius: 28px;
             padding: 40px 36px 32px 36px;
-            box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.09);
+            box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.16), 0 0 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(226, 232, 240, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            flex-shrink: 0;
-            border: 1px solid rgba(226, 232, 240, 0.9);
         }
 
         /* G-VAMS Logo Emblem at Top of Login Card */
@@ -352,75 +343,86 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           RESPONSIVE LAYOUT (No Overlap on any screen)
+           RESPONSIVE LAYOUT
            ═══════════════════════════════════════════════════════════════ */
         @media (max-width: 1100px) {
-            .showcase-section {
+            .bg-center-hero img {
+                max-width: 450px;
+            }
+            .bg-features-bar {
+                max-width: 600px;
+            }
+            .page-wrapper {
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .bg-showcase-layer {
                 display: none;
             }
-            .page-container {
+            .page-wrapper {
                 justify-content: center;
-                max-width: 440px;
+                padding: 20px;
             }
             .login-card {
                 width: 100%;
-                min-height: 580px;
+                max-width: 420px;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="page-container">
-        
-        <!-- 1. LEFT SECTION: Full Background Showcase (Fully Visible, Uncovered) -->
-        <div class="showcase-section">
-            <!-- Header Logos (GPE | MAPAN) -->
-            <div class="showcase-header">
-                <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
-                <div class="logo-divider"></div>
-                <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
-            </div>
-
-            <!-- Center Artwork (G-VAMS Logo Emblem) -->
-            <div class="showcase-hero">
-                <img src="{{ asset('images/gvams-logo-main.jpg') }}" alt="G-VAMS Vehicle Activity Monitoring System">
-            </div>
-
-            <!-- Bottom 7 Feature Icons Bar -->
-            <div class="features-bar">
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-fleet"><i class="fas fa-location-dot"></i></div>
-                    <div class="feature-box-title">FLEET<br>TRACKING</div>
-                </div>
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-speed"><i class="fas fa-gauge-high"></i></div>
-                    <div class="feature-box-title">SPEED<br>MONITORING</div>
-                </div>
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-payload"><i class="fas fa-weight-hanging"></i></div>
-                    <div class="feature-box-title">PAYLOAD<br>MONITORING</div>
-                </div>
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-abuse"><i class="fas fa-shield-halved"></i></div>
-                    <div class="feature-box-title">ABUSE<br>OPERATION</div>
-                </div>
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-idle"><i class="far fa-clock"></i></div>
-                    <div class="feature-box-title">IDLE<br>MONITORING</div>
-                </div>
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-equipment"><i class="fas fa-gear"></i></div>
-                    <div class="feature-box-title">EQUIPMENT<br>MONITORING</div>
-                </div>
-                <div class="feature-box">
-                    <div class="feature-box-icon icon-analytics"><i class="fas fa-chart-column"></i></div>
-                    <div class="feature-box-title">PERFORMANCE<br>ANALYTICS</div>
-                </div>
-            </div>
+    <!-- 1. FULL PAGE BACKGROUND SHOWCASE (Zero cards, pure background display) -->
+    <div class="bg-showcase-layer">
+        <!-- Partner Logos (GPE | MAPAN) -->
+        <div class="bg-header-logos">
+            <img src="{{ asset('images/gpe-logo-transparent.png') }}" alt="GPE Logo" class="logo-gpe">
+            <div class="logo-divider"></div>
+            <img src="{{ asset('images/mapan-logo-transparent.png') }}" alt="MAPAN Logo" class="logo-mapan">
         </div>
 
-        <!-- 2. RIGHT SECTION: Distinct Login Form Card (Side-by-Side) -->
+        <!-- Center Artwork: Large G-VAMS Emblem -->
+        <div class="bg-center-hero">
+            <img src="{{ asset('images/gvams-logo-main.jpg') }}" alt="G-VAMS Vehicle Activity Monitoring System">
+        </div>
+
+        <!-- Bottom 7 Feature Icons Bar -->
+        <div class="bg-features-bar">
+            <div class="feature-box">
+                <div class="feature-box-icon icon-fleet"><i class="fas fa-location-dot"></i></div>
+                <div class="feature-box-title">FLEET<br>TRACKING</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-box-icon icon-speed"><i class="fas fa-gauge-high"></i></div>
+                <div class="feature-box-title">SPEED<br>MONITORING</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-box-icon icon-payload"><i class="fas fa-weight-hanging"></i></div>
+                <div class="feature-box-title">PAYLOAD<br>MONITORING</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-box-icon icon-abuse"><i class="fas fa-shield-halved"></i></div>
+                <div class="feature-box-title">ABUSE<br>OPERATION</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-box-icon icon-idle"><i class="far fa-clock"></i></div>
+                <div class="feature-box-title">IDLE<br>MONITORING</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-box-icon icon-equipment"><i class="fas fa-gear"></i></div>
+                <div class="feature-box-title">EQUIPMENT<br>MONITORING</div>
+            </div>
+            <div class="feature-box">
+                <div class="feature-box-icon icon-analytics"><i class="fas fa-chart-column"></i></div>
+                <div class="feature-box-title">PERFORMANCE<br>ANALYTICS</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. FLOATING RIGHT LOGIN CARD (The ONLY card on the screen) -->
+    <div class="page-wrapper">
         <div class="login-card">
             <div>
                 <!-- G-VAMS Logo Emblem (Top of Card) -->
@@ -481,7 +483,6 @@
                 <i class="fas fa-location-dot"></i> Available for Admin & Fleet Manager roles
             </div>
         </div>
-
     </div>
 
     <!-- Scripts -->
