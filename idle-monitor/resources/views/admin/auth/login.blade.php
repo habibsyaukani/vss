@@ -115,10 +115,28 @@
             height: auto;
             object-fit: contain;
             filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.5));
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             background: transparent;
             padding: 0;
             border-radius: 0;
+        }
+
+        .hero-slogan-text {
+            font-size: 1.35rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+            margin-bottom: 14px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero-slogan-text .text-everyday {
+            color: #facc15;
+            text-shadow: 0 2px 12px rgba(250, 204, 21, 0.4);
         }
 
         .hero-desc-text {
@@ -490,6 +508,9 @@
                 text-align: center;
                 max-width: 100%;
             }
+            .hero-slogan-text {
+                justify-content: center;
+            }
             .hero-desc-text {
                 margin: 0 auto;
             }
@@ -529,6 +550,9 @@
             <!-- Left Hero Section: G-VAMS Transparent Logo & Slogan -->
             <div class="hero-left-section">
                 <img src="{{ asset('images/gvams-logo-transparent.png') }}" alt="G-VAMS Vehicle Activity Monitoring System" class="hero-logo-img">
+                <div class="hero-slogan-text">
+                    Good Performance <span class="text-everyday">Everyday</span>
+                </div>
                 <p class="hero-desc-text">
                     Sistem monitoring kendaraan terintegrasi untuk memantau kinerja dan aktivitas armada secara <strong><em>real-time</em>, akurat, dan efisien.</strong>
                 </p>
@@ -565,7 +589,7 @@
                             </div>
                         @endif
 
-                        <!-- Admin Login Form -->
+                        <!-- Login Form -->
                         <form action="{{ route('admin.login') }}" method="POST">
                             @csrf
                             
@@ -716,3 +740,4 @@
     </script>
 </body>
 </html>
+
