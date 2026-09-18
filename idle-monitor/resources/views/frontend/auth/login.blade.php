@@ -109,48 +109,48 @@
         }
 
         .hero-left-section {
-            max-width: 580px;
+            max-width: 680px;
             color: #ffffff;
         }
 
         .hero-logo-img {
-            max-width: 480px;
+            max-width: 580px;
             width: 100%;
             height: auto;
             object-fit: contain;
-            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.5));
-            margin-bottom: 16px;
+            filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.55));
+            margin-bottom: 20px;
             background: transparent;
             padding: 0;
             border-radius: 0;
         }
 
         .hero-slogan-text {
-            font-size: 1.35rem;
+            font-size: 1.75rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
             color: #ffffff;
-            margin-bottom: 14px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+            margin-bottom: 16px;
+            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .hero-slogan-text .text-everyday {
             color: #facc15;
-            text-shadow: 0 2px 12px rgba(250, 204, 21, 0.4);
+            text-shadow: 0 3px 14px rgba(250, 204, 21, 0.5);
         }
 
         .hero-desc-text {
-            font-size: 1.05rem;
-            line-height: 1.6;
+            font-size: 1.18rem;
+            line-height: 1.65;
             color: rgba(255, 255, 255, 0.95);
             font-weight: 500;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
             margin: 0;
-            max-width: 540px;
+            max-width: 620px;
         }
 
         .hero-desc-text strong {
@@ -371,16 +371,16 @@
         }
 
         .glass-pill-left {
-            background: rgba(15, 23, 42, 0.75);
+            background: rgba(15, 23, 42, 0.78);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border-radius: 18px;
-            padding: 10px 24px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 12px 28px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
             display: flex;
             align-items: center;
-            gap: 22px;
+            gap: 24px;
         }
 
         .feature-item-pill {
@@ -394,24 +394,24 @@
         .feature-item-pill:not(:last-child)::after {
             content: '';
             position: absolute;
-            right: -11px;
+            right: -12px;
             top: 15%;
             height: 70%;
             width: 1px;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.18);
         }
 
         .feature-icon-circle {
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 16px;
             color: #ffffff;
-            margin-bottom: 4px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            margin-bottom: 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }
 
         .icon-fleet { background: #2563eb; }
@@ -423,12 +423,12 @@
         .icon-analytics { background: #1e3a8a; }
 
         .feature-text-label {
-            font-size: 0.65rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: #ffffff;
             text-transform: uppercase;
-            line-height: 1.2;
-            letter-spacing: -0.2px;
+            line-height: 1.25;
+            letter-spacing: 0px;
         }
 
         .glass-pill-right {
