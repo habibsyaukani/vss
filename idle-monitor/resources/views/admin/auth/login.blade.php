@@ -31,111 +31,111 @@
 
         body {
             font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-            background: #f1f5f9;
+            background: #edf2f7;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 24px;
+            padding: 30px 20px;
             color: #0f172a;
             position: relative;
             overflow-x: hidden;
         }
 
-        /* Subtle Background Decor */
+        /* Subtle Background Mesh Decor */
         body::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 40%);
+                radial-gradient(circle at 5% 15%, rgba(37, 99, 235, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 95% 85%, rgba(37, 99, 235, 0.06) 0%, transparent 45%);
             z-index: 0;
             pointer-events: none;
         }
 
-        /* Main Container: Full Showcase on Left + Login Card on Right */
+        /* Main Flex Wrapper: Showcase on Left, Login Card on Right (Zero Overlap) */
         .page-container {
             width: 100%;
-            max-width: 1360px;
+            max-width: 1420px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 28px;
+            align-items: stretch;
+            justify-content: center;
+            gap: 32px;
             position: relative;
             z-index: 1;
             margin: auto;
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           LEFT SECTION: Full Background Showcase (Image 3)
+           LEFT SECTION: Full Background Showcase Card (Uncovered)
            ═══════════════════════════════════════════════════════════════ */
         .showcase-section {
-            flex: 1;
-            height: 600px;
+            flex: 1.3;
+            min-height: 620px;
             background: #ffffff;
-            border-radius: 24px;
-            padding: 28px 36px 24px 36px;
-            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 28px;
+            padding: 32px 40px 28px 40px;
+            box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.07);
+            border: 1px solid rgba(226, 232, 240, 0.9);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             overflow: hidden;
         }
 
-        /* Right Header Partner Logos (GPE | MAPAN) */
+        /* Top Right Header: Partner Logos (GPE | MAPAN) */
         .showcase-header {
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
         }
 
         .showcase-header img.logo-gpe {
-            height: 38px;
+            height: 40px;
             width: auto;
             object-fit: contain;
         }
 
         .showcase-header img.logo-mapan {
-            height: 38px;
+            height: 40px;
             width: auto;
             object-fit: contain;
         }
 
         .logo-divider {
             width: 1.5px;
-            height: 24px;
+            height: 26px;
             background: #cbd5e1;
             border-radius: 1px;
         }
 
-        /* Large G-VAMS Logo Display */
+        /* Center Artwork: Large G-VAMS Logo Emblem (Fully Visible, High Res) */
         .showcase-hero {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px 0;
+            padding: 20px 10px;
         }
 
         .showcase-hero img {
-            max-width: 620px;
+            max-width: 640px;
             width: 100%;
             height: auto;
-            max-height: 360px;
+            max-height: 370px;
             object-fit: contain;
-            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.05));
+            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.04));
         }
 
-        /* Bottom 7 Features Bar */
+        /* Bottom 7 Feature Icons Bar */
         .features-bar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 4px;
             border-top: 1px solid #e2e8f0;
-            padding-top: 20px;
+            padding-top: 22px;
             margin-top: 10px;
         }
 
@@ -156,8 +156,8 @@
         }
 
         .feature-box-icon {
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             margin: 0 auto 8px auto;
             display: flex;
@@ -165,7 +165,12 @@
             justify-content: center;
             font-size: 16px;
             color: #ffffff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .feature-box:hover .feature-box-icon {
+            transform: translateY(-2px);
         }
 
         .icon-fleet { background: #2563eb; }
@@ -177,7 +182,7 @@
         .icon-analytics { background: #1e3a8a; }
 
         .feature-box-title {
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: #1e293b;
             text-transform: uppercase;
@@ -186,27 +191,26 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           RIGHT SECTION: Floating Login Form Card (Image 2 Modified)
-           No GPE or MAPAN logos inside card — G-VAMS Logo ONLY
+           RIGHT SECTION: Distinct Login Card (Side-by-Side, No Overlap)
            ═══════════════════════════════════════════════════════════════ */
         .login-card {
-            width: 420px;
-            height: 600px;
+            width: 390px;
+            min-height: 620px;
             background: #ffffff;
-            border-radius: 24px;
-            padding: 36px 36px 28px 36px;
-            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.1), 0 0 1px rgba(0,0,0,0.05);
+            border-radius: 28px;
+            padding: 40px 36px 32px 36px;
+            box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.09);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             flex-shrink: 0;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.9);
         }
 
-        /* G-VAMS Logo Emblem inside Login Card (Top of Card) */
+        /* G-VAMS Logo Emblem at Top of Login Card */
         .card-logo-container {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
             margin-top: 10px;
         }
 
@@ -214,13 +218,13 @@
             max-width: 290px;
             width: 100%;
             height: auto;
-            max-height: 140px;
+            max-height: 145px;
             object-fit: contain;
         }
 
         /* Form Controls */
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
 
         .form-label-custom {
@@ -288,12 +292,12 @@
         /* Sign In Button */
         .btn-signin {
             width: 100%;
-            height: 48px;
+            height: 50px;
             background: var(--primary-blue);
             color: #ffffff;
             border: none;
             border-radius: 12px;
-            font-size: 0.98rem;
+            font-size: 1rem;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -301,14 +305,14 @@
             gap: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-            margin-top: 14px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+            margin-top: 16px;
         }
 
         .btn-signin:hover {
             background: var(--primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
         }
 
         .btn-signin i {
@@ -330,7 +334,7 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            margin-top: 16px;
+            margin-top: 18px;
         }
 
         .role-badge-text i {
@@ -348,7 +352,7 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           RESPONSIVE LAYOUT
+           RESPONSIVE LAYOUT (No Overlap on any screen)
            ═══════════════════════════════════════════════════════════════ */
         @media (max-width: 1100px) {
             .showcase-section {
@@ -360,8 +364,7 @@
             }
             .login-card {
                 width: 100%;
-                height: auto;
-                min-height: 560px;
+                min-height: 580px;
             }
         }
     </style>
@@ -370,7 +373,7 @@
 
     <div class="page-container">
         
-        <!-- 1. LEFT SECTION: Full Background Showcase (Image 3) -->
+        <!-- 1. LEFT SECTION: Full Background Showcase (Fully Visible, Uncovered) -->
         <div class="showcase-section">
             <!-- Header Logos (GPE | MAPAN) -->
             <div class="showcase-header">
@@ -417,10 +420,10 @@
             </div>
         </div>
 
-        <!-- 2. RIGHT SECTION: Login Form Card (Image 2 Modified) -->
+        <!-- 2. RIGHT SECTION: Distinct Login Form Card (Side-by-Side) -->
         <div class="login-card">
             <div>
-                <!-- G-VAMS Logo ONLY (No GPE / MAPAN logos inside card) -->
+                <!-- G-VAMS Logo Emblem (Top of Card) -->
                 <div class="card-logo-container">
                     <img src="{{ asset('images/gvams-logo-main.jpg') }}" alt="G-VAMS Vehicle Activity Monitoring System">
                 </div>
