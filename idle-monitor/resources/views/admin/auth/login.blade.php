@@ -109,48 +109,48 @@
         }
 
         .hero-left-section {
-            max-width: 680px;
+            max-width: 820px;
             color: #ffffff;
         }
 
         .hero-logo-img {
-            max-width: 580px;
+            max-width: 660px;
             width: 100%;
             height: auto;
             object-fit: contain;
-            filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.55));
-            margin-bottom: 20px;
+            filter: drop-shadow(0 14px 35px rgba(0, 0, 0, 0.6));
+            margin-bottom: 22px;
             background: transparent;
             padding: 0;
             border-radius: 0;
         }
 
         .hero-slogan-text {
-            font-size: 1.75rem;
+            font-size: 2.2rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 2px;
             color: #ffffff;
-            margin-bottom: 16px;
-            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.8);
+            margin-bottom: 18px;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.85);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .hero-slogan-text .text-everyday {
             color: #facc15;
-            text-shadow: 0 3px 14px rgba(250, 204, 21, 0.5);
+            text-shadow: 0 4px 16px rgba(250, 204, 21, 0.55);
         }
 
         .hero-desc-text {
-            font-size: 1.18rem;
+            font-size: 1.28rem;
             line-height: 1.65;
             color: rgba(255, 255, 255, 0.95);
             font-weight: 500;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.85);
             margin: 0;
-            max-width: 620px;
+            max-width: 760px;
         }
 
         .hero-desc-text strong {
@@ -371,16 +371,16 @@
         }
 
         .glass-pill-left {
-            background: rgba(15, 23, 42, 0.78);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-radius: 20px;
-            padding: 12px 28px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 22px;
+            padding: 14px 36px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 30px;
         }
 
         .feature-item-pill {
@@ -394,24 +394,24 @@
         .feature-item-pill:not(:last-child)::after {
             content: '';
             position: absolute;
-            right: -12px;
+            right: -15px;
             top: 15%;
             height: 70%;
             width: 1px;
-            background: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .feature-icon-circle {
-            width: 38px;
-            height: 38px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 19px;
             color: #ffffff;
-            margin-bottom: 5px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            margin-bottom: 6px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
         }
 
         .icon-fleet { background: #2563eb; }
@@ -423,12 +423,12 @@
         .icon-analytics { background: #1e3a8a; }
 
         .feature-text-label {
-            font-size: 0.72rem;
-            font-weight: 700;
+            font-size: 0.78rem;
+            font-weight: 800;
             color: #ffffff;
             text-transform: uppercase;
             line-height: 1.25;
-            letter-spacing: 0px;
+            letter-spacing: 0.2px;
         }
 
         .glass-pill-right {
