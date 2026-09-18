@@ -39,14 +39,14 @@
             color: #ffffff;
         }
 
-        /* Gradient Overlay for high text readability & contrast */
+        /* Subtle Overlay for high readability & depth without dimming background */
         .page-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: linear-gradient(135deg, 
-                rgba(10, 25, 47, 0.72) 0%, 
-                rgba(15, 34, 75, 0.45) 50%, 
-                rgba(10, 25, 47, 0.68) 100%);
+                rgba(10, 25, 47, 0.45) 0%, 
+                rgba(15, 34, 75, 0.20) 50%, 
+                rgba(10, 25, 47, 0.40) 100%);
             z-index: 1;
             pointer-events: none;
         }
@@ -71,28 +71,28 @@
         }
 
         .top-header-logos img.logo-gpe {
-            height: 44px;
+            height: 42px;
             width: auto;
             object-fit: contain;
-            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
 
         .top-header-logos img.logo-mapan {
-            height: 44px;
+            height: 42px;
             width: auto;
             object-fit: contain;
-            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
 
         .logo-divider {
             width: 1.5px;
-            height: 28px;
+            height: 26px;
             background: rgba(255, 255, 255, 0.4);
             border-radius: 1px;
         }
 
         /* ═══════════════════════════════════════════════════════════════
-           2. CENTER-LEFT CONTENT AREA (Hero G-VAMS Logo & Subtitle)
+           2. CENTER-LEFT CONTENT AREA (Hero G-VAMS Transparent Logo & Slogan)
            ═══════════════════════════════════════════════════════════════ */
         .content-body {
             display: flex;
@@ -114,12 +114,11 @@
             width: 100%;
             height: auto;
             object-fit: contain;
-            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.4));
-            margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.85);
-            padding: 16px 24px;
-            border-radius: 16px;
-            backdrop-filter: blur(8px);
+            filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.5));
+            margin-bottom: 24px;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
         }
 
         .hero-desc-text {
@@ -127,13 +126,18 @@
             line-height: 1.6;
             color: rgba(255, 255, 255, 0.95);
             font-weight: 500;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
             margin: 0;
             max-width: 540px;
         }
 
+        .hero-desc-text strong {
+            font-weight: 700;
+            color: #ffffff;
+        }
+
         /* ═══════════════════════════════════════════════════════════════
-           3. FLOATING RIGHT LOGIN CARD (White Card)
+           3. FLOATING RIGHT LOGIN CARD (Glassmorphism / Transparent White Card)
            ═══════════════════════════════════════════════════════════════ */
         .login-card-wrapper {
             width: 420px;
@@ -141,32 +145,35 @@
         }
 
         .login-card {
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 36px 40px;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
             color: #0f172a;
             border: 1px solid rgba(255, 255, 255, 0.9);
         }
 
         .card-logo-container {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .card-logo-container img {
-            max-width: 280px;
+            max-width: 260px;
             width: 100%;
             height: auto;
             max-height: 120px;
             object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.08));
         }
 
         .card-title-accent {
             width: 40px;
             height: 3px;
             background: var(--primary-blue);
-            margin: 8px auto 0 auto;
+            margin: 14px auto 22px auto;
             border-radius: 2px;
         }
 
@@ -242,7 +249,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
             font-size: 0.85rem;
         }
 
@@ -252,6 +259,7 @@
             gap: 8px;
             color: #64748b;
             cursor: pointer;
+            font-weight: 500;
         }
 
         .forgot-link {
@@ -280,13 +288,13 @@
             gap: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
         }
 
         .btn-signin:hover {
             background: var(--primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
         }
 
         .btn-signin i {
@@ -307,13 +315,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            margin-top: 20px;
+            gap: 8px;
+            margin-top: 22px;
         }
 
         .role-badge-text i {
             color: var(--primary-blue);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
 
         /* Alerts */
@@ -341,7 +349,7 @@
         }
 
         .glass-pill-left {
-            background: rgba(15, 23, 42, 0.78);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-radius: 18px;
@@ -402,7 +410,7 @@
         }
 
         .glass-pill-right {
-            background: rgba(15, 23, 42, 0.78);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-radius: 18px;
@@ -438,26 +446,36 @@
             font-size: 0.7rem;
             color: #94a3b8;
             margin: 0;
+            line-height: 1.3;
         }
 
         .footer-time-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             border-left: 1px solid rgba(255, 255, 255, 0.15);
             padding-left: 20px;
         }
 
         .footer-time-item i {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             color: #94a3b8;
         }
 
         .footer-time-text strong {
             display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 700;
             color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .footer-time-text span {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            line-height: 1.2;
         }
 
         /* ═══════════════════════════════════════════════════════════════
@@ -508,11 +526,11 @@
         <!-- 2. MAIN CONTENT BODY -->
         <div class="content-body">
             
-            <!-- Left Hero Section: G-VAMS Logo & Slogan -->
+            <!-- Left Hero Section: G-VAMS Transparent Logo & Slogan -->
             <div class="hero-left-section">
-                <img src="{{ asset('images/gvams-logo-main.jpg') }}" alt="G-VAMS Vehicle Activity Monitoring System" class="hero-logo-img">
+                <img src="{{ asset('images/gvams-logo-transparent.png') }}" alt="G-VAMS Vehicle Activity Monitoring System" class="hero-logo-img">
                 <p class="hero-desc-text">
-                    Sistem monitoring kendaraan terintegrasi untuk memantau kinerja dan aktivitas armada secara real-time, akurat, dan efisien.
+                    Sistem monitoring kendaraan terintegrasi untuk memantau kinerja dan aktivitas armada secara <strong><em>real-time</em>, akurat, dan efisien.</strong>
                 </p>
             </div>
 
@@ -520,9 +538,9 @@
             <div class="login-card-wrapper">
                 <div class="login-card">
                     <div>
-                        <!-- G-VAMS Logo inside card -->
+                        <!-- G-VAMS Transparent Logo inside card -->
                         <div class="card-logo-container">
-                            <img src="{{ asset('images/gvams-logo-main.jpg') }}" alt="G-VAMS Vehicle Activity Monitoring System">
+                            <img src="{{ asset('images/gvams-logo-transparent.png') }}" alt="G-VAMS Vehicle Activity Monitoring System">
                             <div class="card-title-accent"></div>
                         </div>
 
@@ -632,13 +650,14 @@
                 <i class="fas fa-lock"></i>
                 <div class="footer-secure-text">
                     <h6>SECURE ACCESS</h6>
-                    <p>Data akurat. Keputusan tepat. Operasional lebih efisien.</p>
+                    <p>Data akurat. Keputusan tepat.<br>Operasional lebih efisien.</p>
                 </div>
             </div>
             <div class="footer-time-item">
-                <i class="far fa-clock"></i>
+                <i class="far fa-calendar-alt"></i>
                 <div class="footer-time-text">
-                    <strong id="systemTime">Loading...</strong>
+                    <strong id="systemDate">18 Sep 2026</strong>
+                    <span id="systemTime">09:21 WITA</span>
                 </div>
             </div>
         </div>
@@ -677,16 +696,20 @@
             });
         }
 
-        // Live System Clock
+        // Live System Clock & Date
         function updateClock() {
             const now = new Date();
-            const options = { day: '2-digit', month: 'short', year: 'numeric' };
-            const dateStr = now.toLocaleDateString('id-ID', options);
-            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-            const clockEl = document.getElementById('systemTime');
-            if (clockEl) {
-                clockEl.textContent = dateStr + ' - ' + timeStr + ' WITA';
-            }
+            const day = now.getDate().toString().padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agus', 'Sep', 'Okt', 'Nov', 'Des'];
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            const dateEl = document.getElementById('systemDate');
+            const timeEl = document.getElementById('systemTime');
+            if (dateEl) dateEl.textContent = day + ' ' + month + ' ' + year;
+            if (timeEl) timeEl.textContent = hours + ':' + minutes + ' WITA';
         }
         setInterval(updateClock, 1000);
         updateClock();
