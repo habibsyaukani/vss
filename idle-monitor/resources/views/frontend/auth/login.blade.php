@@ -30,13 +30,17 @@
 
         body {
             font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-            background: url('{{ asset('images/bglogin.png') }}') no-repeat center center fixed;
+            background: #0a192f url('{{ asset('images/bglogin.png') }}') no-repeat center center fixed;
             background-size: cover;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
             min-height: 100vh;
             width: 100vw;
             position: relative;
             overflow-x: hidden;
             color: #ffffff;
+            image-rendering: -webkit-optimize-contrast;
         }
 
         /* Subtle Overlay for high readability & depth without dimming background */
