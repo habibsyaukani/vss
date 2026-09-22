@@ -1,15 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <link rel="icon" type="image/png" href="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>">
     <link rel="shortcut icon" type="image/png" href="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>">
-    <title>Admin Portal - Idle Monitor System</title>
+    <title>G-VAMS - GPE Vehicle Activity Monitoring System (Admin)</title>
+    
+    <!-- Bootstrap & FontAwesome & Google Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --primary-blue: #2563eb;
+            --primary-hover: #1d4ed8;
+            --dark-navy: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -17,758 +29,722 @@
         }
 
         body {
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, rgba(10, 14, 39, 0.82) 0%, rgba(22, 33, 62, 0.82) 100%), url('<?php echo e(asset('images/bglogin.jpg')); ?>') no-repeat center center fixed;
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+            background: #0a192f url('<?php echo e(asset('images/bglogin.png')); ?>') no-repeat center center fixed;
             background-size: cover;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            min-height: 100vh;
+            width: 100vw;
+            position: relative;
+            overflow-x: hidden;
+            color: #ffffff;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        /* Subtle Overlay for high readability & depth without dimming background */
+        .page-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(10, 25, 47, 0.45) 0%, 
+                rgba(15, 34, 75, 0.20) 50%, 
+                rgba(10, 25, 47, 0.40) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .main-wrapper {
+            position: relative;
+            z-index: 2;
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Animated background waves */
-        body::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 300px;
-            background: linear-gradient(90deg, rgba(29, 78, 216, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-            border-radius: 50% 50% 0 0;
-            transform: translateY(50%);
-        }
-
-        body::after {
-            content: '';
-            position: absolute;
-            top: -100px;
-            right: -100px;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(29, 78, 216, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .login-wrapper {
-            display: flex;
-            max-width: 1400px;
-            width: 95%;
-            gap: 40px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* LEFT SIDE - Dashboard Preview */
-        .left-section {
-            flex: 1;
-            display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 30px;
+            justify-content: space-between;
+            padding: 30px 50px 100px 50px;
         }
 
-        .dashboard-preview {
-            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
-            border-radius: 20px;
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(29, 78, 216, 0.4);
-        }
-
-        .dashboard-preview::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-        }
-
-        .security-badge {
-            background: rgba(255, 255, 255, 0.2);
-            width: 60px;
-            height: 60px;
-            border-radius: 15px;
+        /* ═══════════════════════════════════════════════════════════════
+           1. TOP LEFT LOGOS (GPE | MAPAN)
+           ═══════════════════════════════════════════════════════════════ */
+        .top-header-logos {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .security-badge i {
-            font-size: 28px;
-            color: white;
-        }
-
-        .dashboard-screen {
-            background: rgba(10, 14, 39, 0.6);
-            border-radius: 15px;
-            padding: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .chart-preview {
-            display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            margin-bottom: 20px;
-        }
-
-        .chart-bar {
-            flex: 1;
-            background: linear-gradient(to top, #3b82f6, #60a5fa);
-            border-radius: 5px;
-            min-height: 40px;
-            animation: pulse 2s infinite;
-        }
-
-        .chart-bar:nth-child(1) { height: 60px; animation-delay: 0s; }
-        .chart-bar:nth-child(2) { height: 90px; animation-delay: 0.2s; }
-        .chart-bar:nth-child(3) { height: 70px; animation-delay: 0.4s; }
-        .chart-bar:nth-child(4) { height: 100px; animation-delay: 0.6s; }
-        .chart-bar:nth-child(5) { height: 80px; animation-delay: 0.8s; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        .dashboard-icons {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .icon-box {
-            background: rgba(29, 78, 216, 0.3);
-            width: 45px;
-            height: 45px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-
-        .secure-access {
-            text-align: center;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .secure-access-icon {
-            background: rgba(29, 78, 216, 0.2);
-            width: 60px;
-            height: 60px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-            border: 1px solid rgba(29, 78, 216, 0.3);
-        }
-
-        .secure-access-icon i {
-            font-size: 24px;
-            color: #60a5fa;
-        }
-
-        .secure-access h3 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .secure-access p {
-            font-size: 14px;
-            opacity: 0.7;
-        }
-
-        /* CENTER - Login Card */
-        .login-card {
-            background: white;
-            border-radius: 25px;
-            padding: 30px 45px 45px 45px;
-            width: 450px;
-            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.3);
-            position: relative;
-        }
-
-        .login-logo-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
             gap: 16px;
-            margin-bottom: 8px;
         }
-        .login-logo-header img.logo-mapan {
-            height: 46px;
-            max-height: 46px;
+
+        .top-header-logos img.logo-gpe {
+            height: 42px;
             width: auto;
             object-fit: contain;
-            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
-        .login-logo-header img.logo-gpe {
-            height: 46px;
-            max-height: 46px;
+
+        .top-header-logos img.logo-mapan {
+            height: 42px;
             width: auto;
             object-fit: contain;
-            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
+
         .logo-divider {
-            height: 28px;
             width: 1.5px;
-            background: #e2e8f0;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.4);
             border-radius: 1px;
         }
-        .brand-co-text {
-            text-align: center;
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: #64748b;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-        }
 
-        .lock-icon {
+        /* ═══════════════════════════════════════════════════════════════
+           2. CENTER-LEFT CONTENT AREA (Hero G-VAMS Transparent Logo & Slogan)
+           ═══════════════════════════════════════════════════════════════ */
+        .content-body {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            padding: 0;
+            justify-content: space-between;
+            margin-top: auto;
+            margin-bottom: auto;
+            gap: 40px;
+            padding: 20px 0;
         }
 
-        .lock-icon img {
-            max-width: 200px;
-            max-height: 75px;
-            width: auto;
+        .hero-left-section {
+            max-width: 820px;
+            color: #ffffff;
+        }
+
+        .hero-logo-img {
+            max-width: 660px;
+            width: 100%;
             height: auto;
             object-fit: contain;
+            filter: drop-shadow(0 14px 35px rgba(0, 0, 0, 0.6));
+            margin-bottom: 22px;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
         }
 
-        .login-card h1 {
-            text-align: center;
-            font-size: 32px;
+        .hero-slogan-text {
+            font-size: 2.2rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffffff;
+            margin-bottom: 18px;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hero-slogan-text .text-everyday {
+            color: #facc15;
+            text-shadow: 0 4px 16px rgba(250, 204, 21, 0.55);
+        }
+
+        .hero-desc-text {
+            font-size: 1.28rem;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.85);
+            margin: 0;
+            max-width: 760px;
+        }
+
+        .hero-desc-text strong {
             font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 10px;
+            color: #ffffff;
         }
 
-        .login-card h1::after {
-            content: '';
-            display: block;
-            width: 60px;
-            height: 4px;
-            background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
-            margin: 15px auto;
+        /* ═══════════════════════════════════════════════════════════════
+           3. FLOATING RIGHT LOGIN CARD (Glassmorphism / Transparent White Card)
+           ═══════════════════════════════════════════════════════════════ */
+        .login-card-wrapper {
+            width: 420px;
+            flex-shrink: 0;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 36px 40px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+            color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .card-logo-container {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .card-logo-container img {
+            max-width: 260px;
+            width: 100%;
+            height: auto;
+            max-height: 120px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.08));
+        }
+
+        .card-title-accent {
+            width: 40px;
+            height: 3px;
+            background: var(--primary-blue);
+            margin: 14px auto 22px auto;
             border-radius: 2px;
         }
 
+        /* Form Controls */
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 18px;
         }
 
-        .form-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .form-label-custom {
+            font-size: 0.88rem;
             font-weight: 600;
-            color: #475569;
-            margin-bottom: 10px;
-            font-size: 14px;
+            color: #334155;
+            margin-bottom: 8px;
+            display: block;
         }
 
-        .form-label i {
-            color: #1d4ed8;
-        }
-
-        .input-wrapper {
+        .input-group-custom {
             position: relative;
         }
 
-        .form-control {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 15px;
-            transition: all 0.3s;
-            background: #f8fafc;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #1d4ed8;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.1);
-        }
-
-        .toggle-password {
+        .input-group-custom i.icon-left {
             position: absolute;
-            right: 15px;
+            left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            cursor: pointer;
             color: #94a3b8;
-            transition: color 0.3s;
+            font-size: 15px;
+            transition: color 0.2s;
         }
 
-        .toggle-password:hover {
-            color: #1d4ed8;
+        .input-group-custom .form-control {
+            height: 48px;
+            padding-left: 44px;
+            padding-right: 44px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
-        .form-footer {
+        .input-group-custom .form-control:focus {
+            background: #ffffff;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            outline: none;
+        }
+
+        .input-group-custom .form-control:focus ~ i.icon-left {
+            color: var(--primary-blue);
+        }
+
+        .input-group-custom i.icon-right {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .input-group-custom i.icon-right:hover {
+            color: var(--primary-blue);
+        }
+
+        /* Form Extras (Remember me & Forgot password) */
+        .form-extras {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 22px;
+            font-size: 0.85rem;
         }
 
-        .remember-me {
+        .remember-checkbox {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
             color: #64748b;
-        }
-
-        .remember-me input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
             cursor: pointer;
+            font-weight: 500;
         }
 
-        .forgot-password {
-            font-size: 14px;
-            color: #1d4ed8;
+        .forgot-link {
+            color: var(--primary-blue);
             text-decoration: none;
             font-weight: 600;
-            transition: color 0.3s;
         }
 
-        .forgot-password:hover {
-            color: #1e40af;
+        .forgot-link:hover {
+            text-decoration: underline;
         }
 
+        /* Sign In Button */
         .btn-signin {
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-            color: white;
+            height: 48px;
+            background: var(--primary-blue);
+            color: #ffffff;
             border: none;
             border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+            font-size: 0.98rem;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            box-shadow: 0 10px 25px rgba(29, 78, 216, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
         }
 
         .btn-signin:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(29, 78, 216, 0.4);
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
         }
 
-        /* RIGHT SIDE - Features */
-        .right-section {
-            flex: 1;
+        .btn-signin i {
+            font-size: 0.95rem;
+            transition: transform 0.2s;
+        }
+
+        .btn-signin:hover i {
+            transform: translateX(3px);
+        }
+
+        /* Role Access Subtitle */
+        .role-badge-text {
+            text-align: center;
+            font-size: 0.82rem;
+            color: #64748b;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 22px;
+        }
+
+        .role-badge-text i {
+            color: var(--primary-blue);
+            font-size: 0.9rem;
+        }
+
+        /* Alerts */
+        .alert-custom {
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 14px;
+            border: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           4. FLOATING GLASSBAR FOOTER AT BOTTOM
+           ═══════════════════════════════════════════════════════════════ */
+        .footer-glassbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50px;
+            right: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+        }
+
+        .glass-pill-left {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 22px;
+            padding: 14px 36px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .feature-item-pill {
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .feature-card {
-            background: rgba(30, 41, 59, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            display: flex;
-            gap: 15px;
             align-items: center;
-            transition: all 0.3s;
+            text-align: center;
+            position: relative;
         }
 
-        .feature-card:hover {
-            background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(29, 78, 216, 0.3);
-            transform: translateX(10px);
-        }
-
-        .feature-icon {
-            width: 55px;
-            height: 55px;
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .feature-icon i {
-            font-size: 24px;
-            color: white;
-        }
-
-        .feature-content h4 {
-            font-size: 16px;
-            font-weight: 600;
-            color: white;
-            margin-bottom: 5px;
-        }
-
-        .feature-content p {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.6);
-            margin: 0;
-        }
-
-        /* Footer */
-        .login-footer {
+        .feature-item-pill:not(:last-child)::after {
+            content: '';
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 13px;
+            right: -15px;
+            top: 15%;
+            height: 70%;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .feature-icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            font-size: 19px;
+            color: #ffffff;
+            margin-bottom: 6px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
         }
 
-        /* Alert */
-        .alert {
-            border-radius: 12px;
-            padding: 14px 18px;
-            margin-bottom: 20px;
-            border: none;
-            font-size: 14px;
+        .icon-fleet { background: #2563eb; }
+        .icon-speed { background: #f97316; }
+        .icon-payload { background: #16a34a; }
+        .icon-abuse { background: #dc2626; }
+        .icon-idle { background: #9333ea; }
+        .icon-equipment { background: #0891b2; }
+        .icon-analytics { background: #1e3a8a; }
+
+        .feature-text-label {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            line-height: 1.25;
+            letter-spacing: 0.2px;
         }
 
-        .alert-danger {
-            background: #fef2f2;
-            color: #991b1b;
-            border-left: 4px solid #dc2626;
+        .glass-pill-right {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 18px;
+            padding: 10px 24px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            color: #ffffff;
         }
 
-        .alert-success {
-            background: #f0fdf4;
-            color: #166534;
-            border-left: 4px solid #22c55e;
+        .footer-secure-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        /* Responsive */
+        .footer-secure-item i {
+            font-size: 1.4rem;
+            color: #94a3b8;
+        }
+
+        .footer-secure-text h6 {
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin: 0 0 2px 0;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .footer-secure-text p {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .footer-time-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            padding-left: 20px;
+        }
+
+        .footer-time-item i {
+            font-size: 1.3rem;
+            color: #94a3b8;
+        }
+
+        .footer-time-text strong {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .footer-time-text span {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            line-height: 1.2;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE LAYOUT
+           ═══════════════════════════════════════════════════════════════ */
         @media (max-width: 1200px) {
-            .login-wrapper {
+            .content-body {
                 flex-direction: column;
-                max-width: 500px;
+                justify-content: center;
             }
-
-            .left-section,
-            .right-section {
-                display: none;
+            .hero-left-section {
+                text-align: center;
+                max-width: 100%;
             }
-
-            .login-card {
+            .hero-slogan-text {
+                justify-content: center;
+            }
+            .hero-desc-text {
+                margin: 0 auto;
+            }
+            .login-card-wrapper {
                 width: 100%;
+                max-width: 420px;
             }
-        }
-
-        @media (max-width: 576px) {
-            .login-card {
-                padding: 35px 25px;
+            .footer-glassbar {
+                flex-direction: column;
+                gap: 12px;
+                left: 20px;
+                right: 20px;
+                bottom: 15px;
             }
-
-            .login-card h1 {
-                font-size: 26px;
+            .main-wrapper {
+                padding-bottom: 160px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="login-wrapper">
-        <!-- LEFT SECTION -->
-        <div class="left-section">
-            <div class="dashboard-preview">
-                <div class="security-badge">
-                    <i class="fas fa-shield-check"></i>
-                </div>
-                
-                <div class="dashboard-screen">
-                    <div class="chart-preview">
-                        <div class="chart-bar"></div>
-                        <div class="chart-bar"></div>
-                        <div class="chart-bar"></div>
-                        <div class="chart-bar"></div>
-                        <div class="chart-bar"></div>
-                    </div>
-                    
-                    <div class="dashboard-icons">
-                        <div class="icon-box"><i class="fas fa-home"></i></div>
-                        <div class="icon-box"><i class="fas fa-chart-line"></i></div>
-                        <div class="icon-box"><i class="fas fa-cog"></i></div>
-                        <div class="icon-box"><i class="fas fa-chart-pie"></i></div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="secure-access">
-                <div class="secure-access-icon">
-                    <i class="fas fa-lock"></i>
-                </div>
-                <h3>Secure Access</h3>
-                <p>Your data is protected<br>and access is secure</p>
-            </div>
+    <div class="page-overlay"></div>
+
+    <div class="main-wrapper">
+        
+        <!-- 1. TOP HEADER LOGOS (GPE | MAPAN) -->
+        <div class="top-header-logos">
+            <img src="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>" alt="GPE Logo" class="logo-gpe">
+            <div class="logo-divider"></div>
+            <img src="<?php echo e(asset('images/mapan-logo-transparent.png')); ?>" alt="MAPAN Logo" class="logo-mapan">
         </div>
 
-        <!-- CENTER - LOGIN CARD -->
-        <div class="login-card">
-            <div class="login-logo-header">
-                <img src="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>" alt="GPE Logo" class="logo-gpe">
-                <div class="logo-divider"></div>
-                <img src="<?php echo e(asset('images/mapan-logo-transparent.png')); ?>" alt="MAPAN Logo" class="logo-mapan">
-            </div>
+        <!-- 2. MAIN CONTENT BODY -->
+        <div class="content-body">
             
-            <h1>Admin Portal</h1>
-
-            <?php if($errors->any()): ?>
-                <div class="alert alert-danger">
-                    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <div><?php echo e($error); ?></div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <!-- Left Hero Section: G-VAMS Transparent Logo & Slogan -->
+            <div class="hero-left-section">
+                <img src="<?php echo e(asset('images/gvams-logo-transparent.png')); ?>" alt="G-VAMS Vehicle Activity Monitoring System" class="hero-logo-img">
+                <div class="hero-slogan-text">
+                    Good Performance <span class="text-everyday">Everyday</span>
                 </div>
-            <?php endif; ?>
+                <p class="hero-desc-text">
+                    Sistem monitoring kendaraan terintegrasi untuk memantau kinerja dan aktivitas armada secara <strong><em>real-time</em>, akurat, dan efisien.</strong>
+                </p>
+            </div>
 
-            <?php if(session('error')): ?>
-                <div class="alert alert-danger"><?php echo e(session('error')); ?></div>
-            <?php endif; ?>
+            <!-- Right Floating Login Card -->
+            <div class="login-card-wrapper">
+                <div class="login-card">
+                    <div>
+                        <!-- G-VAMS Transparent Logo inside card -->
+                        <div class="card-logo-container">
+                            <img src="<?php echo e(asset('images/gvams-logo-transparent.png')); ?>" alt="G-VAMS Vehicle Activity Monitoring System">
+                            <div class="card-title-accent"></div>
+                        </div>
 
-            <?php if(session('success')): ?>
-                <div class="alert alert-success"><?php echo e(session('success')); ?></div>
-            <?php endif; ?>
+                        <!-- Session Alerts -->
+                        <?php if($errors->any()): ?>
+                            <div class="alert alert-danger alert-custom bg-danger text-white">
+                                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <div><i class="fas fa-exclamation-circle me-1"></i> <?php echo e($error); ?></div>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            </div>
+                        <?php endif; ?>
 
-            <form action="<?php echo e(route('admin.login')); ?>" method="POST">
-                <?php echo csrf_field(); ?>
+                        <?php if(session('error')): ?>
+                            <div class="alert alert-danger alert-custom bg-danger text-white">
+                                <i class="fas fa-exclamation-circle me-1"></i> <?php echo e(session('error')); ?>
 
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-user"></i>
-                        Username
-                    </label>
-                    <input type="text" name="username" class="form-control" 
-                           placeholder="Enter your username" 
-                           value="<?php echo e(old('username')); ?>" required autofocus>
-                </div>
+                            </div>
+                        <?php endif; ?>
 
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-lock"></i>
-                        Password
-                    </label>
-                    <div class="input-wrapper">
-                        <input type="password" name="password" id="password" class="form-control" 
-                               placeholder="Enter your password" required>
-                        <i class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
+                        <?php if(session('success')): ?>
+                            <div class="alert alert-success alert-custom bg-success text-white">
+                                <i class="fas fa-check-circle me-1"></i> <?php echo e(session('success')); ?>
+
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Login Form -->
+                        <form action="<?php echo e(route('admin.login')); ?>" method="POST">
+                            <?php echo csrf_field(); ?>
+                            
+                            <div class="form-group">
+                                <label class="form-label-custom">Username</label>
+                                <div class="input-group-custom">
+                                    <i class="fas fa-user icon-left"></i>
+                                    <input type="text" name="username" class="form-control" placeholder="Enter your username" value="<?php echo e(old('username')); ?>" required autofocus>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label-custom">Password</label>
+                                <div class="input-group-custom">
+                                    <i class="fas fa-lock icon-left"></i>
+                                    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required>
+                                    <i class="far fa-eye icon-right" id="togglePassword"></i>
+                                </div>
+                            </div>
+
+                            <div class="form-extras">
+                                <label class="remember-checkbox">
+                                    <input type="checkbox" name="remember" class="form-check-input me-1"> Remember me
+                                </label>
+                                <a href="#" class="forgot-link">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="btn-signin">
+                                Sign In <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Role Badge -->
+                    <div class="role-badge-text">
+                        <i class="fas fa-shield-alt"></i> Available for Admin & Fleet Manager roles
                     </div>
                 </div>
+            </div>
 
-                <div class="form-footer">
-                    <label class="remember-me">
-                        <input type="checkbox" name="remember">
-                        <span>Remember me</span>
-                    </label>
-                    <a href="#" class="forgot-password">Forgot password?</a>
-                </div>
-
-                <button type="submit" class="btn-signin">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In to Admin Panel
-                </button>
-            </form>
         </div>
 
-        <!-- RIGHT SECTION -->
-        <div class="right-section">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="feature-content">
-                    <h4>Real-time Monitoring</h4>
-                    <p>Track performance and activities in real time</p>
+    </div>
+
+    <!-- 3. FLOATING GLASSBAR FOOTER AT BOTTOM -->
+    <div class="footer-glassbar">
+        <!-- Left Glass Pill: 7 Features Icons Bar -->
+        <div class="glass-pill-left">
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-fleet"><i class="fas fa-location-dot"></i></div>
+                <div class="feature-text-label">FLEET<br>TRACKING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-speed"><i class="fas fa-gauge-high"></i></div>
+                <div class="feature-text-label">SPEED<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-payload"><i class="fas fa-weight-hanging"></i></div>
+                <div class="feature-text-label">PAYLOAD<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-abuse"><i class="fas fa-shield-halved"></i></div>
+                <div class="feature-text-label">ABUSE<br>OPERATION</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-idle"><i class="far fa-clock"></i></div>
+                <div class="feature-text-label">IDLE<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-equipment"><i class="fas fa-gear"></i></div>
+                <div class="feature-text-label">EQUIPMENT<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-analytics"><i class="fas fa-chart-column"></i></div>
+                <div class="feature-text-label">PERFORMANCE<br>ANALYTICS</div>
+            </div>
+        </div>
+
+        <!-- Right Glass Pill: Secure Access & System Clock -->
+        <div class="glass-pill-right">
+            <div class="footer-secure-item">
+                <i class="fas fa-lock"></i>
+                <div class="footer-secure-text">
+                    <h6>SECURE ACCESS</h6>
+                    <p>Data akurat. Keputusan tepat.<br>Operasional lebih efisien.</p>
                 </div>
             </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-truck"></i>
-                </div>
-                <div class="feature-content">
-                    <h4>Fleet Management</h4>
-                    <p>Manage and optimize your entire fleet</p>
-                </div>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
-                <div class="feature-content">
-                    <h4>Performance Analytics</h4>
-                    <p>Get insights and make data-driven decisions</p>
-                </div>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-file-alt"></i>
-                </div>
-                <div class="feature-content">
-                    <h4>Data Reports</h4>
-                    <p>Generate detailed reports and export data</p>
-                </div>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <div class="feature-content">
-                    <h4>Equipment Status</h4>
-                    <p>Monitor equipment health and status</p>
-                </div>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <div class="feature-content">
-                    <h4>Safety Monitoring</h4>
-                    <p>Ensure safety compliance and risk management</p>
+            <div class="footer-time-item">
+                <i class="far fa-calendar-alt"></i>
+                <div class="footer-time-text">
+                    <strong id="systemDate">18 Sep 2026</strong>
+                    <span id="systemTime">09:21 WITA</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="login-footer">
-        <i class="fas fa-shield-check"></i>
-        <span>© 2025. All rights reserved.</span>
-    </div>
-
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ═══════════════════════════════════════════════════════════════
-        // AUTO-REFRESH CSRF TOKEN ON LOGIN PAGE (prevent Page Expired)
-        // ═══════════════════════════════════════════════════════════════
         $(document).ready(function() {
-            // Auto-refresh CSRF token every 30 minutes
+            // Auto-refresh CSRF token every 15 minutes to prevent session expiration
             setInterval(function() {
                 $.ajax({
-                    url: '/refresh-csrf',
+                    url: '<?php echo e(route("csrf.refresh")); ?>',
                     method: 'GET',
                     success: function(data) {
-                        if (data.token) {
-                            // Update meta tag
+                        if (data && data.token) {
                             $('meta[name="csrf-token"]').attr('content', data.token);
-                            // Update form token
                             $('input[name="_token"]').val(data.token);
-                            console.log('[Login] CSRF token refreshed successfully');
                         }
-                    },
-                    error: function() {
-                        console.warn('[Login] CSRF token refresh failed');
                     }
                 });
-            }, 30 * 60 * 1000); // 30 minutes
-            
-            // Also refresh before form submit to ensure token is fresh
-            $('form').on('submit', function(e) {
-                e.preventDefault();
-                const form = this;
-                
-                console.log('[Login] Refreshing CSRF token before submit...');
-                
-                $.ajax({
-                    url: '/refresh-csrf',
-                    method: 'GET',
-                    success: function(data) {
-                        if (data.token) {
-                            // Update form token with fresh one
-                            $(form).find('input[name="_token"]').val(data.token);
-                            console.log('[Login] Fresh token obtained, submitting form...');
-                            
-                            // Submit form with fresh token
-                            setTimeout(() => {
-                                form.submit();
-                            }, 100);
-                        } else {
-                            // No token received, submit anyway
-                            form.submit();
-                        }
-                    },
-                    error: function() {
-                        console.warn('[Login] Token refresh failed, submitting anyway...');
-                        // Submit anyway
-                        form.submit();
-                    }
-                });
-            });
-        });
-        
-        // Fix "Page Expired" error after logout by reloading page once
-        window.addEventListener('DOMContentLoaded', function() {
-            // Check if we just came from logout (has success message)
-            const hasSuccessMessage = document.querySelector('.alert-success');
-            const hasReloaded = sessionStorage.getItem('login_page_reloaded');
-            
-            // If coming from logout and haven't reloaded yet, reload once to get fresh CSRF token
-            if (hasSuccessMessage && !hasReloaded) {
-                sessionStorage.setItem('login_page_reloaded', '1');
-                location.reload();
-            }
-            
-            // Clear the reload flag when user starts typing (fresh login attempt)
-            const usernameInput = document.querySelector('input[name="username"]');
-            if (usernameInput) {
-                usernameInput.addEventListener('focus', function() {
-                    sessionStorage.removeItem('login_page_reloaded');
-                });
-            }
+            }, 15 * 60 * 1000);
         });
 
-        function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const toggleIcon = document.querySelector('.toggle-password');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
-            }
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
         }
+
+        // Live System Clock & Date
+        function updateClock() {
+            const now = new Date();
+            const day = now.getDate().toString().padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agus', 'Sep', 'Okt', 'Nov', 'Des'];
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            const dateEl = document.getElementById('systemDate');
+            const timeEl = document.getElementById('systemTime');
+            if (dateEl) dateEl.textContent = day + ' ' + month + ' ' + year;
+            if (timeEl) timeEl.textContent = hours + ':' + minutes + ' WITA';
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
     </script>
 </body>
 </html>
+
 <?php /**PATH G:\project\vss\idle-monitor\resources\views/admin/auth/login.blade.php ENDPATH**/ ?>

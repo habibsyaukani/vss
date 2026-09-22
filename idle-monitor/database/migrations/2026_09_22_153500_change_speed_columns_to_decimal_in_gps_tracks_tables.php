@@ -11,18 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Change gps_tracks.speed
-        Schema::table('gps_tracks', function (Blueprint $table) {
-            // Drop existing integer column
-            // We use change() if doctrine/dbal is installed, but sometimes it fails for unsignedSmallInteger
-            // Let's use change() first:
-            $table->decimal('speed', 10, 2)->nullable()->comment('Unit: km/h')->change();
-        });
-
-        // Change gps_tracks_raw.speed
-        Schema::table('gps_tracks_raw', function (Blueprint $table) {
-            $table->decimal('speed', 10, 2)->nullable()->comment('Unit: km/h')->change();
-        });
+        \Illuminate\Support\Facades\DB::statement("ALTER TABLE gps_tracks MODIFY speed DECIMAL(10,2) NULL COMMENT 'Unit: km/h'");
+        \Illuminate\Support\Facades\DB::statement("ALTER TABLE gps_tracks_raw MODIFY speed DECIMAL(10,2) NULL COMMENT 'Unit: km/h'");
     }
 
     /**
@@ -30,12 +20,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('gps_tracks', function (Blueprint $table) {
-            $table->unsignedSmallInteger('speed')->nullable()->comment('Unit: km/h')->change();
-        });
-
-        Schema::table('gps_tracks_raw', function (Blueprint $table) {
-            $table->unsignedSmallInteger('speed')->nullable()->comment('Unit: km/h')->change();
-        });
+        \Illuminate\Support\Facades\DB::statement("ALTER TABLE gps_tracks MODIFY speed SMALLINT UNSIGNED NULL COMMENT 'Unit: km/h'");
+        \Illuminate\Support\Facades\DB::statement("ALTER TABLE gps_tracks_raw MODIFY speed SMALLINT UNSIGNED NULL COMMENT 'Unit: km/h'");
     }
 };

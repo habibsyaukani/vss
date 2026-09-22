@@ -1,32 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <link rel="icon" type="image/png" href="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>">
     <link rel="shortcut icon" type="image/png" href="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>">
-    <title>Login - Fleet Monitoring System</title>
+    <title>G-VAMS - GPE Vehicle Activity Monitoring System</title>
+    
+    <!-- Bootstrap & FontAwesome & Google Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body {
-            background: url('<?php echo e(asset('images/bglogin.png')); ?>') no-repeat center center fixed;
-            background-size: cover;
-            min-height: 100vh;
-            font-family: 'Inter', sans-serif;
+        :root {
+            --primary-blue: #2563eb;
+            --primary-hover: #1d4ed8;
+            --dark-navy: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            position: relative;
-            color: #fff;
+            box-sizing: border-box;
         }
-        
-        /* Dark overlay for better text readability */
-        .overlay {
-            position: absolute;
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+            background: #0a192f url('<?php echo e(asset('images/bglogin.png')); ?>') no-repeat center center fixed;
+            background-size: cover;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            min-height: 100vh;
+            width: 100vw;
+            position: relative;
+            overflow-x: hidden;
+            color: #ffffff;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        /* Subtle Overlay for high readability & depth without dimming background */
+        .page-overlay {
+            position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(90deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.5) 40%, rgba(15, 23, 42, 0.1) 100%);
+            background: linear-gradient(135deg, 
+                rgba(10, 25, 47, 0.45) 0%, 
+                rgba(15, 34, 75, 0.20) 50%, 
+                rgba(10, 25, 47, 0.40) 100%);
             z-index: 1;
+            pointer-events: none;
         }
 
         .main-wrapper {
@@ -35,553 +61,690 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-
-        /* Header Section */
-        .page-header {
-            padding: 40px 60px;
-        }
-        .header-title-container {
-            border-left: 4px solid #3b82f6;
-            padding-left: 20px;
-        }
-        .header-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: -0.5px;
-        }
-        .header-subtitle {
-            font-size: 1.1rem;
-            color: #cbd5e1;
-            margin-top: 5px;
-        }
-
-        /* Content Section */
-        .content-area {
-            flex-grow: 1;
-            display: flex;
-            padding: 0 80px;
-            align-items: center;
             justify-content: space-between;
+            padding: 30px 50px 100px 50px;
         }
 
-        /* Features List */
-        .features-list {
-            max-width: 420px;
-        }
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 25px;
-        }
-        .feature-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        /* ═══════════════════════════════════════════════════════════════
+           1. TOP LEFT LOGOS (GPE | MAPAN)
+           ═══════════════════════════════════════════════════════════════ */
+        .top-header-logos {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-right: 18px;
-            font-size: 16px;
-            flex-shrink: 0;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(4px);
-        }
-        .feature-text h4 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin: 0 0 4px 0;
-        }
-        .feature-text p {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            margin: 0;
-            line-height: 1.5;
-        }
-        .feature-highlight {
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(4px);
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-top: 35px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-        }
-        .feature-highlight i {
-            margin-right: 12px;
-            font-size: 1.2rem;
-            color: #3b82f6;
-        }
-
-        /* Login Box */
-        .login-box-wrapper {
-            flex: 1;
-            display: flex;
-            justify-content: flex-end;
-            padding-right: 40px;
-        }
-        .login-container {
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            max-width: 420px;
-            padding: 25px 40px 35px 40px;
-            color: #0f172a;
-        }
-        .login-logo {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .login-logo-header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
             gap: 16px;
-            margin-bottom: 8px;
         }
-        .login-logo-header img.logo-mapan {
-            height: 46px;
-            max-height: 46px;
+
+        .top-header-logos img.logo-gpe {
+            height: 42px;
             width: auto;
             object-fit: contain;
-            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
-            transition: transform 0.2s;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
-        .login-logo-header img.logo-gpe {
-            height: 46px;
-            max-height: 46px;
+
+        .top-header-logos img.logo-mapan {
+            height: 42px;
             width: auto;
             object-fit: contain;
-            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.12));
-            transition: transform 0.2s;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
+
         .logo-divider {
-            height: 28px;
             width: 1.5px;
-            background: #e2e8f0;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.4);
             border-radius: 1px;
         }
-        .brand-co-text {
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: #64748b;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-        }
-        .login-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
-            text-align: center;
-        }
-        .login-subtitle {
-            font-size: 0.9rem;
-            color: #64748b;
-            text-align: center;
-            margin-top: 5px;
-            position: relative;
-            padding-bottom: 15px;
-        }
-        .login-subtitle::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30px;
-            height: 2px;
-            background: #3b82f6;
+
+        /* ═══════════════════════════════════════════════════════════════
+           2. CENTER-LEFT CONTENT AREA (Hero G-VAMS Transparent Logo & Slogan)
+           ═══════════════════════════════════════════════════════════════ */
+        .content-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            margin-bottom: auto;
+            gap: 40px;
+            padding: 20px 0;
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .hero-left-section {
+            max-width: 820px;
+            color: #ffffff;
         }
-        .form-label {
-            font-size: 0.85rem;
+
+        .hero-logo-img {
+            max-width: 660px;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 14px 35px rgba(0, 0, 0, 0.6));
+            margin-bottom: 22px;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .hero-slogan-text {
+            font-size: 2.2rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffffff;
+            margin-bottom: 18px;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hero-slogan-text .text-everyday {
+            color: #facc15;
+            text-shadow: 0 4px 16px rgba(250, 204, 21, 0.55);
+        }
+
+        .hero-desc-text {
+            font-size: 1.28rem;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.85);
+            margin: 0;
+            max-width: 760px;
+        }
+
+        .hero-desc-text strong {
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           3. FLOATING RIGHT LOGIN CARD (Glassmorphism / Transparent White Card)
+           ═══════════════════════════════════════════════════════════════ */
+        .login-card-wrapper {
+            width: 420px;
+            flex-shrink: 0;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 36px 40px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+            color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .card-logo-container {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .card-logo-container img {
+            max-width: 260px;
+            width: 100%;
+            height: auto;
+            max-height: 120px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.08));
+        }
+
+        .card-title-accent {
+            width: 40px;
+            height: 3px;
+            background: var(--primary-blue);
+            margin: 14px auto 22px auto;
+            border-radius: 2px;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label-custom {
+            font-size: 0.88rem;
             font-weight: 600;
             color: #334155;
             margin-bottom: 8px;
             display: block;
         }
+
         .input-group-custom {
             position: relative;
         }
+
         .input-group-custom i.icon-left {
             position: absolute;
-            left: 14px;
+            left: 16px;
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
-            font-size: 14px;
+            font-size: 15px;
+            transition: color 0.2s;
         }
+
         .input-group-custom .form-control {
-            padding-left: 40px;
-            padding-right: 40px;
             height: 48px;
+            padding-left: 44px;
+            padding-right: 44px;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 0.9rem;
             background: #f8fafc;
-            color: #334155;
-            transition: all 0.2s;
+            color: #0f172a;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
+
         .input-group-custom .form-control:focus {
-            background: #fff;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            background: #ffffff;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
             outline: none;
         }
+
+        .input-group-custom .form-control:focus ~ i.icon-left {
+            color: var(--primary-blue);
+        }
+
         .input-group-custom i.icon-right {
             position: absolute;
-            right: 14px;
+            right: 16px;
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
-            font-size: 14px;
+            font-size: 15px;
             cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
         }
 
-        .btn-login {
-            background: #1d4ed8;
-            color: white;
-            border: none;
-            height: 48px;
-            border-radius: 8px;
-            width: 100%;
-            font-weight: 600;
-            font-size: 1rem;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        .btn-login:hover {
-            background: #1e40af;
-            transform: translateY(-1px);
-        }
-        .btn-login i {
-            margin-left: 8px;
+        .input-group-custom i.icon-right:hover {
+            color: var(--primary-blue);
         }
 
-        .role-badge {
-            text-align: center;
-            margin-top: 25px;
-            font-size: 0.8rem;
-            color: #64748b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .role-badge i {
-            color: #3b82f6;
-            margin-right: 6px;
-        }
-
-        /* Footer Bar */
-        .footer-bar {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 15px 60px;
+        /* Form Extras (Remember me & Forgot password) */
+        .form-extras {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 22px;
+            font-size: 0.85rem;
         }
-        .footer-left {
+
+        .remember-checkbox {
             display: flex;
             align-items: center;
+            gap: 8px;
+            color: #64748b;
+            cursor: pointer;
+            font-weight: 500;
         }
-        .footer-left-icon {
-            width: 36px;
-            height: 36px;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 6px;
+
+        .forgot-link {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Sign In Button */
+        .btn-signin {
+            width: 100%;
+            height: 48px;
+            background: var(--primary-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.98rem;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 15px;
-            font-size: 18px;
-        }
-        .footer-left-text h5 {
-            font-size: 0.9rem;
-            margin: 0 0 2px 0;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        .footer-left-text p {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            margin: 0;
-        }
-        
-        .footer-right {
-            display: flex;
-            gap: 40px;
-        }
-        .footer-item {
-            display: flex;
-            align-items: center;
-        }
-        .footer-item i {
-            font-size: 20px;
-            margin-right: 12px;
-            color: #94a3b8;
-        }
-        .footer-item-text span {
-            display: block;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            margin-bottom: 2px;
-        }
-        .footer-item-text strong {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #fff;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
         }
 
-        /* Error/Success Alerts */
-        .alert {
-            font-size: 0.85rem;
-            padding: 10px 15px;
+        .btn-signin:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+        }
+
+        .btn-signin i {
+            font-size: 0.95rem;
+            transition: transform 0.2s;
+        }
+
+        .btn-signin:hover i {
+            transform: translateX(3px);
+        }
+
+        /* Role Access Subtitle */
+        .role-badge-text {
+            text-align: center;
+            font-size: 0.82rem;
+            color: #64748b;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 22px;
+        }
+
+        .role-badge-text i {
+            color: var(--primary-blue);
+            font-size: 0.9rem;
+        }
+
+        /* Alerts */
+        .alert-custom {
+            padding: 10px 14px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 14px;
             border: none;
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .content-area {
+        /* ═══════════════════════════════════════════════════════════════
+           4. FLOATING GLASSBAR FOOTER AT BOTTOM
+           ═══════════════════════════════════════════════════════════════ */
+        .footer-glassbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50px;
+            right: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+        }
+
+        .glass-pill-left {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 22px;
+            padding: 14px 36px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .feature-item-pill {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .feature-item-pill:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            right: -15px;
+            top: 15%;
+            height: 70%;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .feature-icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+            color: #ffffff;
+            margin-bottom: 6px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        }
+
+        .icon-fleet { background: #2563eb; }
+        .icon-speed { background: #f97316; }
+        .icon-payload { background: #16a34a; }
+        .icon-abuse { background: #dc2626; }
+        .icon-idle { background: #9333ea; }
+        .icon-equipment { background: #0891b2; }
+        .icon-analytics { background: #1e3a8a; }
+
+        .feature-text-label {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            line-height: 1.25;
+            letter-spacing: 0.2px;
+        }
+
+        .glass-pill-right {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 18px;
+            padding: 10px 24px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            color: #ffffff;
+        }
+
+        .footer-secure-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .footer-secure-item i {
+            font-size: 1.4rem;
+            color: #94a3b8;
+        }
+
+        .footer-secure-text h6 {
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin: 0 0 2px 0;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .footer-secure-text p {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .footer-time-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            padding-left: 20px;
+        }
+
+        .footer-time-item i {
+            font-size: 1.3rem;
+            color: #94a3b8;
+        }
+
+        .footer-time-text strong {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .footer-time-text span {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            line-height: 1.2;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE LAYOUT
+           ═══════════════════════════════════════════════════════════════ */
+        @media (max-width: 1200px) {
+            .content-body {
                 flex-direction: column;
-                padding: 0 20px;
                 justify-content: center;
             }
-            .features-list {
-                display: none;
-            }
-            .login-box-wrapper {
-                padding-right: 0;
-                margin-top: 20px;
-            }
-            .page-header {
-                padding: 30px 20px;
-            }
-            .footer-bar {
-                flex-direction: column;
-                gap: 20px;
-                padding: 20px;
+            .hero-left-section {
                 text-align: center;
+                max-width: 100%;
             }
-            .footer-left, .footer-right {
+            .hero-slogan-text {
                 justify-content: center;
-                flex-wrap: wrap;
             }
-            .footer-right {
-                gap: 20px;
+            .hero-desc-text {
+                margin: 0 auto;
+            }
+            .login-card-wrapper {
+                width: 100%;
+                max-width: 420px;
+            }
+            .footer-glassbar {
+                flex-direction: column;
+                gap: 12px;
+                left: 20px;
+                right: 20px;
+                bottom: 15px;
+            }
+            .main-wrapper {
+                padding-bottom: 160px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="overlay"></div>
-    
+
+    <div class="page-overlay"></div>
+
     <div class="main-wrapper">
-        <!-- Header -->
-        <div class="page-header">
-            <div class="header-title-container">
-                <h1 class="header-title">Fleet Monitoring System</h1>
-                <p class="header-subtitle">Production & Equipment Performance Monitoring</p>
-            </div>
+        
+        <!-- 1. TOP HEADER LOGOS (GPE | MAPAN) -->
+        <div class="top-header-logos">
+            <img src="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>" alt="GPE Logo" class="logo-gpe">
+            <div class="logo-divider"></div>
+            <img src="<?php echo e(asset('images/mapan-logo-transparent.png')); ?>" alt="MAPAN Logo" class="logo-mapan">
         </div>
 
-        <!-- Main Content -->
-        <div class="content-area">
-            <!-- Left Features -->
-            <div class="features-list">
-                <div class="feature-item">
-                    <div class="feature-icon"><i class="fas fa-map-marker-alt"></i></div>
-                    <div class="feature-text">
-                        <h4>Real-Time Fleet Tracking</h4>
-                        <p>Pantau lokasi dan pergerakan seluruh unit secara real-time</p>
-                    </div>
+        <!-- 2. MAIN CONTENT BODY -->
+        <div class="content-body">
+            
+            <!-- Left Hero Section: G-VAMS Transparent Logo & Slogan -->
+            <div class="hero-left-section">
+                <img src="<?php echo e(asset('images/gvams-logo-transparent.png')); ?>" alt="G-VAMS Vehicle Activity Monitoring System" class="hero-logo-img">
+                <div class="hero-slogan-text">
+                    Good Performance <span class="text-everyday">Everyday</span>
                 </div>
-                <div class="feature-item">
-                    <div class="feature-icon"><i class="far fa-clock"></i></div>
-                    <div class="feature-text">
-                        <h4>Idle Time Monitoring</h4>
-                        <p>Monitor waktu idle untuk meningkatkan produktivitas</p>
-                    </div>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
-                    <div class="feature-text">
-                        <h4>Productivity Analytics</h4>
-                        <p>Analisa performa untuk pengambilan keputusan</p>
-                    </div>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon"><i class="fas fa-cog"></i></div>
-                    <div class="feature-text">
-                        <h4>Equipment Performance</h4>
-                        <p>Pantau kesehatan dan performa equipment</p>
-                    </div>
-                </div>
-                
-                <div class="feature-highlight">
-                    <i class="fas fa-shield-alt"></i>
-                    Data akurat. Keputusan tepat. Operasional lebih efisien.
-                </div>
+                <p class="hero-desc-text">
+                    Sistem monitoring kendaraan terintegrasi untuk memantau kinerja dan aktivitas armada secara <strong><em>real-time</em>, akurat, dan efisien.</strong>
+                </p>
             </div>
 
-            <!-- Right Login Box -->
-            <div class="login-box-wrapper">
-                <div class="login-container">
-                    <div class="login-logo">
-                        <div class="login-logo-header">
-                            <img src="<?php echo e(asset('images/gpe-logo-transparent.png')); ?>" alt="GPE Logo" class="logo-gpe">
-                            <div class="logo-divider"></div>
-                            <img src="<?php echo e(asset('images/mapan-logo-transparent.png')); ?>" alt="MAPAN Logo" class="logo-mapan">
+            <!-- Right Floating Login Card -->
+            <div class="login-card-wrapper">
+                <div class="login-card">
+                    <div>
+                        <!-- G-VAMS Transparent Logo inside card -->
+                        <div class="card-logo-container">
+                            <img src="<?php echo e(asset('images/gvams-logo-transparent.png')); ?>" alt="G-VAMS Vehicle Activity Monitoring System">
+                            <div class="card-title-accent"></div>
                         </div>
-                        <h2 class="login-title">Fleet Monitoring System</h2>
-                        <p class="login-subtitle">Fleet Dashboard</p>
+
+                        <!-- Session Alerts -->
+                        <?php if($errors->any()): ?>
+                            <div class="alert alert-danger alert-custom bg-danger text-white">
+                                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <div><i class="fas fa-exclamation-circle me-1"></i> <?php echo e($error); ?></div>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if(session('error')): ?>
+                            <div class="alert alert-danger alert-custom bg-danger text-white">
+                                <i class="fas fa-exclamation-circle me-1"></i> <?php echo e(session('error')); ?>
+
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if(session('success')): ?>
+                            <div class="alert alert-success alert-custom bg-success text-white">
+                                <i class="fas fa-check-circle me-1"></i> <?php echo e(session('success')); ?>
+
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Login Form -->
+                        <form action="<?php echo e(route('frontend.login')); ?>" method="POST">
+                            <?php echo csrf_field(); ?>
+                            
+                            <div class="form-group">
+                                <label class="form-label-custom">Username</label>
+                                <div class="input-group-custom">
+                                    <i class="fas fa-user icon-left"></i>
+                                    <input type="text" name="username" class="form-control" placeholder="Enter your username" value="<?php echo e(old('username')); ?>" required autofocus>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label-custom">Password</label>
+                                <div class="input-group-custom">
+                                    <i class="fas fa-lock icon-left"></i>
+                                    <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required>
+                                    <i class="far fa-eye icon-right" id="togglePassword"></i>
+                                </div>
+                            </div>
+
+                            <div class="form-extras">
+                                <label class="remember-checkbox">
+                                    <input type="checkbox" name="remember" class="form-check-input me-1"> Remember me
+                                </label>
+                                <a href="#" class="forgot-link">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="btn-signin">
+                                Sign In <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </form>
                     </div>
 
-                    <?php if($errors->any()): ?>
-                        <div class="alert alert-danger bg-danger text-white">
-                            <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <div><i class="fas fa-exclamation-circle me-1"></i> <?php echo e($error); ?></div>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if(session('error')): ?>
-                        <div class="alert alert-danger bg-danger text-white"><i class="fas fa-exclamation-circle me-1"></i> <?php echo e(session('error')); ?></div>
-                    <?php endif; ?>
-
-                    <?php if(session('success')): ?>
-                        <div class="alert alert-success bg-success text-white"><i class="fas fa-check-circle me-1"></i> <?php echo e(session('success')); ?></div>
-                    <?php endif; ?>
-
-                    <form action="<?php echo e(route('frontend.login')); ?>" method="POST">
-                        <?php echo csrf_field(); ?>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Username</label>
-                            <div class="input-group-custom">
-                                <i class="fas fa-user icon-left"></i>
-                                <input type="text" name="username" class="form-control" placeholder="Enter your username" value="<?php echo e(old('username')); ?>" required autofocus>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <div class="input-group-custom">
-                                <i class="fas fa-lock icon-left"></i>
-                                <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required>
-                                <i class="far fa-eye icon-right" id="togglePassword"></i>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-login">
-                            Sign In <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </form>
-
-                    <div class="role-badge">
+                    <!-- Role Badge -->
+                    <div class="role-badge-text">
                         <i class="fas fa-shield-alt"></i> Available for Admin & Fleet Manager roles
                     </div>
                 </div>
             </div>
+
         </div>
 
-        <!-- Footer -->
-        <div class="footer-bar">
-            <div class="footer-left">
-                <div class="footer-left-icon">
-                    <i class="fas fa-plus"></i>
-                </div>
-                <div class="footer-left-text">
-                    <h5>SAFETY FIRST, PRODUCTION ALWAYS</h5>
-                    <p>Utamakan Keselamatan dalam Setiap Aktivitas</p>
+    </div>
+
+    <!-- 3. FLOATING GLASSBAR FOOTER AT BOTTOM -->
+    <div class="footer-glassbar">
+        <!-- Left Glass Pill: 7 Features Icons Bar -->
+        <div class="glass-pill-left">
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-fleet"><i class="fas fa-location-dot"></i></div>
+                <div class="feature-text-label">FLEET<br>TRACKING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-speed"><i class="fas fa-gauge-high"></i></div>
+                <div class="feature-text-label">SPEED<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-payload"><i class="fas fa-weight-hanging"></i></div>
+                <div class="feature-text-label">PAYLOAD<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-abuse"><i class="fas fa-shield-halved"></i></div>
+                <div class="feature-text-label">ABUSE<br>OPERATION</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-idle"><i class="far fa-clock"></i></div>
+                <div class="feature-text-label">IDLE<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-equipment"><i class="fas fa-gear"></i></div>
+                <div class="feature-text-label">EQUIPMENT<br>MONITORING</div>
+            </div>
+            <div class="feature-item-pill">
+                <div class="feature-icon-circle icon-analytics"><i class="fas fa-chart-column"></i></div>
+                <div class="feature-text-label">PERFORMANCE<br>ANALYTICS</div>
+            </div>
+        </div>
+
+        <!-- Right Glass Pill: Secure Access & System Clock -->
+        <div class="glass-pill-right">
+            <div class="footer-secure-item">
+                <i class="fas fa-lock"></i>
+                <div class="footer-secure-text">
+                    <h6>SECURE ACCESS</h6>
+                    <p>Data akurat. Keputusan tepat.<br>Operasional lebih efisien.</p>
                 </div>
             </div>
-            <div class="footer-right">
-                <div class="footer-item">
-                    <i class="fas fa-lock"></i>
-                    <div class="footer-item-text">
-                        <span>Status</span>
-                        <strong>Secure Access</strong>
-                    </div>
-                </div>
-                <div class="footer-item">
-                    <i class="far fa-clock"></i>
-                    <div class="footer-item-text">
-                        <span>System Time</span>
-                        <strong id="systemTime">Loading...</strong>
-                    </div>
+            <div class="footer-time-item">
+                <i class="far fa-calendar-alt"></i>
+                <div class="footer-time-text">
+                    <strong id="systemDate">18 Sep 2026</strong>
+                    <span id="systemTime">09:21 WITA</span>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // ═══════════════════════════════════════════════════════════════
-        // AUTO-REFRESH CSRF TOKEN ON LOGIN PAGE (prevent Page Expired)
-        // ═══════════════════════════════════════════════════════════════
         $(document).ready(function() {
-            // Auto-refresh CSRF token every 15 minutes
+            // Auto-refresh CSRF token every 15 minutes to prevent session expiration
             setInterval(function() {
                 $.ajax({
                     url: '<?php echo e(route("csrf.refresh")); ?>',
                     method: 'GET',
                     success: function(data) {
-                        if (data.token) {
-                            // Update meta tag
+                        if (data && data.token) {
                             $('meta[name="csrf-token"]').attr('content', data.token);
-                            // Update form token
                             $('input[name="_token"]').val(data.token);
-                            console.log('[Login] CSRF token refreshed successfully');
                         }
-                    },
-                    error: function() {
-                        console.warn('[Login] CSRF token refresh failed');
                     }
                 });
-            }, 15 * 60 * 1000); // 15 minutes
-            
+            }, 15 * 60 * 1000);
         });
-
 
         // Toggle password visibility
-        document.getElementById('togglePassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('password');
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
-        });
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
 
-        // Live Clock Update
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        // Live System Clock & Date
         function updateClock() {
             const now = new Date();
-            const options = { day: '2-digit', month: 'short', year: 'numeric' };
-            const dateStr = now.toLocaleDateString('id-ID', options);
-            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('systemTime').textContent = dateStr + ' - ' + timeStr + ' WITA';
+            const day = now.getDate().toString().padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agus', 'Sep', 'Okt', 'Nov', 'Des'];
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            
+            const dateEl = document.getElementById('systemDate');
+            const timeEl = document.getElementById('systemTime');
+            if (dateEl) dateEl.textContent = day + ' ' + month + ' ' + year;
+            if (timeEl) timeEl.textContent = hours + ':' + minutes + ' WITA';
         }
         setInterval(updateClock, 1000);
         updateClock();
     </script>
 </body>
 </html>
+
 <?php /**PATH G:\project\vss\idle-monitor\resources\views/frontend/auth/login.blade.php ENDPATH**/ ?>
