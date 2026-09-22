@@ -165,8 +165,8 @@ class GpsTrackSyncService
         $allRecords = [];
 
         $appTz = config('app.timezone', 'Asia/Makassar');
-        $beginTimeWib = \Carbon\Carbon::parse($beginTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
-        $endTimeWib   = \Carbon\Carbon::parse($endTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+        $beginTimeWib = \Carbon\Carbon::parse($beginTime, $appTz)->toDateTimeString();
+        $endTimeWib   = \Carbon\Carbon::parse($endTime, $appTz)->toDateTimeString();
 
         foreach (array_chunk($deviceIds, $concurrency) as $batchIndex => $deviceBatch) {
             
@@ -260,8 +260,8 @@ class GpsTrackSyncService
     ): array {
         try {
             $appTz = config('app.timezone', 'Asia/Makassar');
-            $beginTimeWib = Carbon::parse($beginTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
-            $endTimeWib   = Carbon::parse($endTime, $appTz)->setTimezone('Asia/Jakarta')->toDateTimeString();
+            $beginTimeWib = Carbon::parse($beginTime, $appTz)->toDateTimeString();
+            $endTimeWib   = Carbon::parse($endTime, $appTz)->toDateTimeString();
 
             $response = Http::withOptions([
                 'verify' => false, // Disable SSL verification for development
@@ -357,7 +357,7 @@ class GpsTrackSyncService
 
         // ✅ FILTER 1: Skip data dengan speed = 0 km/h
         $records = array_filter($records, function ($item) {
-            return isset($item['speed']) && (int)$item['speed'] > 0;
+            return isset($item['speed']) && (float)$item['speed'] > 0;
         });
 
         if (empty($records)) return 0;
@@ -474,7 +474,7 @@ class GpsTrackSyncService
             'longitude'        => $item['longitude'] ?? null,
             'latitude'         => $item['latitude']  ?? null,
             'altitude'         => isset($item['altitude'])  ? (int) $item['altitude']  : null,
-            'speed'            => isset($item['speed'])     ? (int) $item['speed']     : null,
+            'speed'            => isset($item['speed'])     ? (float) $item['speed']   : null,
             'direction'        => isset($item['direct'])    ? (int) $item['direct']    : null,
             'satellites'       => isset($item['satellites'])? (int) $item['satellites']: null,
             'precision'        => isset($item['precision']) ? (int) $item['precision'] : null,
@@ -526,7 +526,7 @@ class GpsTrackSyncService
             'longitude'          => $item['longitude']  ?? null,
             'latitude'           => $item['latitude']   ?? null,
             'altitude'           => isset($item['altitude'])   ? (int) $item['altitude']   : null,
-            'speed'              => isset($item['speed'])      ? (int) $item['speed']      : null,
+            'speed'              => isset($item['speed'])      ? (float) $item['speed']    : null,
             'direction'          => isset($item['direct'])     ? (int) $item['direct']     : null,
             'satellites'         => isset($item['satellites']) ? (int) $item['satellites'] : null,
             'gps_time'           => $this->parseTime($item['createtime'] ?? null),
@@ -561,7 +561,7 @@ class GpsTrackSyncService
             'device_name'   => $deviceName,
             'longitude'     => $item['longitude']   ?? null,
             'latitude'      => $item['latitude']    ?? null,
-            'speed'         => isset($item['speed'])     ? (int) $item['speed']     : null,
+            'speed'         => isset($item['speed'])     ? (float) $item['speed']   : null,
             'altitude'      => isset($item['altitude'])  ? (int) $item['altitude']  : null,
             'direction'     => isset($item['direct'])    ? (int) $item['direct']    : null,
             'satellites'    => isset($item['satellites'])? (int) $item['satellites']: null,
@@ -586,9 +586,9 @@ class GpsTrackSyncService
         if (empty($value)) return null;
         
         try {
-            // VSS / Howen API returns timestamps in Asia/Jakarta (WIB / UTC+7)
-            // Convert to application timezone (Asia/Makassar / WITA / UTC+8)
-            $parsed = Carbon::parse($value, 'Asia/Jakarta')->setTimezone(config('app.timezone', 'Asia/Makassar'));
+            // Parse timestamps directly in application timezone without shifting 1 hour (WIB to WITA)
+            // since Howen web natively displays time matching the received dtu/createtime
+            $parsed = Carbon::parse($value, config('app.timezone', 'Asia/Makassar'));
             $now = now();
             
             // Fix invalid device clocks that send timestamps from the future

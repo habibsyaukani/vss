@@ -374,11 +374,11 @@ class HowenWebsocketListenCommand extends Command
         $et  = $payload['et']  ?? null; // End Time (WIB)
         $loc = $payload['location'] ?? [];
 
-        // Konversi WIB → WITA
         $toWita = function (?string $t): ?string {
             if (!$t) return null;
             try {
-                return \Carbon\Carbon::parse($t, 'Asia/Jakarta')->setTimezone('Asia/Makassar')->toDateTimeString();
+                // Parse directly to app timezone without shifting from WIB
+                return \Carbon\Carbon::parse($t, config('app.timezone', 'Asia/Makassar'))->toDateTimeString();
             } catch (\Exception $e) {
                 return $t;
             }
