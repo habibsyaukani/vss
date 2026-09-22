@@ -697,8 +697,19 @@ $(function() {
         }, 300); // Beri sedikit delay agar efek skeleton terasa smooth
     });
 
-    // ---- Reload helper ----
+    // ---- Reload helper with debounce ----
+    let reloadTimer = null;
     function reloadTable() {
+        // Debounce 500ms: jika user klik banyak checkbox berurutan,
+        // hanya 1 request yang dikirim setelah 500ms idle
+        if (reloadTimer) clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(function() {
+            table.ajax.reload(null, false);
+        }, 500);
+    }
+    function reloadTableNow() {
+        // Immediate reload tanpa debounce (untuk filter tanggal/speed)
+        if (reloadTimer) clearTimeout(reloadTimer);
         table.ajax.reload(null, false);
     }
 
@@ -986,7 +997,7 @@ $(function() {
 
     // ---- Date Filter: auto reload on change ----
     $('#filterDate').change(function() {
-        reloadTable();
+        reloadTableNow();
     });
 
     // ---- Export Logic ----
@@ -1103,19 +1114,19 @@ $(function() {
     // ---- Speed Filter Toggle Buttons ----
     // Salah satu tombol HARUS selalu aktif (tidak bisa keduanya off)
     $('#btnLowSpeed').click(function() {
-        if (activeSpeedFilter === 'low') return; // sudah aktif, abaikan
+        if (activeSpeedFilter === 'low') return;
         activeSpeedFilter = 'low';
         $(this).addClass('active-low');
         $('#btnHighSpeed').removeClass('active-high');
-        reloadTable();
+        reloadTableNow();
     });
 
     $('#btnHighSpeed').click(function() {
-        if (activeSpeedFilter === 'high') return; // sudah aktif, abaikan
+        if (activeSpeedFilter === 'high') return;
         activeSpeedFilter = 'high';
         $(this).addClass('active-high');
         $('#btnLowSpeed').removeClass('active-low');
-        reloadTable();
+        reloadTableNow();
     });
 });
 </script>

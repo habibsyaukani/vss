@@ -46,9 +46,8 @@ class SpeedController extends Controller
             });
         });
 
-        // ⚡ Fast indexed query purely on gps_tracks_raw (NO SQL JOINs)
-        $query = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
-            ->select(
+        // ⚡ True server-side query — let MySQL handle pagination via composite index
+        $query = GpsTrackRaw::select(
                 'id',
                 'device_id',
                 'device_name',
@@ -62,8 +61,7 @@ class SpeedController extends Controller
                 'acc_state as is_acc_on',
                 'over_speed as is_overspeed',
                 'urgency as is_emergency'
-            )
-            ->latest('gps_time');
+            );
 
         $deviceIds = $request->device_ids;
         if (is_string($deviceIds)) {
@@ -77,7 +75,7 @@ class SpeedController extends Controller
                 $cleanIds = array_map(function($id) {
                     return ltrim((string)$id, '0');
                 }, $deviceIds);
-                $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
+                $query->whereIn('device_id', $cleanIds);
             }
         }
 
@@ -104,56 +102,55 @@ class SpeedController extends Controller
                     });
                 }
             }
-            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+            $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
         // Filter by speed range
         if ($request->filled('min_speed')) {
-            $query->where('gps_tracks_raw.speed', '>=', $request->min_speed);
+            $query->where('speed', '>=', $request->min_speed);
         }
         if ($request->filled('max_speed')) {
-            $query->where('gps_tracks_raw.speed', '<=', $request->max_speed);
+            $query->where('speed', '<=', $request->max_speed);
         }
 
         // Filter by overspeed
         if ($request->filled('overspeed') && $request->overspeed == '1') {
-            $query->where('gps_tracks_raw.over_speed', 1);
+            $query->where('over_speed', 1);
         }
 
         // Filter by ACC status
         if ($request->filled('acc_on') && $request->acc_on == '1') {
-            $query->where('gps_tracks_raw.acc_state', 1);
+            $query->where('acc_state', 1);
         }
 
         // Filter by date
         if ($request->filled('start_date')) {
-            $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
+            $query->where('gps_time', '>=', $request->start_date . ' 00:00:00');
         } else {
-            $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
+            $query->where('gps_time', '>=', now()->startOfDay());
         }
         if ($request->filled('end_date')) {
-            $query->where('gps_tracks_raw.gps_time', '<=', $request->end_date . ' 23:59:59');
+            $query->where('gps_time', '<=', $request->end_date . ' 23:59:59');
         }
 
         // Filter by speed mode
         if ($request->filled('speed_filter')) {
             switch ($request->speed_filter) {
                 case 'low':
-                    $query->where('gps_tracks_raw.speed', '>', 0)
-                          ->where('gps_tracks_raw.speed', '<', 15);
+                    $query->where('speed', '>', 0)
+                          ->where('speed', '<', 15);
                     break;
                 case 'high':
-                    $query->where('gps_tracks_raw.speed', '>=', 41);
+                    $query->where('speed', '>=', 41);
                     break;
             }
         } else {
-            $query->where('gps_tracks_raw.speed', '>', 0);
+            $query->where('speed', '>', 0);
         }
 
-        // Limit data to prevent hanging on millions of rows when selecting ALL devices
-        $data = $query->limit(2000)->get();
-
-        return DataTables::of($data)
+        // ⚡ True server-side: pass the Eloquent QUERY (not a collection) to DataTables
+        // DataTables will add ORDER BY, LIMIT, OFFSET at the SQL level
+        return DataTables::of($query)
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
             })
@@ -170,6 +167,9 @@ class SpeedController extends Controller
             })
             ->editColumn('gps_time', function($row) {
                 return $row->gps_time ? date('Y-m-d H:i:s', strtotime($row->gps_time)) : '-';
+            })
+            ->orderColumn('gps_time', function($query, $order) {
+                $query->orderBy('gps_time', $order);
             })
             ->rawColumns(['checkbox'])
             ->make(true);
