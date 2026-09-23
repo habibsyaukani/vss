@@ -579,6 +579,10 @@ $(function() {
     // ---- Speed Filter State — default: Low Speed aktif ----
     let activeSpeedFilter = 'low';
 
+    // ---- Flag: apakah ini load pertama kali (all devices selected = skip AJAX) ----
+    let isInitialLoad = true;
+    let totalDeviceCount = {{ $totalDevices ?? 0 }};
+
     // Disable annoying DataTables alert popup (e.g., when AJAX is aborted by clicking another filter quickly)
     $.fn.dataTable.ext.errMode = 'none';
 
@@ -603,6 +607,19 @@ $(function() {
                 d.start_date   = $('#filterDate').val();
                 d.end_date     = $('#filterDate').val();
                 d.speed_filter = activeSpeedFilter; // 'low', 'high', or ''
+            },
+            beforeSend: function() {
+                // Jika initial load dan semua device dipilih (tidak ada filter khusus),
+                // batalkan request dan tampilkan pesan panduan
+                let selectedIds = getSelectedDeviceIds();
+                if (isInitialLoad && selectedIds.length >= totalDeviceCount) {
+                    isInitialLoad = false;
+                    $('#tableSkeleton').hide();
+                    $('#speedTable tbody').html('<tr><td colspan="14" class="text-center py-5 text-muted"><i class="fas fa-search fa-2x mb-3 d-block text-primary"></i><strong>Silakan pilih atau cari unit kendaraan terlebih dahulu</strong><br><small>Gunakan kotak pencarian di kiri atau centang grup unit tertentu untuk melihat data speed</small></td></tr>');
+                    $('#speedTable tbody').css('opacity', '1');
+                    return false; // batalkan AJAX
+                }
+                isInitialLoad = false;
             }
         },
         columns: [
