@@ -76,6 +76,15 @@ class Kernel extends ConsoleKernel
             ->runInBackground()
             ->description('Pull Tracksolid GPS track data (real-time, last 1 hour)');
 
+        // ✅ PRIMARY: Pull Howen GPS tracks every 3 minutes (last 1 hour)
+        $schedule->command('vss:pull-gps-tracks', [
+            '--hours' => 1,
+        ])
+            ->everyThreeMinutes()
+            ->withoutOverlapping(10)
+            ->runInBackground()
+            ->description('Pull Howen GPS track data (real-time, last 1 hour)');
+
         // 📊 DATA AGGREGATION & CLEANUP
         // ========================================
 
