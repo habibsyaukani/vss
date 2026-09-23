@@ -799,13 +799,24 @@ $(function() {
         let selectedLocation = $('#locationFilter').val();
         let selectedSeries = $('#seriesFilter').val();
         
+        let searchQuery = $(this).val().toLowerCase().trim();
+        if (searchQuery === '') {
+            $('.tree-child').css({ 'background-color': '', 'padding': '', 'border-radius': '', 'display': '' });
+            filterTreeBySeriesLocation();
+            return;
+        }
+        
+        let normQuery = searchQuery.replace(/[\s\.-]/g, '');
+        let totalMatching = 0;
+        let selectedLocation = $('#locationFilter').val();
+        let selectedSeries = $('#seriesFilter').val();
+        
         $('.tree-child').each(function() {
             let $device = $(this);
             let deviceName = $device.find('span').text().toLowerCase();
-            let deviceLocation = $device.data('location') || '';
-            let deviceSeries = $device.data('series') || '';
+            let normDevName = deviceName.replace(/[\s\.-]/g, '');
             
-            let nameMatches = deviceName.includes(searchQuery);
+            let nameMatches = deviceName.includes(searchQuery) || normDevName.includes(normQuery);
             let locationMatches = true;
             let seriesMatches = true;
             
