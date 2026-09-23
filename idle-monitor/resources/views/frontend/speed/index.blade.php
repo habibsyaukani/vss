@@ -657,7 +657,7 @@ $(function() {
                         cls   = 'speed-normal';
                         label = '';
                     }
-                    const displaySpd = (spd % 1 === 0) ? spd.toFixed(0) : spd.toFixed(2);
+                    const displaySpd = Number(spd).toFixed(2);
                     return `<span class="speed-badge ${cls}">${displaySpd} Km/h</span>`;
                 }
             },
