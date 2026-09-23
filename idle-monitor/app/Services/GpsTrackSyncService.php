@@ -355,7 +355,7 @@ class GpsTrackSyncService
         // ⚡ Matikan query log agar tidak menumpuk di memory saat proses besar
         \Illuminate\Support\Facades\DB::connection()->disableQueryLog();
 
-        // ✅ FILTER 1: Skip data dengan speed = 0 km/h
+        // ✅ FILTER 1: Hanya simpan data bergerak (speed > 0)
         $records = array_filter($records, function ($item) {
             return isset($item['speed']) && (float)$item['speed'] > 0;
         });

@@ -140,18 +140,18 @@ class SpeedController extends Controller
         if ($request->filled('speed_filter')) {
             switch ($request->speed_filter) {
                 case 'low':
-                    $query->where('speed', '>=', 0)
+                    $query->where('speed', '>', 0)
                           ->where('speed', '<', 15);
                     break;
                 case 'high':
                     $query->where('speed', '>=', 15);
                     break;
                 default:
-                    $query->where('speed', '>=', 0);
+                    $query->where('speed', '>', 0);
                     break;
             }
         } else {
-            $query->where('speed', '>=', 0);
+            $query->where('speed', '>', 0);
         }
 
         // ⚡ True server-side: pass the Eloquent QUERY (not a collection) to DataTables
