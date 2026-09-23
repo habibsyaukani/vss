@@ -633,7 +633,7 @@ $(function() {
                 name: 'speed',
                 render: function(data) {
                     let cls, label;
-                    const spd = parseInt(data) || 0;
+                    const spd = parseFloat(data) || 0;
                     if (spd >= 100) {
                         cls   = 'speed-high';   // merah — sangat cepat
                         label = '🔴';
@@ -643,14 +643,15 @@ $(function() {
                     } else if (spd >= 15) {
                         cls   = 'speed-normal';  // hijau — normal
                         label = '🟢';
-                    } else if (spd >= 1) {
+                    } else if (spd >= 0.1) {
                         cls   = 'speed-low';     // biru — lambat
                         label = '🔵';
                     } else {
                         cls   = 'speed-normal';
                         label = '';
                     }
-                    return `<span class="speed-badge ${cls}">${spd} Km/h</span>`;
+                    const displaySpd = (spd % 1 === 0) ? spd.toFixed(0) : spd.toFixed(2);
+                    return `<span class="speed-badge ${cls}">${displaySpd} Km/h</span>`;
                 }
             },
             { data: 'altitude', name: 'altitude', render: function(data) { return data ? data : '-'; } },
