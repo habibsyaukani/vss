@@ -16,7 +16,8 @@ class PullGpsTracksCommand extends Command
                             {--date= : Specific date to pull (YYYY-MM-DD), defaults to today}
                             {--devices= : Comma-separated device IDs, or "all" for all active devices}
                             {--limit=0 : Limit number of devices (0 = no limit)}
-                            {--hours= : Look back X hours from now (overrides --date)}';
+                            {--hours= : Look back X hours from now (overrides --date)}
+                            {--howen-only : Pull only Howen devices}';
     
     protected $description = 'Pull GPS track data efficiently from VSS API (loops devices but shows better progress)';
 
@@ -61,6 +62,10 @@ class PullGpsTracksCommand extends Command
             $this->info("🚗 Loading devices...");
             $devicesQuery = \App\Models\Device::whereNotNull('device_id')
                 ->orderBy('device_name');
+            
+            if ($this->option('howen-only')) {
+                $devicesQuery->where('device_id', '<', '800000000000000');
+            }
             
             if ($deviceFilter !== 'all') {
                 $deviceIds = explode(',', $deviceFilter);
