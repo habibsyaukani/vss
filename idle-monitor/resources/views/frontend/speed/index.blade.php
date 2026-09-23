@@ -569,7 +569,8 @@ $(function() {
         let ids = [];
         $('.device-checkbox:checked').each(function() {
             let $li = $(this).closest('.tree-child');
-            if ($li.length === 0 || $li.is(':visible')) {
+            let style = $li.attr('style') || '';
+            if ($li.length === 0 || !style.includes('display: none')) {
                 ids.push($(this).val());
             }
         });
@@ -795,17 +796,6 @@ $(function() {
             return;
         }
         
-        let totalMatching = 0;
-        let selectedLocation = $('#locationFilter').val();
-        let selectedSeries = $('#seriesFilter').val();
-        
-        let searchQuery = $(this).val().toLowerCase().trim();
-        if (searchQuery === '') {
-            $('.tree-child').css({ 'background-color': '', 'padding': '', 'border-radius': '', 'display': '' });
-            filterTreeBySeriesLocation();
-            return;
-        }
-        
         let normQuery = searchQuery.replace(/[\s\.-]/g, '');
         let totalMatching = 0;
         let selectedLocation = $('#locationFilter').val();
@@ -815,6 +805,8 @@ $(function() {
             let $device = $(this);
             let deviceName = $device.find('span').text().toLowerCase();
             let normDevName = deviceName.replace(/[\s\.-]/g, '');
+            let deviceLocation = ($device.attr('data-location') || '').toString();
+            let deviceSeries = ($device.attr('data-series') || '').toString();
             
             let nameMatches = deviceName.includes(searchQuery) || normDevName.includes(normQuery);
             let locationMatches = true;
