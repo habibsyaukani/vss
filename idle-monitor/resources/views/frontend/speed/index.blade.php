@@ -499,17 +499,13 @@
     <!-- Speed Filter -->
     <div class="speed-filter-group ms-3">
         <label><i class="fas fa-tachometer-alt me-1"></i> SPEED</label>
-        <button type="button" class="btn-speed-filter active-all" id="btnAllSpeed">
-            <span class="speed-dot" style="background:#10b981;"></span>
-            Semua Speed (&gt;0)
-        </button>
-        <button type="button" class="btn-speed-filter" id="btnLowSpeed">
+        <button type="button" class="btn-speed-filter active-low" id="btnLowSpeed">
             <span class="speed-dot" style="background:#1963f2;"></span>
             Low Speed &lt;15 km/h
         </button>
         <button type="button" class="btn-speed-filter" id="btnHighSpeed">
             <span class="speed-dot" style="background:#dc2626;"></span>
-            High Speed &ge;41 km/h
+            High Speed &ge;15 km/h
         </button>
     </div>
 
@@ -577,8 +573,8 @@ $(function() {
         return ids;
     }
 
-    // ---- Speed Filter State — default: Semua Speed aktif ----
-    let activeSpeedFilter = 'all';
+    // ---- Speed Filter State — default: Low Speed aktif ----
+    let activeSpeedFilter = 'low';
 
     // Disable annoying DataTables alert popup (e.g., when AJAX is aborted by clicking another filter quickly)
     $.fn.dataTable.ext.errMode = 'none';
@@ -1121,27 +1117,19 @@ $(function() {
     });
 
     // ---- Speed Filter Toggle Buttons ----
-    $('#btnAllSpeed').click(function() {
-        if (activeSpeedFilter === 'all') return;
-        activeSpeedFilter = 'all';
-        $('.btn-speed-filter').removeClass('active-all active-low active-high');
-        $(this).addClass('active-all');
-        reloadTableNow();
-    });
-
     $('#btnLowSpeed').click(function() {
         if (activeSpeedFilter === 'low') return;
         activeSpeedFilter = 'low';
-        $('.btn-speed-filter').removeClass('active-all active-low active-high');
         $(this).addClass('active-low');
+        $('#btnHighSpeed').removeClass('active-high');
         reloadTableNow();
     });
 
     $('#btnHighSpeed').click(function() {
         if (activeSpeedFilter === 'high') return;
         activeSpeedFilter = 'high';
-        $('.btn-speed-filter').removeClass('active-all active-low active-high');
         $(this).addClass('active-high');
+        $('#btnLowSpeed').removeClass('active-low');
         reloadTableNow();
     });
 });

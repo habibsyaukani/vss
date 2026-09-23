@@ -147,9 +147,8 @@ class SpeedController extends Controller
                           ->where('speed', '<', 15);
                     break;
                 case 'high':
-                    $query->where('speed', '>=', 41);
+                    $query->where('speed', '>=', 15);
                     break;
-                case 'all':
                 default:
                     $query->where('speed', '>', 0);
                     break;
