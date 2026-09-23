@@ -161,7 +161,7 @@ class GpsTrackSyncService
             'errors'        => [],
         ];
 
-        $concurrency = 20; // 20 concurrent requests per batch
+        $concurrency = 4; // Safe concurrency to prevent Howen API 'Requests too frequent' rate limits
         $allRecords = [];
 
         $appTz = config('app.timezone', 'Asia/Makassar');
