@@ -585,6 +585,8 @@ $(function() {
     // ---- DataTables Init ----
     let table = $('#speedTable').on('error.dt', function(e, settings, techNote, message) {
         console.log('DataTables error:', message);
+        $('#tableSkeleton').hide();
+        $('#speedTable tbody').css('opacity', '1');
     }).DataTable({
         processing: true,
         serverSide: true,
@@ -704,10 +706,8 @@ $(function() {
     });
 
     table.on('xhr.dt', function (e, settings, json, xhr) {
-        setTimeout(function() {
-            $('#tableSkeleton').hide();
-            $('#speedTable tbody').css('opacity', '1');
-        }, 300); // Beri sedikit delay agar efek skeleton terasa smooth
+        $('#tableSkeleton').hide();
+        $('#speedTable tbody').css('opacity', '1');
     });
 
     // ---- Reload helper with debounce ----
