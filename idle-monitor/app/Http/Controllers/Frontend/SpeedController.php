@@ -69,20 +69,17 @@ class SpeedController extends Controller
         }
 
         // Filter by specific device IDs (from tree view)
-        if ($deviceIds && is_array($deviceIds)) {
-            $totalDevices = count($deviceMap);
-            if (count($deviceIds) < $totalDevices) {
-                $cleanIds = [];
-                foreach ($deviceIds as $id) {
-                    $strId = (string) $id;
-                    $cleanIds[] = $strId;
-                    $unpadded = ltrim($strId, '0');
-                    if ($unpadded !== '' && $unpadded !== $strId) {
-                        $cleanIds[] = $unpadded;
-                    }
+        if ($deviceIds && is_array($deviceIds) && !empty($deviceIds)) {
+            $cleanIds = [];
+            foreach ($deviceIds as $id) {
+                $strId = (string) $id;
+                $cleanIds[] = $strId;
+                $unpadded = ltrim($strId, '0');
+                if ($unpadded !== '' && $unpadded !== $strId) {
+                    $cleanIds[] = $unpadded;
                 }
-                $query->whereIn('device_id', array_values(array_unique($cleanIds)));
             }
+            $query->whereIn('device_id', array_values(array_unique($cleanIds)));
         }
 
         // Filter by location or series (in-memory lookup)

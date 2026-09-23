@@ -568,7 +568,10 @@ $(function() {
     function getSelectedDeviceIds() {
         let ids = [];
         $('.device-checkbox:checked').each(function() {
-            ids.push($(this).val());
+            let $li = $(this).closest('.tree-child');
+            if ($li.length === 0 || $li.is(':visible')) {
+                ids.push($(this).val());
+            }
         });
         return ids;
     }
