@@ -583,18 +583,15 @@ $(function() {
     $.fn.dataTable.ext.errMode = 'none';
 
     // ---- DataTables Init ----
-    // deferLoading: 0 → DataTables TIDAK akan mengirim AJAX pada load pertama.
-    // Data baru dimuat saat user memilih device/group lalu reloadTable() dipanggil.
     let table = $('#speedTable').on('error.dt', function(e, settings, techNote, message) {
         console.log('DataTables error:', message);
     }).DataTable({
         processing: true,
         serverSide: true,
-        deferLoading: 0,
         bFilter: false,
         scrollX: true,
         language: {
-            emptyTable: '<div class="py-4"><i class="fas fa-search fa-2x mb-2 d-block text-primary"></i><strong>Silakan pilih unit kendaraan</strong><br><small class="text-muted">Centang grup unit di panel kiri atau cari nama unit untuk melihat data speed</small></div>',
+            emptyTable: '<div class="py-4"><i class="fas fa-search fa-2x mb-2 d-block text-primary"></i><strong>Tidak ada data speed ditemukan untuk filter ini</strong></div>',
             zeroRecords: 'Tidak ada data speed ditemukan untuk filter ini'
         },
         ajax: {
