@@ -870,6 +870,7 @@ $(function() {
                 $allGpeParent.find('> .tree-parent').addClass('open');
                 $allGpeChildren.attr('style', 'display: none !important');
             }
+            reloadTable();
         }, 10);
     });
 
