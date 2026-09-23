@@ -72,10 +72,16 @@ class SpeedController extends Controller
         if ($deviceIds && is_array($deviceIds)) {
             $totalDevices = count($deviceMap);
             if (count($deviceIds) < $totalDevices) {
-                $cleanIds = array_map(function($id) {
-                    return ltrim((string)$id, '0');
-                }, $deviceIds);
-                $query->whereIn('device_id', $cleanIds);
+                $cleanIds = [];
+                foreach ($deviceIds as $id) {
+                    $strId = (string) $id;
+                    $cleanIds[] = $strId;
+                    $unpadded = ltrim($strId, '0');
+                    if ($unpadded !== '' && $unpadded !== $strId) {
+                        $cleanIds[] = $unpadded;
+                    }
+                }
+                $query->whereIn('device_id', array_values(array_unique($cleanIds)));
             }
         }
 
@@ -142,6 +148,10 @@ class SpeedController extends Controller
                     break;
                 case 'high':
                     $query->where('speed', '>=', 41);
+                    break;
+                case 'all':
+                default:
+                    $query->where('speed', '>', 0);
                     break;
             }
         } else {
