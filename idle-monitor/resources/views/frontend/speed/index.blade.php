@@ -579,21 +579,24 @@ $(function() {
     // ---- Speed Filter State — default: Low Speed aktif ----
     let activeSpeedFilter = 'low';
 
-    // ---- Flag: apakah ini load pertama kali (all devices selected = skip AJAX) ----
-    let isInitialLoad = true;
-    let totalDeviceCount = {{ $totalDevices ?? 0 }};
-
     // Disable annoying DataTables alert popup (e.g., when AJAX is aborted by clicking another filter quickly)
     $.fn.dataTable.ext.errMode = 'none';
 
     // ---- DataTables Init ----
+    // deferLoading: 0 → DataTables TIDAK akan mengirim AJAX pada load pertama.
+    // Data baru dimuat saat user memilih device/group lalu reloadTable() dipanggil.
     let table = $('#speedTable').on('error.dt', function(e, settings, techNote, message) {
         console.log('DataTables error:', message);
     }).DataTable({
         processing: true,
         serverSide: true,
-        bFilter: false, // Hapus fitur search default DataTables
-        scrollX: true,  // Aktifkan horizontal scroll jika kolom terlalu banyak
+        deferLoading: 0,
+        bFilter: false,
+        scrollX: true,
+        language: {
+            emptyTable: '<div class="py-4"><i class="fas fa-search fa-2x mb-2 d-block text-primary"></i><strong>Silakan pilih unit kendaraan</strong><br><small class="text-muted">Centang grup unit di panel kiri atau cari nama unit untuk melihat data speed</small></div>',
+            zeroRecords: 'Tidak ada data speed ditemukan untuk filter ini'
+        },
         ajax: {
             url: '{{ route('frontend.speed.data') }}',
             type: 'POST',
@@ -607,19 +610,6 @@ $(function() {
                 d.start_date   = $('#filterDate').val();
                 d.end_date     = $('#filterDate').val();
                 d.speed_filter = activeSpeedFilter; // 'low', 'high', or ''
-            },
-            beforeSend: function() {
-                // Jika initial load dan semua device dipilih (tidak ada filter khusus),
-                // batalkan request dan tampilkan pesan panduan
-                let selectedIds = getSelectedDeviceIds();
-                if (isInitialLoad && selectedIds.length >= totalDeviceCount) {
-                    isInitialLoad = false;
-                    $('#tableSkeleton').hide();
-                    $('#speedTable tbody').html('<tr><td colspan="14" class="text-center py-5 text-muted"><i class="fas fa-search fa-2x mb-3 d-block text-primary"></i><strong>Silakan pilih atau cari unit kendaraan terlebih dahulu</strong><br><small>Gunakan kotak pencarian di kiri atau centang grup unit tertentu untuk melihat data speed</small></td></tr>');
-                    $('#speedTable tbody').css('opacity', '1');
-                    return false; // batalkan AJAX
-                }
-                isInitialLoad = false;
             }
         },
         columns: [
