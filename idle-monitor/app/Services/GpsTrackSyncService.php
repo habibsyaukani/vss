@@ -161,7 +161,7 @@ class GpsTrackSyncService
             'errors'        => [],
         ];
 
-        $concurrency = 4; // Safe concurrency to prevent Howen API 'Requests too frequent' rate limits
+        $concurrency = 2; // 2 concurrent requests to stay under Howen API rate limit (~3 req/sec)
         $allRecords = [];
 
         $appTz = config('app.timezone', 'Asia/Makassar');
@@ -225,10 +225,8 @@ class GpsTrackSyncService
                 }
             }
 
-            // Optional delay between large batches to avoid rate limit
-            if ($this->delayMs > 0) {
-                usleep($this->delayMs * 1000);
-            }
+            // Mandatory 600ms delay between batches to respect Howen rate limits
+            usleep(600000);
         }
 
         // Save all collected records across this batch of devices
