@@ -69,6 +69,7 @@ class SpeedController extends Controller
         }
 
         // Filter by specific device IDs (from tree view)
+        // Only apply whereIn if selected devices are a subset of total master devices
         if ($deviceIds && is_array($deviceIds) && !empty($deviceIds)) {
             $cleanIds = [];
             foreach ($deviceIds as $id) {
@@ -79,7 +80,10 @@ class SpeedController extends Controller
                     $cleanIds[] = $unpadded;
                 }
             }
-            $query->whereIn('device_id', array_values(array_unique($cleanIds)));
+            $uniqueCleanIds = array_values(array_unique($cleanIds));
+            if (count($uniqueCleanIds) < $deviceMap->count()) {
+                $query->whereIn('device_id', $uniqueCleanIds);
+            }
         }
 
         // Filter by location or series (in-memory lookup)
@@ -154,9 +158,33 @@ class SpeedController extends Controller
             $query->where('speed', '>', 0);
         }
 
-        // ⚡ True server-side: pass the Eloquent QUERY (not a collection) to DataTables
-        // DataTables will add ORDER BY, LIMIT, OFFSET at the SQL level
-        return DataTables::of($query)
+        // ⚡ Validate DataTables pagination parameters
+        $start = max(0, (int) $request->input('start', 0));
+        $allowedLengths = [50, 100, 200, 300, 500];
+        $reqLength = (int) $request->input('length', 50);
+        $length = in_array($reqLength, $allowedLengths, true) ? $reqLength : 50;
+
+        $fetchLimit = $length + 1;
+
+        // ⚡ Order by gps_time DESC
+        $query->orderBy('gps_time', 'desc');
+
+        // ⚡ Over-fetch data: fetch $length + 1 rows
+        $rawItems = $query->offset($start)->limit($fetchLimit)->get();
+
+        $hasMore = $rawItems->count() > $length;
+        if ($hasMore) {
+            $rawItems->pop(); // remove 51st row
+        }
+
+        $dynamicRecords = $start + $rawItems->count() + ($hasMore ? 1 : 0);
+
+        // ⚡ True server-side without COUNT(*) — pass paginated collection to DataTables
+        return DataTables::of($rawItems)
+            ->skipPaging()
+            ->setTotalRecords($dynamicRecords)
+            ->setFilteredRecords($dynamicRecords)
+            ->with('has_more', $hasMore)
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->id . '">';
             })
@@ -173,9 +201,6 @@ class SpeedController extends Controller
             })
             ->editColumn('gps_time', function($row) {
                 return $row->gps_time ? date('Y-m-d H:i:s', strtotime($row->gps_time)) : '-';
-            })
-            ->orderColumn('gps_time', function($query, $order) {
-                $query->orderBy('gps_time', $order);
             })
             ->rawColumns(['checkbox'])
             ->make(true);

@@ -591,6 +591,7 @@ $(function() {
     }).DataTable({
         processing: true,
         serverSide: true,
+        pagingType: 'simple',
         bFilter: false,
         scrollX: true,
         language: {
@@ -696,7 +697,12 @@ $(function() {
         lengthMenu: [[50, 100, 200, 300, 500], [50, 100, 200, 300, 500]],
         pageLength: 50,
         drawCallback: function(settings) {
-            $('#recordCount').text(settings.json ? (settings.json.recordsFiltered || 0) : 0);
+            if (settings.json) {
+                let count = settings.json.recordsFiltered || 0;
+                let hasMore = settings.json.has_more;
+                let displayText = hasMore ? (count - 1) + '+' : count;
+                $('#recordCount').text(displayText);
+            }
         }
     });
 
