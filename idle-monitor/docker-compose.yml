@@ -115,7 +115,7 @@ services:
     working_dir: /var/www
     environment:
       TZ: Asia/Makassar
-    command: php artisan vss:pull-gps-tracks-loop
+    command: php artisan howen:websocket-listen
     volumes:
       - ./:/var/www
     networks:
