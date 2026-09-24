@@ -165,7 +165,7 @@ class HowenWebsocketListenCommand extends Command
                         Log::info('[HowenWS] Login successful, sending Subscribe');
                         $conn->send(json_encode([
                             'action'  => '80001',
-                            'payload' => ['username' => $this->username]
+                            'payload' => ''
                         ]));
                         Log::info('[HowenWS] Subscribe sent');
                         $this->info('📡 Subscribed to realtime events!');
