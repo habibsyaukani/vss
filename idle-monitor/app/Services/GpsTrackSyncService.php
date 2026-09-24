@@ -361,13 +361,14 @@ class GpsTrackSyncService
         if (empty($records)) return 0;
 
         // ✅ FILTER 2: Skip data dengan createtime dari masa depan (hardware clock rusak)
-        $nowWib = now()->setTimezone('Asia/Jakarta');
-        $records = array_filter($records, function ($item) use ($nowWib) {
+        $timezone = config('app.timezone', 'Asia/Makassar');
+        $nowApp = now()->setTimezone($timezone);
+        $records = array_filter($records, function ($item) use ($nowApp, $timezone) {
             $rawTime = $item['createtime'] ?? null;
             if (!$rawTime) return true; // Kalau tidak ada waktu, biarkan masuk
             try {
-                $t = \Carbon\Carbon::parse($rawTime, 'Asia/Jakarta');
-                return $t->lessThanOrEqualTo($nowWib);
+                $t = \Carbon\Carbon::parse($rawTime, $timezone);
+                return $t->lessThanOrEqualTo($nowApp);
             } catch (\Throwable $e) {
                 return true;
             }
