@@ -51,9 +51,13 @@ class IdleAlarmController extends Controller
         }
 
         // Filter by search keyword (unit name, device ID, location, group)
-        $search = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
-        if (!empty($search)) {
-            $search = trim($search);
+        $rawSearch = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
+        if (is_array($rawSearch)) {
+            $rawSearch = $rawSearch['value'] ?? (reset($rawSearch) ?: '');
+        }
+        $search = is_scalar($rawSearch) ? trim((string)$rawSearch) : '';
+
+        if ($search !== '') {
             $query->where(function($q) use ($search) {
                 $q->where('idle_alarms.device_id', 'LIKE', "%{$search}%")
                   ->orWhere('idle_alarms.device_name', 'LIKE', "%{$search}%")
@@ -64,8 +68,8 @@ class IdleAlarmController extends Controller
         }
 
         // Filter by location
-        if ($request->location) {
-            $loc = str_replace([' ', '.', '-'], '', strtoupper(trim($request->location)));
+        if ($request->filled('location') && is_scalar($request->location)) {
+            $loc = str_replace([' ', '.', '-'], '', strtoupper(trim((string)$request->location)));
             $query->where(function($q) use ($loc) {
                 $q->whereRaw("REPLACE(REPLACE(REPLACE(UPPER(devices.lokasi), ' ', ''), '.', ''), '-', '') LIKE ?", ['%' . $loc . '%'])
                   ->orWhereRaw("REPLACE(REPLACE(REPLACE(UPPER(devices.location), ' ', ''), '.', ''), '-', '') LIKE ?", ['%' . $loc . '%']);
@@ -73,8 +77,8 @@ class IdleAlarmController extends Controller
         }
 
         // Filter by series
-        if ($request->series) {
-            $series = trim($request->series);
+        if ($request->filled('series') && is_scalar($request->series)) {
+            $series = trim((string)$request->series);
             $query->where(function($q) use ($series) {
                 if (strtoupper($series) === 'VOLVO' || strtoupper($series) === 'DT VOLVO') {
                     $q->where('devices.series', 'LIKE', '%VOLVO%')
