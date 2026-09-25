@@ -314,23 +314,29 @@ class HowenWebsocketListenCommand extends Command
         $acc = (isset($payload['basic']['key']) && $payload['basic']['key'] == 1);
 
         try {
-            // 1. Simpan ke gps_tracks_raw
-            $guid = 'ws_' . $deviceId . '_' . time() . '_' . rand(100, 999);
-            $raw = \App\Models\GpsTrackRaw::create([
-                'device_id'   => $deviceId,
-                'device_name' => $deviceName,
-                'guid'        => $guid,
-                'latitude'    => $lat,
-                'longitude'   => $lon,
-                'speed'       => $speed,
-                'direction'   => (int)($loc['direct'] ?? 0),
-                'satellites'  => (int)($loc['satellites'] ?? 0),
-                'altitude'    => (int)($loc['altitude'] ?? 0),
-                'acc_state'   => $acc ? 1 : 0,
-                'gps_time'    => $gpsTimeStr,
-                'report_time' => $gpsTimeStr,
-                'is_later'    => 0,
-            ]);
+            // 1. Simpan ke gps_tracks_raw (Cek apakah record device_id + gps_time sudah ada untuk mencegah duplicate)
+            $raw = \App\Models\GpsTrackRaw::where('device_id', $deviceId)
+                ->where('gps_time', $gpsTimeStr)
+                ->first();
+
+            if (!$raw) {
+                $guid = 'ws_' . $deviceId . '_' . strtotime($gpsTimeStr);
+                $raw = \App\Models\GpsTrackRaw::create([
+                    'device_id'   => $deviceId,
+                    'device_name' => $deviceName,
+                    'guid'        => $guid,
+                    'latitude'    => $lat,
+                    'longitude'   => $lon,
+                    'speed'       => $speed,
+                    'direction'   => (int)($loc['direct'] ?? 0),
+                    'satellites'  => (int)($loc['satellites'] ?? 0),
+                    'altitude'    => (int)($loc['altitude'] ?? 0),
+                    'acc_state'   => $acc ? 1 : 0,
+                    'gps_time'    => $gpsTimeStr,
+                    'report_time' => $gpsTimeStr,
+                    'is_later'    => 0,
+                ]);
+            }
 
             // 2. Simpan ke gps_tracks dengan raw_id
             \App\Models\GpsTrack::updateOrCreate(

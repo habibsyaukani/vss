@@ -747,15 +747,32 @@ $(document).ready(function() {
     });
 
     $('#clearBtn').click(function() {
-        $('.tree-checkbox').prop('checked', false);
+        $('#deviceSearch').val('');
+        $('#locationFilter').val('');
+        $('#seriesFilter').val('');
+        $('#durationFilter').val('');
+        $('.tree-child').css({
+            'background-color': '',
+            'padding': '',
+            'border-radius': '',
+            'display': ''
+        });
+        filterTreeBySeriesLocation();
+        $('.tree-checkbox').prop('checked', true);
         reloadTable();
     });
 
     // ---- Device Search Filter ----
     // Device Search Filter - filters tree by device name in real-time
+    let searchDebounceTimer = null;
     $('#deviceSearch').on('input', function() {
         let searchQuery = $(this).val().toLowerCase().trim();
         
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(function() {
+            reloadTable();
+        }, 400);
+
         console.log('🔍 [SEARCH START] Query:', searchQuery);
         
         if (searchQuery === '') {
@@ -1246,6 +1263,7 @@ $(document).ready(function() {
                 d.duration_range = $('#durationFilter').val();
                 d.location = $('#locationFilter').val();
                 d.series = $('#seriesFilter').val();
+                d.search_keyword = $('#deviceSearch').val();
                 
                 // Collect selected device IDs — only from VISIBLE (filtered) devices
                 // This ensures location+series combined filter works correctly:

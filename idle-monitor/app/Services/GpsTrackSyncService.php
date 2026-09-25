@@ -388,8 +388,9 @@ class GpsTrackSyncService
 
         $now = now()->toDateTimeString();
 
-        // 1. Siapkan semua raw rows
-        $rawRows = [];
+        // 1. Siapkan semua raw rows — skip jika (device_id, gps_time) sudah ada di gps_tracks_raw
+        $candidateMaps = [];
+        $checkTimesByDevice = [];
         foreach ($validRecords as $guid => $item) {
             $rawMap = $this->mapToRaw($item, $deviceId);
             if (isset($rawMap['gps_time']) && $rawMap['gps_time'] instanceof Carbon) {
@@ -397,6 +398,32 @@ class GpsTrackSyncService
             }
             if (isset($rawMap['report_time']) && $rawMap['report_time'] instanceof Carbon) {
                 $rawMap['report_time'] = $rawMap['report_time']->toDateTimeString();
+            }
+            $devId = $rawMap['device_id'] ?? null;
+            $gTime = $rawMap['gps_time'] ?? null;
+            if ($devId && $gTime) {
+                $checkTimesByDevice[$devId][] = $gTime;
+            }
+            $candidateMaps[$guid] = $rawMap;
+        }
+
+        // Batch query existing (device_id, gps_time)
+        $existingDeviceTimes = [];
+        foreach ($checkTimesByDevice as $devId => $times) {
+            $existingTimes = GpsTrackRaw::where('device_id', $devId)
+                ->whereIn('gps_time', array_unique($times))
+                ->pluck('gps_time')
+                ->toArray();
+            foreach ($existingTimes as $t) {
+                $existingDeviceTimes[$devId . '_' . (string)$t] = true;
+            }
+        }
+
+        $rawRows = [];
+        foreach ($candidateMaps as $guid => $rawMap) {
+            $key = ($rawMap['device_id'] ?? '') . '_' . ($rawMap['gps_time'] ?? '');
+            if (isset($existingDeviceTimes[$key])) {
+                continue; // Point already ingested (e.g. via WebSocket), skip
             }
             $rawMap['created_at'] = $now;
             $rawMap['updated_at'] = $now;

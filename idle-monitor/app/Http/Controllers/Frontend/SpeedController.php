@@ -46,30 +46,12 @@ class SpeedController extends Controller
             });
         });
 
-        // ⚡ True server-side query — let MySQL handle pagination via composite index
-        $query = GpsTrackRaw::select(
-                'id',
-                'device_id',
-                'device_name',
-                'longitude',
-                'latitude',
-                'altitude',
-                'speed',
-                'direction',
-                'satellites',
-                'gps_time',
-                'acc_state as is_acc_on',
-                'over_speed as is_overspeed',
-                'urgency as is_emergency'
-            );
-
         $deviceIds = $request->device_ids;
         if (is_string($deviceIds)) {
             $deviceIds = json_decode($deviceIds, true);
         }
 
-        // Filter by specific device IDs (from tree view)
-        // Only apply whereIn if selected devices are a subset of total master devices
+        $uniqueCleanIds = [];
         if ($deviceIds && is_array($deviceIds) && !empty($deviceIds)) {
             $cleanIds = [];
             foreach ($deviceIds as $id) {
@@ -81,12 +63,10 @@ class SpeedController extends Controller
                 }
             }
             $uniqueCleanIds = array_values(array_unique($cleanIds));
-            if (count($uniqueCleanIds) < $deviceMap->count()) {
-                $query->whereIn('device_id', $uniqueCleanIds);
-            }
         }
 
         // Filter by location or series (in-memory lookup)
+        $filteredDevices = null;
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
@@ -109,53 +89,92 @@ class SpeedController extends Controller
                     });
                 }
             }
-            $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
-        // Filter by speed range
-        if ($request->filled('min_speed')) {
-            $query->where('speed', '>=', $request->min_speed);
-        }
-        if ($request->filled('max_speed')) {
-            $query->where('speed', '<=', $request->max_speed);
-        }
+        // ⚡ Scoped, scalable deduplication subquery — scoped by request date & device filters
+        // to avoid scanning all 30+ million rows on production DB
+        $dedupSub = DB::table('gps_tracks_raw')
+            ->select(DB::raw('MAX(id) as max_id'));
 
-        // Filter by overspeed
-        if ($request->filled('overspeed') && $request->overspeed == '1') {
-            $query->where('over_speed', 1);
-        }
-
-        // Filter by ACC status
-        if ($request->filled('acc_on') && $request->acc_on == '1') {
-            $query->where('acc_state', 1);
-        }
-
-        // Filter by date
         if ($request->filled('start_date')) {
-            $query->where('gps_time', '>=', $request->start_date . ' 00:00:00');
+            $dedupSub->where('gps_time', '>=', $request->start_date . ' 00:00:00');
         } else {
-            $query->where('gps_time', '>=', now()->startOfDay());
+            $dedupSub->where('gps_time', '>=', now()->startOfDay());
         }
         if ($request->filled('end_date')) {
-            $query->where('gps_time', '<=', $request->end_date . ' 23:59:59');
+            $dedupSub->where('gps_time', '<=', $request->end_date . ' 23:59:59');
         }
 
-        // Filter by speed mode
+        if (!empty($uniqueCleanIds) && ($deviceMap->isEmpty() || count($uniqueCleanIds) < $deviceMap->count())) {
+            $dedupSub->whereIn('device_id', $uniqueCleanIds);
+        }
+
+        if ($filteredDevices) {
+            $dedupSub->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
+        }
+
+        $dedupSub->groupBy('device_id', 'gps_time');
+
+        $query = GpsTrackRaw::query()
+            ->joinSub($dedupSub, 'dedup', 'gps_tracks_raw.id', '=', 'dedup.max_id')
+            ->select(
+                'gps_tracks_raw.id',
+                'gps_tracks_raw.device_id',
+                'gps_tracks_raw.device_name',
+                'gps_tracks_raw.longitude',
+                'gps_tracks_raw.latitude',
+                'gps_tracks_raw.altitude',
+                'gps_tracks_raw.speed',
+                'gps_tracks_raw.direction',
+                'gps_tracks_raw.satellites',
+                'gps_tracks_raw.gps_time',
+                'gps_tracks_raw.acc_state as is_acc_on',
+                'gps_tracks_raw.over_speed as is_overspeed',
+                'gps_tracks_raw.urgency as is_emergency'
+            );
+
+        if (!empty($uniqueCleanIds) && ($deviceMap->isEmpty() || count($uniqueCleanIds) < $deviceMap->count())) {
+            $query->whereIn('gps_tracks_raw.device_id', $uniqueCleanIds);
+        }
+        if ($filteredDevices) {
+            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+        }
+        if ($request->filled('min_speed')) {
+            $query->where('gps_tracks_raw.speed', '>=', $request->min_speed);
+        }
+        if ($request->filled('max_speed')) {
+            $query->where('gps_tracks_raw.speed', '<=', $request->max_speed);
+        }
+        if ($request->filled('overspeed') && $request->overspeed == '1') {
+            $query->where('gps_tracks_raw.over_speed', 1);
+        }
+        if ($request->filled('acc_on') && $request->acc_on == '1') {
+            $query->where('gps_tracks_raw.acc_state', 1);
+        }
+        if ($request->filled('start_date')) {
+            $query->where('gps_tracks_raw.gps_time', '>=', $request->start_date . ' 00:00:00');
+        } else {
+            $query->where('gps_tracks_raw.gps_time', '>=', now()->startOfDay());
+        }
+        if ($request->filled('end_date')) {
+            $query->where('gps_tracks_raw.gps_time', '<=', $request->end_date . ' 23:59:59');
+        }
         if ($request->filled('speed_filter')) {
             switch ($request->speed_filter) {
                 case 'low':
-                    $query->where('speed', '>', 0)
-                          ->where('speed', '<', 15);
+                    $query->where('gps_tracks_raw.speed', '>', 0)->where('gps_tracks_raw.speed', '<', 15);
                     break;
                 case 'high':
-                    $query->where('speed', '>=', 15);
+                    $query->where('gps_tracks_raw.speed', '>=', 15);
+                    break;
+                case 'all':
                     break;
                 default:
-                    $query->where('speed', '>', 0);
+                    $query->where('gps_tracks_raw.speed', '>', 0);
                     break;
             }
         } else {
-            $query->where('speed', '>', 0);
+            $query->where('gps_tracks_raw.speed', '>', 0);
         }
 
         // ⚡ Validate DataTables pagination parameters

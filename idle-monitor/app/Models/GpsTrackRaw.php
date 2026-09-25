@@ -49,7 +49,7 @@ class GpsTrackRaw extends Model
     protected $casts = [
         'longitude' => 'decimal:7',
         'latitude' => 'decimal:7',
-        'speed' => 'integer',
+        'speed' => 'float',
         'gps_time' => 'datetime',
         'report_time' => 'datetime',
         'state_json' => 'array',

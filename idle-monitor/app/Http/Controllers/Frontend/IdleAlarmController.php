@@ -50,6 +50,19 @@ class IdleAlarmController extends Controller
             $query->where('idle_alarms.alarm_status', $request->status);
         }
 
+        // Filter by search keyword (unit name, device ID, location, group)
+        $search = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
+        if (!empty($search)) {
+            $search = trim($search);
+            $query->where(function($q) use ($search) {
+                $q->where('idle_alarms.device_id', 'LIKE', "%{$search}%")
+                  ->orWhere('idle_alarms.device_name', 'LIKE', "%{$search}%")
+                  ->orWhere('devices.group_name', 'LIKE', "%{$search}%")
+                  ->orWhere('devices.lokasi', 'LIKE', "%{$search}%")
+                  ->orWhere('devices.location', 'LIKE', "%{$search}%");
+            });
+        }
+
         // Filter by location
         if ($request->location) {
             $loc = str_replace([' ', '.', '-'], '', strtoupper(trim($request->location)));
