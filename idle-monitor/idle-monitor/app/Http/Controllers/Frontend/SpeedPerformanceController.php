@@ -39,21 +39,22 @@ class SpeedPerformanceController extends Controller
             });
         });
 
-        $query = GpsTrackRaw::select(
-                'gps_tracks_raw.device_id',
-                'gps_tracks_raw.device_name',
-                DB::raw('AVG(gps_tracks_raw.speed) as avg_speed'),
-                DB::raw('MAX(gps_tracks_raw.speed) as max_speed')
+        $query = \App\Models\GpsHourlyStat::select(
+                'device_id',
+                'device_name',
+                DB::raw('SUM(total_records) as total_gps_records'),
+                DB::raw('CASE WHEN SUM(total_records) > 0 THEN SUM(sum_speed) / SUM(total_records) ELSE 0 END as avg_speed'),
+                DB::raw('MAX(max_speed) as max_speed')
             )
-            ->where('gps_tracks_raw.speed', '>', 0)
-            ->groupBy('gps_tracks_raw.device_id', 'gps_tracks_raw.device_name');
+            ->where('total_records', '>', 0)
+            ->groupBy('device_id', 'device_name');
 
         // Filter by specific device IDs (from tree view)
         if ($request->device_ids && is_array($request->device_ids)) {
             $totalDevices = count($deviceMap);
             if (count($request->device_ids) < $totalDevices) {
                 $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $request->device_ids);
-                $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
+                $query->whereIn('device_id', $cleanIds);
             }
         }
 
@@ -61,66 +62,102 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
+                $loc = trim(strtoupper($request->location));
+                $filteredDevices = $filteredDevices->filter(function($d) use ($loc) {
+                    $dLoc = strtoupper($d->location ?? '');
+                    $dLok = strtoupper($d->lokasi ?? '');
+                    return str_contains($dLoc, $loc) || str_contains($dLok, $loc);
+                });
             }
             if ($request->filled('series')) {
-                $seriesParam = strtoupper($request->series);
-                if ($seriesParam === 'VOLVO') {
-                    $filteredDevices = $filteredDevices->filter(fn($d) => stripos($d->series, 'FMX') !== false);
+                $series = trim(strtoupper($request->series));
+                if ($series === 'VOLVO' || $series === 'DT VOLVO') {
+                    $filteredDevices = $filteredDevices->filter(function($d) {
+                        return stripos($d->series, 'FMX') !== false || stripos($d->series, 'VOLVO') !== false;
+                    });
                 } else {
-                    $filteredDevices = $filteredDevices->where('series', $request->series);
+                    $filteredDevices = $filteredDevices->filter(function($d) use ($series) {
+                        return stripos($d->series, $series) !== false;
+                    });
                 }
             }
-            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+            $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
         // Date and Shift Filter
         $date = $request->input('date', date('Y-m-d'));
         $shift = $request->input('shift', 'shift1');
 
-        $startDateTime = $date . ' 00:00:00';
-        $endDateTime = $date . ' 23:59:59';
-        $timeLabel = $date;
-
         if ($shift === 'shift1') {
-            $startDateTime = $date . ' 07:00:00';
-            $endDateTime = $date . ' 19:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [7, 18]);
             $timeLabel = $date . "\n07:00 - 19:00\nSHIFT 1";
         } elseif ($shift === 'shift2') {
-            $startDateTime = $date . ' 19:00:00';
-            $endDateTime = date('Y-m-d', strtotime($date . ' +1 day')) . ' 07:00:00';
+            $nextDate = date('Y-m-d', strtotime($date . ' +1 day'));
+            $query->where(function($q) use ($date, $nextDate) {
+                $q->where(function($q1) use ($date) {
+                    $q1->where('record_date', $date)->where('record_hour', '>=', 19);
+                })->orWhere(function($q2) use ($nextDate) {
+                    $q2->where('record_date', $nextDate)->where('record_hour', '<=', 6);
+                });
+            });
             $timeLabel = $date . "\n19:00 - 07:00\nSHIFT 2";
         } elseif ($shift === 'op_malam') {
-            $startDateTime = $date . ' 18:00:00';
-            $endDateTime = $date . ' 23:59:59';
+            $query->where('record_date', $date)->whereBetween('record_hour', [18, 23]);
             $timeLabel = $date . "\n18:00 - 23:59\nOP. MALAM";
         } elseif ($shift === 'op_dini_hari') {
-            $startDateTime = $date . ' 00:00:00';
-            $endDateTime = $date . ' 07:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [0, 6]);
             $timeLabel = $date . "\n00:00 - 07:00\nOP. DINI HARI";
         } elseif ($shift === 'op_pagi') {
-            $startDateTime = $date . ' 07:00:00';
-            $endDateTime = $date . ' 12:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [7, 11]);
             $timeLabel = $date . "\n07:00 - 12:00\nOP. PAGI";
         } elseif ($shift === 'op_siang') {
-            $startDateTime = $date . ' 12:00:00';
-            $endDateTime = $date . ' 18:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [12, 17]);
             $timeLabel = $date . "\n12:00 - 18:00\nOP. SIANG";
-        } elseif ($shift === 'full') {
-            $startDateTime = $date . ' 00:00:00';
-            $endDateTime = $date . ' 23:59:59';
+        } else {
+            $query->where('record_date', $date);
             $timeLabel = $date . "\n00:00 - 23:59\nFULL DAY";
         }
 
-        $query->where('gps_tracks_raw.gps_time', '>=', $startDateTime)
-              ->where('gps_tracks_raw.gps_time', '<=', $endDateTime);
+        if ($request->filled('hour')) {
+            $query->where('record_hour', (int)$request->hour);
+        }
+
+        // Search Keyword Filter (DataTables global search)
+        $rawSearch = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
+        if (is_array($rawSearch)) {
+            $rawSearch = $rawSearch['value'] ?? (reset($rawSearch) ?: '');
+        }
+        $search = is_scalar($rawSearch) ? trim((string)$rawSearch) : '';
+
+        if ($search !== '') {
+            $matchingDeviceIds = $deviceMap->filter(function($d) use ($search) {
+                $devName = $d->device_name ?? '';
+                $devId   = (string)($d->device_id ?? '');
+                return stripos($devName, $search) !== false || stripos($devId, $search) !== false;
+            })->pluck('device_id')->map(function($id) {
+                return (string)$id;
+            })->toArray();
+
+            $query->where(function($q) use ($search, $matchingDeviceIds) {
+                $q->where('device_id', 'LIKE', "%{$search}%")
+                  ->orWhere('device_name', 'LIKE', "%{$search}%");
+                if (!empty($matchingDeviceIds)) {
+                    $q->orWhereIn('device_id', $matchingDeviceIds);
+                }
+            });
+        }
 
         $summaryQuery = clone $query;
         $summary = $summaryQuery->get();
         $overallAvg = $summary->avg('avg_speed') ?? 0;
         $overallMax = $summary->max('max_speed') ?? 0;
+        $totalGpsRecords = $summary->sum('total_gps_records') ?? 0;
+        $totalMatchingDevices = $summary->count();
 
         return DataTables::of($query)
+            ->filter(function($q) {
+                // Search is already applied manually to $query above before cloning $summaryQuery
+            })
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->device_id . '">';
             })
@@ -141,7 +178,8 @@ class SpeedPerformanceController extends Controller
             ->with([
                 'summaryAvg' => round($overallAvg, 1),
                 'summaryMax' => round($overallMax, 1),
-                'totalRecords' => $summary->count()
+                'totalRecords' => $totalGpsRecords,
+                'totalDevices' => $totalMatchingDevices,
             ])
             ->make(true);
     }
@@ -157,20 +195,20 @@ class SpeedPerformanceController extends Controller
             });
         });
 
-        $query = GpsTrackRaw::select(
-                'gps_tracks_raw.device_id',
-                'gps_tracks_raw.device_name',
-                DB::raw('AVG(gps_tracks_raw.speed) as avg_speed'),
-                DB::raw('MAX(gps_tracks_raw.speed) as max_speed')
+        $query = \App\Models\GpsHourlyStat::select(
+                'device_id',
+                'device_name',
+                DB::raw('CASE WHEN SUM(total_records) > 0 THEN SUM(sum_speed) / SUM(total_records) ELSE 0 END as avg_speed'),
+                DB::raw('MAX(max_speed) as max_speed')
             )
-            ->where('gps_tracks_raw.speed', '>', 0)
-            ->groupBy('gps_tracks_raw.device_id', 'gps_tracks_raw.device_name');
+            ->where('total_records', '>', 0)
+            ->groupBy('device_id', 'device_name');
 
         $isExportSelected = false;
         if ($request->filled('export_type') && $request->export_type === 'selected' && $request->filled('row_ids')) {
             $rowIds = explode(',', $request->row_ids);
             if (!empty($rowIds)) {
-                $query->whereIn('gps_tracks_raw.device_id', $rowIds);
+                $query->whereIn('device_id', $rowIds);
                 $isExportSelected = true;
             }
         } else {
@@ -179,7 +217,7 @@ class SpeedPerformanceController extends Controller
                 $totalDevices = count($deviceMap);
                 if (count($deviceIds) < $totalDevices) {
                     $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $deviceIds);
-                    $query->whereIn('gps_tracks_raw.device_id', $cleanIds);
+                    $query->whereIn('device_id', $cleanIds);
                 }
             }
         }
@@ -187,56 +225,89 @@ class SpeedPerformanceController extends Controller
         if ($request->filled('location') || $request->filled('series')) {
             $filteredDevices = $deviceMap;
             if ($request->filled('location')) {
-                $filteredDevices = $filteredDevices->where('lokasi', $request->location);
+                $loc = trim(strtoupper($request->location));
+                $filteredDevices = $filteredDevices->filter(function($d) use ($loc) {
+                    $dLoc = strtoupper($d->location ?? '');
+                    $dLok = strtoupper($d->lokasi ?? '');
+                    return str_contains($dLoc, $loc) || str_contains($dLok, $loc);
+                });
             }
             if ($request->filled('series')) {
-                $seriesParam = strtoupper($request->series);
-                if ($seriesParam === 'VOLVO') {
-                    $filteredDevices = $filteredDevices->filter(fn($d) => stripos($d->series, 'FMX') !== false);
+                $series = trim(strtoupper($request->series));
+                if ($series === 'VOLVO' || $series === 'DT VOLVO') {
+                    $filteredDevices = $filteredDevices->filter(function($d) {
+                        return stripos($d->series, 'FMX') !== false || stripos($d->series, 'VOLVO') !== false;
+                    });
                 } else {
-                    $filteredDevices = $filteredDevices->where('series', $request->series);
+                    $filteredDevices = $filteredDevices->filter(function($d) use ($series) {
+                        return stripos($d->series, $series) !== false;
+                    });
                 }
             }
-            $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
+            $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
         }
 
         $date = $request->input('date', date('Y-m-d'));
         $shift = $request->input('shift', 'shift1');
 
-        $startDateTime = $date . ' 00:00:00';
-        $endDateTime = $date . ' 23:59:59';
-        $timeLabel = $date;
-
         if ($shift === 'shift1') {
-            $startDateTime = $date . ' 07:00:00';
-            $endDateTime = $date . ' 19:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [7, 18]);
             $timeLabel = "Shift 1 (07:00 - 19:00)";
         } elseif ($shift === 'shift2') {
-            $startDateTime = $date . ' 19:00:00';
-            $endDateTime = date('Y-m-d', strtotime($date . ' +1 day')) . ' 07:00:00';
+            $nextDate = date('Y-m-d', strtotime($date . ' +1 day'));
+            $query->where(function($q) use ($date, $nextDate) {
+                $q->where(function($q1) use ($date) {
+                    $q1->where('record_date', $date)->where('record_hour', '>=', 19);
+                })->orWhere(function($q2) use ($nextDate) {
+                    $q2->where('record_date', $nextDate)->where('record_hour', '<=', 6);
+                });
+            });
             $timeLabel = "Shift 2 (19:00 - 07:00)";
         } elseif ($shift === 'op_malam') {
-            $startDateTime = $date . ' 18:00:00';
-            $endDateTime = $date . ' 23:59:59';
+            $query->where('record_date', $date)->whereBetween('record_hour', [18, 23]);
             $timeLabel = "Operasional Malam (18:00 - 23:59)";
         } elseif ($shift === 'op_dini_hari') {
-            $startDateTime = $date . ' 00:00:00';
-            $endDateTime = $date . ' 07:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [0, 6]);
             $timeLabel = "Operasional Dini Hari (00:00 - 07:00)";
         } elseif ($shift === 'op_pagi') {
-            $startDateTime = $date . ' 07:00:00';
-            $endDateTime = $date . ' 12:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [7, 11]);
             $timeLabel = "Operasional Pagi (07:00 - 12:00)";
         } elseif ($shift === 'op_siang') {
-            $startDateTime = $date . ' 12:00:00';
-            $endDateTime = $date . ' 18:00:00';
+            $query->where('record_date', $date)->whereBetween('record_hour', [12, 17]);
             $timeLabel = "Operasional Siang (12:00 - 18:00)";
-        } elseif ($shift === 'full') {
+        } else {
+            $query->where('record_date', $date);
             $timeLabel = "Full Day (00:00 - 23:59)";
         }
 
-        $query->where('gps_tracks_raw.gps_time', '>=', $startDateTime)
-              ->where('gps_tracks_raw.gps_time', '<=', $endDateTime);
+        if ($request->filled('hour')) {
+            $query->where('record_hour', (int)$request->hour);
+        }
+
+        // Search Keyword Filter
+        $rawSearch = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
+        if (is_array($rawSearch)) {
+            $rawSearch = $rawSearch['value'] ?? (reset($rawSearch) ?: '');
+        }
+        $search = is_scalar($rawSearch) ? trim((string)$rawSearch) : '';
+
+        if ($search !== '') {
+            $matchingDeviceIds = $deviceMap->filter(function($d) use ($search) {
+                $devName = $d->device_name ?? '';
+                $devId   = (string)($d->device_id ?? '');
+                return stripos($devName, $search) !== false || stripos($devId, $search) !== false;
+            })->pluck('device_id')->map(function($id) {
+                return (string)$id;
+            })->toArray();
+
+            $query->where(function($q) use ($search, $matchingDeviceIds) {
+                $q->where('device_id', 'LIKE', "%{$search}%")
+                  ->orWhere('device_name', 'LIKE', "%{$search}%");
+                if (!empty($matchingDeviceIds)) {
+                    $q->orWhereIn('device_id', $matchingDeviceIds);
+                }
+            });
+        }
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['use_queue' => false]);

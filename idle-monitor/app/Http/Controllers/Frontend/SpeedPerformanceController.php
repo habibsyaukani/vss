@@ -118,6 +118,35 @@ class SpeedPerformanceController extends Controller
             $timeLabel = $date . "\n00:00 - 23:59\nFULL DAY";
         }
 
+        if ($request->filled('hour')) {
+            $query->where('record_hour', (int)$request->hour);
+        }
+
+        // Search Keyword Filter (DataTables global search)
+        $rawSearch = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
+        if (is_array($rawSearch)) {
+            $rawSearch = $rawSearch['value'] ?? (reset($rawSearch) ?: '');
+        }
+        $search = is_scalar($rawSearch) ? trim((string)$rawSearch) : '';
+
+        if ($search !== '') {
+            $matchingDeviceIds = $deviceMap->filter(function($d) use ($search) {
+                $devName = $d->device_name ?? '';
+                $devId   = (string)($d->device_id ?? '');
+                return stripos($devName, $search) !== false || stripos($devId, $search) !== false;
+            })->pluck('device_id')->map(function($id) {
+                return (string)$id;
+            })->toArray();
+
+            $query->where(function($q) use ($search, $matchingDeviceIds) {
+                $q->where('device_id', 'LIKE', "%{$search}%")
+                  ->orWhere('device_name', 'LIKE', "%{$search}%");
+                if (!empty($matchingDeviceIds)) {
+                    $q->orWhereIn('device_id', $matchingDeviceIds);
+                }
+            });
+        }
+
         $summaryQuery = clone $query;
         $summary = $summaryQuery->get();
         $overallAvg = $summary->avg('avg_speed') ?? 0;
@@ -126,6 +155,9 @@ class SpeedPerformanceController extends Controller
         $totalMatchingDevices = $summary->count();
 
         return DataTables::of($query)
+            ->filter(function($q) {
+                // Search is already applied manually to $query above before cloning $summaryQuery
+            })
             ->addColumn('checkbox', function($row){
                 return '<input type="checkbox" class="row-checkbox" value="' . $row->device_id . '">';
             })
@@ -246,6 +278,35 @@ class SpeedPerformanceController extends Controller
         } else {
             $query->where('record_date', $date);
             $timeLabel = "Full Day (00:00 - 23:59)";
+        }
+
+        if ($request->filled('hour')) {
+            $query->where('record_hour', (int)$request->hour);
+        }
+
+        // Search Keyword Filter
+        $rawSearch = $request->search_keyword ?? $request->input('search.value') ?? $request->search;
+        if (is_array($rawSearch)) {
+            $rawSearch = $rawSearch['value'] ?? (reset($rawSearch) ?: '');
+        }
+        $search = is_scalar($rawSearch) ? trim((string)$rawSearch) : '';
+
+        if ($search !== '') {
+            $matchingDeviceIds = $deviceMap->filter(function($d) use ($search) {
+                $devName = $d->device_name ?? '';
+                $devId   = (string)($d->device_id ?? '');
+                return stripos($devName, $search) !== false || stripos($devId, $search) !== false;
+            })->pluck('device_id')->map(function($id) {
+                return (string)$id;
+            })->toArray();
+
+            $query->where(function($q) use ($search, $matchingDeviceIds) {
+                $q->where('device_id', 'LIKE', "%{$search}%")
+                  ->orWhere('device_name', 'LIKE', "%{$search}%");
+                if (!empty($matchingDeviceIds)) {
+                    $q->orWhereIn('device_id', $matchingDeviceIds);
+                }
+            });
         }
 
         if ($request->ajax() || $request->wantsJson()) {

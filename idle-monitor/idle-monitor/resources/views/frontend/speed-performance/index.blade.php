@@ -372,7 +372,7 @@
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
-                                <li class="tree-child" data-device-name="{{ strtolower($device->device_name) }}" data-location="{{ $device->lokasi ?? '' }}" data-series="{{ $device->series ?? '' }}">
+                                <li class="tree-child" data-device-name="{{ strtolower($device->device_name) }}" data-location="{{ strtoupper(trim($device->lokasi ?: ($device->location ?? ''))) }}" data-series="{{ strtoupper(trim($device->series ?? '')) }}">
                                     <input type="checkbox" class="tree-checkbox device-checkbox" value="{{ $device->device_id }}" checked data-group="{{ Str::slug($groupName) }}">
                                     @php
                                         $dIcon = 'fa-car';
@@ -553,6 +553,7 @@ $(document).ready(function() {
                     d.date = $('#filterDate').val();
                     d.shift = $('#filterShift').val();
                     d.hour = $('#filterHour').val();
+                    d.search_keyword = (d.search && d.search.value) ? d.search.value : '';
                 },
                 dataSrc: function(json) {
                     // Update summary cards
@@ -564,6 +565,11 @@ $(document).ready(function() {
                     }
                     if(json.totalRecords !== undefined) {
                         $('#cardTotalRecords').text(json.totalRecords.toLocaleString());
+                    }
+                    if(json.totalDevices !== undefined) {
+                        $('#cardDevices').text(json.totalDevices.toLocaleString());
+                        $('#unitCountBadge').text(json.totalDevices + ' unit');
+                    } else if(json.data) {
                         $('#cardDevices').text(json.data.length.toLocaleString());
                         $('#unitCountBadge').text(json.data.length + ' unit');
                     }
@@ -738,17 +744,21 @@ $(document).ready(function() {
             let shouldShow = true;
             
             // Check location match
-            if (location && deviceLocation !== location) {
-                shouldShow = false;
+            if (location) {
+                let normLoc = location.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
+                    shouldShow = false;
+                }
             }
             
             // Check series match  
             if (series && shouldShow) {
-                let normalizedSelected = series.trim().toUpperCase().replace(/\s+/g, ' ');
-                let normalizedDevice = (deviceSeries || '').trim().toUpperCase().replace(/\s+/g, ' ');
+                let normalizedSelected = series.trim().toUpperCase().replace(/[\s\.-]/g, '');
+                let normalizedDevice = deviceSeries.trim().toUpperCase().replace(/[\s\.-]/g, '');
                 
-                if (series.toUpperCase() === 'VOLVO') {
-                    if (normalizedDevice !== 'VOLVO') {
+                if (normalizedSelected === 'VOLVO' || normalizedSelected === 'DTVOLVO') {
+                    if (!normalizedDevice.includes('VOLVO')) {
                         shouldShow = false;
                     }
                 } else {
@@ -897,7 +907,8 @@ $(document).ready(function() {
             series: $('#seriesFilter').val(),
             date: $('#filterDate').val(),
             shift: $('#filterShift').val(),
-            hour: $('#filterHour').val()
+            hour: $('#filterHour').val(),
+            search_keyword: (table && table.search) ? table.search() : ''
         };
 
         if (exportType === 'selected') {

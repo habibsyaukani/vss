@@ -553,6 +553,7 @@ $(document).ready(function() {
                     d.date = $('#filterDate').val();
                     d.shift = $('#filterShift').val();
                     d.hour = $('#filterHour').val();
+                    d.search_keyword = (d.search && d.search.value) ? d.search.value : '';
                 },
                 dataSrc: function(json) {
                     // Update summary cards
@@ -906,7 +907,8 @@ $(document).ready(function() {
             series: $('#seriesFilter').val(),
             date: $('#filterDate').val(),
             shift: $('#filterShift').val(),
-            hour: $('#filterHour').val()
+            hour: $('#filterHour').val(),
+            search_keyword: (table && table.search) ? table.search() : ''
         };
 
         if (exportType === 'selected') {
