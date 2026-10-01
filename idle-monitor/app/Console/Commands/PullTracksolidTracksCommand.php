@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Device;
+use App\Services\TracksolidApiService;
 use App\Services\TracksolidTrackService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -27,7 +28,7 @@ class PullTracksolidTracksCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(TracksolidTrackService $trackService)
+    public function handle(TracksolidApiService $apiService, TracksolidTrackService $trackService)
     {
         $imei = $this->argument('imei');
         $hours = (int) $this->option('hours');
@@ -42,19 +43,54 @@ class PullTracksolidTracksCommand extends Command
         $this->info("Starting Tracksolid Track Pull");
         $this->info("Time Range: {$beginTimeStr} to {$endTimeStr}");
 
+        // Fetch official IMEI list from Tracksolid API (cached for 30 minutes when successful)
+        $officialImeis = $apiService->getOfficialDeviceImeis();
+
         if ($imei) {
-            $devices = Device::where('imei', $imei)->orWhere('device_id', $imei)->get();
-            if ($devices->isEmpty()) {
-                $this->error("Device with IMEI/ID {$imei} not found in local DB.");
+            if (!in_array($imei, $officialImeis)) {
+                $this->error("IMEI/ID {$imei} is not present in official Tracksolid device list.");
+                Log::warning("[Track Pull] Specified IMEI {$imei} is not in official Tracksolid device list.");
                 return 1;
             }
+
+            $device = Device::where('status', 'active')
+                ->where('imei', $imei)
+                ->first();
+            if (!$device) {
+                $this->warn("Warning: Official Tracksolid device with IMEI {$imei} has no local Device mapping in DB.");
+                Log::warning("[Track Pull] Official Tracksolid device IMEI {$imei} has no local Device mapping in database.");
+                return 1;
+            }
+
+            $devices = collect([$device]);
         } else {
-            // Pull for all active devices
+            if (empty($officialImeis)) {
+                $this->error("Cannot pull tracks: Official Tracksolid device list could not be retrieved or is empty.");
+                return 1;
+            }
+
+            // Pull only active local devices whose imei exists in the official Tracksolid IMEI list
             $devices = Device::where('status', 'active')
-                             ->whereNotNull('imei')
-                             ->where('imei', '!=', '')
+                             ->whereIn('imei', $officialImeis)
                              ->get();
-            $this->info("Found {$devices->count()} active devices.");
+
+            // Log warning for any official Tracksolid device that has no local active mapping
+            $matchedImeis = $devices->pluck('imei')->filter()->toArray();
+            $matchedSet = array_flip($matchedImeis);
+
+            foreach ($officialImeis as $offImei) {
+                if (!isset($matchedSet[$offImei])) {
+                    $this->warn("Warning: Official Tracksolid device IMEI {$offImei} has no local active Device mapping in DB.");
+                    Log::warning("[Track Pull] Official Tracksolid device IMEI {$offImei} has no local active Device mapping in database.");
+                }
+            }
+
+            $this->info("Found " . $devices->count() . " active local devices matching official Tracksolid device list (out of " . count($officialImeis) . " official devices).");
+        }
+
+        if ($devices->isEmpty()) {
+            $this->warn("No matching active devices to process.");
+            return 0;
         }
 
         $totalFetched = 0;

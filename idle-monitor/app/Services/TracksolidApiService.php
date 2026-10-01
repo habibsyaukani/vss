@@ -121,6 +121,52 @@ class TracksolidApiService
     }
 
     /**
+     * Fetch list of official device IMEIs registered under the Tracksolid account.
+     * Cached for 30 minutes (1800 seconds) only when successful and non-empty.
+     */
+    public function getOfficialDeviceImeis(): array
+    {
+        $cacheKey = 'tracksolid_official_imeis';
+
+        if (Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && !empty($cached)) {
+                return $cached;
+            }
+        }
+
+        if (empty($this->username)) {
+            Log::warning("[Tracksolid API] Cannot fetch official device list: TRACKSOLID_USERNAME is not configured.");
+            return [];
+        }
+
+        $response = $this->callApi('jimi.user.device.list', [
+            'target' => $this->username,
+        ]);
+
+        if (!$response['success'] || empty($response['result'])) {
+            Log::warning("[Tracksolid API] Failed to fetch official device list or empty result: " . ($response['message'] ?? 'Empty result'));
+            return [];
+        }
+
+        $devices = $response['result'] ?? [];
+        $imeis = [];
+        foreach ($devices as $device) {
+            if (!empty($device['imei'])) {
+                $imeis[] = (string) $device['imei'];
+            }
+        }
+
+        $uniqueImeis = array_values(array_unique($imeis));
+
+        if (!empty($uniqueImeis)) {
+            Cache::put($cacheKey, $uniqueImeis, 1800);
+        }
+
+        return $uniqueImeis;
+    }
+
+    /**
      * Generate MD5 signature based on Tracksolid logic
      */
     private function generateSignature(array $params): string
@@ -145,7 +191,7 @@ class TracksolidApiService
         // 5. Calculate MD5 and convert to uppercase
         $sign = strtoupper(md5($fullStr));
         
-        Log::info("[Tracksolid API] Sign Payload: {$fullStr} -> {$sign}");
+        Log::debug("[Tracksolid API] Generated signature for method: " . ($params['method'] ?? 'unknown'));
         
         return $sign;
     }
