@@ -47,13 +47,13 @@ class ProcessIdleAlarmJob implements ShouldQueue
             $skipped = 0;
             $maxRecordsPerRun = 5000; // Max 5000 alarms per job run to prevent DB lock & worker hogging
 
-            // Count pending alarms to process
-            $pendingCount = \App\Models\AlarmRaw::where('alarm_type', 32)
+            // Check if there are any pending alarms to process
+            $hasPending = \App\Models\AlarmRaw::where('alarm_type', 32)
                 ->where('alarm_state', 0)
                 ->where('is_processed', 0)
-                ->count();
+                ->exists();
 
-            if ($pendingCount === 0) {
+            if (!$hasPending) {
                 SystemLogger::success('PROCESSING', 'No new idle alarms to process', [
                     'reason' => 'All alarm_raw records already processed or no Type 32 alarms found',
                 ]);
@@ -69,10 +69,14 @@ class ProcessIdleAlarmJob implements ShouldQueue
                 return;
             }
 
-            SystemLogger::success('PROCESSING', "Found {$pendingCount} new idle alarms to process");
+            SystemLogger::success('PROCESSING', "Found new idle alarms to process");
 
-            // ✅ OPTIMASI: Loop do-while mengambil 500 record belum diproses per iterasi
-            // Order BY ID DESC agar data TERBARU (hari ini) diproses TERLEBIH DAHULU
+            // Evaluate Schema column presence ONCE before the chunk loop
+            $hasAlarmStateColumn = \Illuminate\Support\Facades\Schema::hasColumn('idle_alarms', 'alarm_state');
+            $hasDeviceSerialColumn = \Illuminate\Support\Facades\Schema::hasColumn('devices', 'serial_no');
+
+            // ✅ OPTIMASI: Loop do-while mengambil 500 record belum dipproses per iterasi
+            // Order BY ID DESC agar data TERBARU (hari ini) dipproses TERLEBIH DAHULU
             do {
                 $alarms = \App\Models\AlarmRaw::where('alarm_type', 32)
                     ->where('alarm_state', 0)
@@ -87,6 +91,14 @@ class ProcessIdleAlarmJob implements ShouldQueue
 
                 SystemLogger::success('PROCESSING', "Processing chunk of alarms", ['count' => $alarms->count()]);
                 $chunkRawIds = [];
+                $idleDataBatch = [];
+                $now = now();
+
+                // Pre-fetch Device serial_no map for the current chunk
+                $deviceIds = $alarms->pluck('device_id')->filter()->unique()->toArray();
+                $deviceMap = (!empty($deviceIds) && $hasDeviceSerialColumn)
+                    ? \App\Models\Device::whereIn('device_id', $deviceIds)->pluck('serial_no', 'device_id')->toArray()
+                    : [];
 
                 foreach ($alarms as $alarmRaw) {
                     $chunkRawIds[] = $alarmRaw->id;
@@ -166,9 +178,8 @@ class ProcessIdleAlarmJob implements ShouldQueue
                             $endLong = (float)$endLong;
                         }
 
-                        // Get serial_no from devices table
-                        $device = \App\Models\Device::where('device_id', $alarmRaw->device_id)->first();
-                        $serialNo = $device ? $device->serial_no : null;
+                        // Get serial_no from pre-fetched device map
+                        $serialNo = $deviceMap[$alarmRaw->device_id] ?? null;
 
                         // ✅ Use start_detail from alarm_raw directly (already mapped from alarmvalue)
                         // No need to create synthetic dur:0 - use actual technical data
@@ -177,6 +188,7 @@ class ProcessIdleAlarmJob implements ShouldQueue
                         
                         // Data untuk disimpan ke idle_alarms
                         $idleData = [
+                            'guid'               => $alarmRaw->guid,
                             'serial_no'          => $serialNo,
                             'device_id'          => $alarmRaw->device_id,
                             'device_name'        => $alarmRaw->device_name,
@@ -197,19 +209,16 @@ class ProcessIdleAlarmJob implements ShouldQueue
                             'longitude_start'    => $startLong,
                             'latitude_end'       => $endLat,
                             'longitude_end'      => $endLong,
+                            'created_at'         => $now,
+                            'updated_at'         => $now,
                         ];
 
-                        // Tambah alarm_state jika kolom sudah ada di tabel
-                        if (\Illuminate\Support\Facades\Schema::hasColumn('idle_alarms', 'alarm_state')) {
+                        // Tambah alarm_state jika kolom ada di tabel
+                        if ($hasAlarmStateColumn) {
                             $idleData['alarm_state'] = $alarmState;
                         }
 
-                        // Create or update idle_alarm (only valid ones)
-                        \App\Models\IdleAlarm::updateOrCreate(
-                            ['guid' => $alarmRaw->guid],
-                            $idleData
-                        );
-
+                        $idleDataBatch[] = $idleData;
                         $processed++;
                         
                         // Update processLog every 100 records to show progress
@@ -235,6 +244,27 @@ class ProcessIdleAlarmJob implements ShouldQueue
                             $e
                         );
                     }
+                }
+
+                // Batch upsert idle_alarms per chunk
+                if (!empty($idleDataBatch)) {
+                    $updateColumns = [
+                        'serial_no', 'device_id', 'device_name', 'alarm_type', 'alarm_status',
+                        'starting_time', 'starting_location', 'ending_time', 'ending_location',
+                        'start_detail', 'end_detail', 'start_speed', 'end_speed', 'report_time',
+                        'duration_seconds', 'duration_minutes', 'latitude_start', 'longitude_start',
+                        'latitude_end', 'longitude_end', 'updated_at'
+                    ];
+
+                    if ($hasAlarmStateColumn) {
+                        $updateColumns[] = 'alarm_state';
+                    }
+
+                    \Illuminate\Support\Facades\DB::table('idle_alarms')->upsert(
+                        $idleDataBatch,
+                        ['guid'],
+                        $updateColumns
+                    );
                 }
 
                 // Bulk update is_processed for all examined raw IDs in chunk
