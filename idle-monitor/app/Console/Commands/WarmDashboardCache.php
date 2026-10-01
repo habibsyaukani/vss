@@ -45,7 +45,7 @@ class WarmDashboardCache extends Command
                     $rawMax = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
                         ->where('gps_time', '>=', $currentHourStart)
                         ->where('speed', '>', 0)
-                        ->max('speed') ?? 0;
+                        ->max(DB::raw('COALESCE(speed_decimal, speed)')) ?? 0;
 
                     return max((float)$hourlyMax, (float)$rawMax);
                 }

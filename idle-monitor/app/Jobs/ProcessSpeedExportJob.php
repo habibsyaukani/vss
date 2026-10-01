@@ -49,7 +49,7 @@ class ProcessSpeedExportJob implements ShouldQueue
             $query = GpsTrackRaw::query()
                 ->select(
                 'id', 'device_id', 'device_name', 'longitude', 'latitude',
-                'altitude', 'speed', 'direction', 'satellites', 'gps_time',
+                'altitude', \Illuminate\Support\Facades\DB::raw('COALESCE(speed_decimal, speed) as speed'), 'direction', 'satellites', 'gps_time',
                 'acc_state as is_acc_on', 'over_speed as is_overspeed', 'urgency as is_emergency',
                 'io_state as input_output_status'
             )->orderBy('gps_time', 'desc');
@@ -103,10 +103,16 @@ class ProcessSpeedExportJob implements ShouldQueue
                 if (!empty($this->filters['speed_filter'])) {
                     switch ($this->filters['speed_filter']) {
                         case 'low':
-                            $query->where('speed', '>', 0)->where('speed', '<', 15);
+                            $query->where('speed', '>', 0)
+                                  ->where(\Illuminate\Support\Facades\DB::raw('COALESCE(speed_decimal, speed)'), '<', 15);
                             break;
                         case 'high':
-                            $query->where('speed', '>=', 41);
+                            $query->where('speed', '>', 0)
+                                  ->where(
+                                      \Illuminate\Support\Facades\DB::raw('COALESCE(speed_decimal, speed)'),
+                                      '>=',
+                                      41
+                                  );
                             break;
                     }
                 } else {

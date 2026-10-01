@@ -122,8 +122,8 @@ class DashboardController extends Controller
                     ->select(
                         'device_id',
                         'device_name',
-                        DB::raw('MAX(speed) as max_speed'),
-                        DB::raw('SUM(speed) as sum_speed'),
+                        DB::raw('MAX(COALESCE(speed_decimal, speed)) as max_speed'),
+                        DB::raw('SUM(COALESCE(speed_decimal, speed)) as sum_speed'),
                         DB::raw('COUNT(*) as row_count')
                     )
                     ->where('gps_time', '>=', $currentHourStart)
@@ -257,7 +257,7 @@ class DashboardController extends Controller
                     $rawMax = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
                                          ->where('gps_time', '>=', $currentHourStart)
                                          ->where('speed', '>', 0)
-                                         ->max('speed') ?? 0;
+                                         ->max(DB::raw('COALESCE(speed_decimal, speed)')) ?? 0;
                     $maxSpeed = max($maxSpeed, $rawMax);
                 }
             }

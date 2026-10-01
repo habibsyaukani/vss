@@ -124,7 +124,7 @@ class SpeedController extends Controller
                 'gps_tracks_raw.longitude',
                 'gps_tracks_raw.latitude',
                 'gps_tracks_raw.altitude',
-                'gps_tracks_raw.speed',
+                DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed) as speed'),
                 'gps_tracks_raw.direction',
                 'gps_tracks_raw.satellites',
                 'gps_tracks_raw.gps_time',
@@ -140,10 +140,10 @@ class SpeedController extends Controller
             $query->whereIn('gps_tracks_raw.device_id', $filteredDevices->pluck('device_id')->toArray());
         }
         if ($request->filled('min_speed')) {
-            $query->where('gps_tracks_raw.speed', '>=', $request->min_speed);
+            $query->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>=', $request->min_speed);
         }
         if ($request->filled('max_speed')) {
-            $query->where('gps_tracks_raw.speed', '<=', $request->max_speed);
+            $query->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '<=', $request->max_speed);
         }
         if ($request->filled('overspeed') && $request->overspeed == '1') {
             $query->where('gps_tracks_raw.over_speed', 1);
@@ -162,10 +162,16 @@ class SpeedController extends Controller
         if ($request->filled('speed_filter')) {
             switch ($request->speed_filter) {
                 case 'low':
-                    $query->where('gps_tracks_raw.speed', '>', 0)->where('gps_tracks_raw.speed', '<', 15);
+                    $query->where('gps_tracks_raw.speed', '>', 0)
+                          ->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '<', 15);
                     break;
                 case 'high':
-                    $query->where('gps_tracks_raw.speed', '>=', 15);
+                    $query->where('gps_tracks_raw.speed', '>', 0)
+                          ->where(
+                              DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'),
+                              '>=',
+                              15
+                          );
                     break;
                 case 'all':
                     break;

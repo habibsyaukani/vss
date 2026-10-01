@@ -71,8 +71,8 @@ class RollupGpsStatsCommand extends Command
         $stats = GpsTrackRaw::select(
                 'device_id',
                 'device_name',
-                DB::raw('MAX(speed) as max_speed'),
-                DB::raw('SUM(speed) as sum_speed'),
+                DB::raw('MAX(COALESCE(speed_decimal, speed)) as max_speed'),
+                DB::raw('SUM(COALESCE(speed_decimal, speed)) as sum_speed'),
                 DB::raw('COUNT(*) as total_records')
             )
             ->where('gps_time', '>=', $startTime)
