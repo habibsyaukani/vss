@@ -322,19 +322,20 @@ class HowenWebsocketListenCommand extends Command
             if (!$raw) {
                 $guid = 'ws_' . $deviceId . '_' . strtotime($gpsTimeStr);
                 $raw = \App\Models\GpsTrackRaw::create([
-                    'device_id'   => $deviceId,
-                    'device_name' => $deviceName,
-                    'guid'        => $guid,
-                    'latitude'    => $lat,
-                    'longitude'   => $lon,
-                    'speed'       => $speed,
-                    'direction'   => (int)($loc['direct'] ?? 0),
-                    'satellites'  => (int)($loc['satellites'] ?? 0),
-                    'altitude'    => (int)($loc['altitude'] ?? 0),
-                    'acc_state'   => $acc ? 1 : 0,
-                    'gps_time'    => $gpsTimeStr,
-                    'report_time' => $gpsTimeStr,
-                    'is_later'    => 0,
+                    'device_id'     => $deviceId,
+                    'device_name'   => $deviceName,
+                    'guid'          => $guid,
+                    'latitude'      => $lat,
+                    'longitude'     => $lon,
+                    'speed'         => $speed,
+                    'speed_decimal' => $speed,
+                    'direction'     => (int)($loc['direct'] ?? 0),
+                    'satellites'    => (int)($loc['satellites'] ?? 0),
+                    'altitude'      => (int)($loc['altitude'] ?? 0),
+                    'acc_state'     => $acc ? 1 : 0,
+                    'gps_time'      => $gpsTimeStr,
+                    'report_time'   => $gpsTimeStr,
+                    'is_later'      => 0,
                 ]);
             }
 
@@ -345,16 +346,17 @@ class HowenWebsocketListenCommand extends Command
                     'gps_time'  => $gpsTimeStr,
                 ],
                 [
-                    'raw_id'      => $raw->id,
-                    'device_name' => $deviceName,
-                    'latitude'    => $lat,
-                    'longitude'   => $lon,
-                    'speed'       => $speed,
-                    'direction'   => (int)($loc['direct'] ?? 0),
-                    'satellites'  => (int)($loc['satellites'] ?? 0),
-                    'altitude'    => (int)($loc['altitude'] ?? 0),
-                    'is_acc_on'   => $acc,
-                    'report_time' => $gpsTimeStr,
+                    'raw_id'        => $raw->id,
+                    'device_name'   => $deviceName,
+                    'latitude'      => $lat,
+                    'longitude'     => $lon,
+                    'speed'         => $speed,
+                    'speed_decimal' => $speed,
+                    'direction'     => (int)($loc['direct'] ?? 0),
+                    'satellites'    => (int)($loc['satellites'] ?? 0),
+                    'altitude'      => (int)($loc['altitude'] ?? 0),
+                    'is_acc_on'     => $acc,
+                    'report_time'   => $gpsTimeStr,
                 ]
             );
 
@@ -376,22 +378,36 @@ class HowenWebsocketListenCommand extends Command
 
         if (!$deviceId || !$alarmId) return;
 
-        $st  = $payload['st']  ?? null; // Start Time (WIB)
-        $et  = $payload['et']  ?? null; // End Time (WIB)
+        $st  = $payload['st']  ?? null; // Start Time (WITA)
+        $et  = $payload['et']  ?? null; // End Time (WITA)
         $loc = $payload['location'] ?? [];
 
-        $toWita = function (?string $t): ?string {
+        $appTz = config('app.timezone', 'Asia/Makassar');
+
+        $parseDeviceWita = function(?string $t) use ($appTz): ?string {
             if (!$t) return null;
             try {
-                // Parse directly to app timezone without shifting from WIB
-                return \Carbon\Carbon::parse($t, config('app.timezone', 'Asia/Makassar'))->toDateTimeString();
+                return \Carbon\Carbon::parse($t, $appTz)->toDateTimeString();
             } catch (\Exception $e) {
                 return $t;
             }
         };
 
-        $startTimeWita = $toWita($st);
-        $endTimeWita   = $toWita($et);
+        $parseHowenServerWib = function(?string $t) use ($appTz): ?string {
+            if (!$t) return null;
+            try {
+                return \Carbon\Carbon::parse($t, 'Asia/Jakarta')
+                    ->setTimezone($appTz)
+                    ->toDateTimeString();
+            } catch (\Exception $e) {
+                return $t;
+            }
+        };
+
+        $startTimeWita = $parseDeviceWita($st);
+        $endTimeWita   = $parseDeviceWita($et);
+        $rawDtu        = $loc['dtu'] ?? null;
+        $reportTimeWita = $rawDtu ? $parseDeviceWita($rawDtu) : ($startTimeWita ?? now()->toDateTimeString());
 
         $durationSeconds = 0;
         $durationMinutes = 0;
@@ -430,7 +446,7 @@ class HowenWebsocketListenCommand extends Command
                     'end_gps'          => $gpsString,
                     'start_speed'      => 0,
                     'end_speed'        => (float)($loc['speed'] ?? 0),
-                    'report_time'      => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
+                    'report_time'      => $reportTimeWita,
                     'duration_seconds' => $durationSeconds,
                     'raw_json'         => json_encode($payload),
                 ]
@@ -458,7 +474,7 @@ class HowenWebsocketListenCommand extends Command
                         'ending_location'   => $gpsString,
                         'start_speed'       => 0,
                         'end_speed'         => (float)($loc['speed'] ?? 0),
-                        'report_time'       => $toWita($loc['dtu'] ?? null) ?? now()->toDateTimeString(),
+                        'report_time'       => $reportTimeWita,
                     ]
                 );
                 $this->info("🚨 Idle Alarm: {$deviceName} durasi {$durationMinutes} menit");

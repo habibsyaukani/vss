@@ -82,7 +82,7 @@ class TracksolidSyncService
             if (!$gpsTime) continue;
 
             // Filter speed > 0 for standard tracking
-            $speed = isset($item['gpsSpeed']) ? (int) $item['gpsSpeed'] : 0;
+            $speed = isset($item['gpsSpeed']) ? (float) $item['gpsSpeed'] : 0;
             if ($speed <= 0) continue;
 
             // Generate a fake GUID to enforce uniqueness
@@ -92,20 +92,21 @@ class TracksolidSyncService
             $parsedTime = $this->parseTime($gpsTime);
 
             $rawRows[] = [
-                'device_id'    => $imei, 
-                'device_name'  => $imei, // Can be mapped to device names later
-                'guid'         => $guid,
-                'latitude'     => $item['lat'] ?? null,
-                'longitude'    => $item['lng'] ?? null,
-                'speed'        => $speed,
-                'direction'    => isset($item['direction']) ? (int) $item['direction'] : null,
-                'satellites'   => isset($item['satellite']) ? (int) $item['satellite'] : null,
-                'gps_time'     => $parsedTime ? $parsedTime->toDateTimeString() : null,
-                'report_time'  => $parsedTime ? $parsedTime->toDateTimeString() : null,
-                'acc_state'    => (isset($item['accStatus']) && $item['accStatus'] === 'ON') ? 1 : 0,
-                'net_type'     => isset($item['posType']) ? (int) $item['posType'] : null,
-                'created_at'   => $now,
-                'updated_at'   => $now,
+                'device_id'     => $imei,
+                'device_name'   => $imei, // Can be mapped to device names later
+                'guid'          => $guid,
+                'latitude'      => $item['lat'] ?? null,
+                'longitude'     => $item['lng'] ?? null,
+                'speed'         => (int) $speed,
+                'speed_decimal' => $speed,
+                'direction'     => isset($item['direction']) ? (int) $item['direction'] : null,
+                'satellites'    => isset($item['satellite']) ? (int) $item['satellite'] : null,
+                'gps_time'      => $parsedTime ? $parsedTime->toDateTimeString() : null,
+                'report_time'   => $parsedTime ? $parsedTime->toDateTimeString() : null,
+                'acc_state'     => (isset($item['accStatus']) && $item['accStatus'] === 'ON') ? 1 : 0,
+                'net_type'      => isset($item['posType']) ? (int) $item['posType'] : null,
+                'created_at'    => $now,
+                'updated_at'    => $now,
             ];
         }
 
@@ -140,12 +141,13 @@ class TracksolidSyncService
             $parsedTime = $this->parseTime($item['gpsTime'] ?? null);
 
             $newTracks[] = [
-                'raw_id'       => $rawId,
-                'device_id'    => $imei,
-                'device_name'  => $imei,
-                'latitude'     => $item['lat'] ?? null,
-                'longitude'    => $item['lng'] ?? null,
-                'speed'        => isset($item['gpsSpeed']) ? (int) $item['gpsSpeed'] : 0,
+                'raw_id'        => $rawId,
+                'device_id'     => $imei,
+                'device_name'   => $imei,
+                'latitude'      => $item['lat'] ?? null,
+                'longitude'     => $item['lng'] ?? null,
+                'speed'         => isset($item['gpsSpeed']) ? (int) $item['gpsSpeed'] : 0,
+                'speed_decimal' => isset($item['gpsSpeed']) ? (float) $item['gpsSpeed'] : 0,
                 'direction'    => isset($item['direction']) ? (int) $item['direction'] : null,
                 'satellites'   => isset($item['satellite']) ? (int) $item['satellite'] : null,
                 'gps_time'     => $parsedTime ? $parsedTime->toDateTimeString() : null,

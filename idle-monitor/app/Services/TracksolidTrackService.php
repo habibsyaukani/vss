@@ -70,6 +70,7 @@ class TracksolidTrackService
                     'latitude'         => $track['lat'] ?? null,
                     'longitude'        => $track['lng'] ?? null,
                     'speed'            => isset($track['gpsSpeed']) ? (float) $track['gpsSpeed'] : 0,
+                    'speed_decimal'    => isset($track['gpsSpeed']) ? (float) $track['gpsSpeed'] : 0,
                     'direction'        => isset($track['direction']) ? (int) $track['direction'] : 0,
                     'satellites'       => isset($track['satellite']) ? (int) $track['satellite'] : 0,
                     'acc_state'        => (isset($track['accStatus']) && $track['accStatus'] === 'ON') ? 1 : 0,
