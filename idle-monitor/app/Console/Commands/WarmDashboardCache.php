@@ -2,11 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Models\GpsHourlyStat;
 use App\Models\GpsTrackRaw;
 use App\Models\IdleAlarm;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Warms up all dashboard caches proactively.
@@ -31,15 +33,24 @@ class WarmDashboardCache extends Command
         // ── Speed per day 7 hari (paling lambat — cache per hari) ─────────
         $this->info('  → Warming speed_max_day cache...');
         for ($i = 6; $i >= 0; $i--) {
-            $date  = Carbon::today()->subDays($i)->toDateString();
-            $ttl   = ($i === 0) ? 600 : 3600;
-            $start = $date . ' 00:00:00';
-            $end   = $date . ' 23:59:59';
+            $date = Carbon::today()->subDays($i)->toDateString();
+            $ttl  = ($i === 0) ? 600 : 3600;
 
-            Cache::remember("speed_max_day_{$date}", $ttl, function () use ($start, $end) {
-                return GpsTrackRaw::whereBetween('gps_time', [$start, $end])
-                    ->where('speed', '>', 0)
-                    ->max('speed') ?? 0;
+            Cache::remember("speed_max_day_{$date}", $ttl, function () use ($date, $i) {
+                $hourlyMax = GpsHourlyStat::where('record_date', $date)
+                    ->max('max_speed') ?? 0;
+
+                if ($i === 0) {
+                    $currentHourStart = Carbon::now()->startOfHour()->format('Y-m-d H:i:s');
+                    $rawMax = GpsTrackRaw::from(DB::raw('gps_tracks_raw FORCE INDEX (gps_tracks_raw_gps_time_index)'))
+                        ->where('gps_time', '>=', $currentHourStart)
+                        ->where('speed', '>', 0)
+                        ->max('speed') ?? 0;
+
+                    return max((float)$hourlyMax, (float)$rawMax);
+                }
+
+                return (float)$hourlyMax;
             });
 
             $this->line("    speed_max_day_{$date} cached");
