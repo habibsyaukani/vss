@@ -26,6 +26,34 @@
         margin-bottom: 8px;
         display: block;
     }
+    .search-box {
+        position: relative;
+    }
+    .search-box i {
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        color: #adb5bd;
+        font-size: 14px;
+    }
+    .search-box input {
+        padding-left: 35px;
+        border-radius: 6px;
+        font-size: 13px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background-color: rgba(255,255,255,0.05);
+        color: white;
+    }
+    .search-box input:focus {
+        border-color: #3b82f6;
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+        box-shadow: none;
+        outline: none;
+    }
+    .search-box input::placeholder {
+        color: #64748b;
+    }
     .form-select-sm {
         font-size: 13px;
         border-color: rgba(255,255,255,0.1);
@@ -314,6 +342,14 @@
 
 @section('sidebar')
 <!-- Device Filter Search -->
+<div class="filter-section px-4 py-3">
+    <div class="filter-label">DEVICE FILTER</div>
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="search" class="form-control" id="deviceSearch" placeholder="Search device...">
+    </div>
+</div>
+
 <!-- Location Filter -->
 <div class="filter-section px-4 py-3">
     <div class="filter-label">LOCATION</div>
@@ -372,7 +408,7 @@
                         </div>
                         <ul class="tree-children">
                             @foreach($groupData['devices'] as $device)
-                                <li class="tree-child" data-device-name="{{ strtolower($device->device_name) }}" data-location="{{ strtoupper(trim($device->lokasi ?: ($device->location ?? ''))) }}" data-series="{{ strtoupper(trim($device->series ?? '')) }}">
+                                <li class="tree-child" data-device-name="{{ strtolower($device->device_name) }}" data-device-id="{{ $device->device_id }}" data-location="{{ strtoupper(trim($device->lokasi ?: ($device->location ?? ''))) }}" data-series="{{ strtoupper(trim($device->series ?? '')) }}">
                                     <input type="checkbox" class="tree-checkbox device-checkbox" value="{{ $device->device_id }}" checked data-group="{{ Str::slug($groupName) }}">
                                     @php
                                         $dIcon = 'fa-car';
@@ -526,9 +562,16 @@ $(document).ready(function() {
 
     function getSelectedDevices() {
         let selected = [];
+
         $('.device-checkbox:checked').each(function() {
-            selected.push($(this).val());
+            let $li = $(this).closest('.tree-child');
+            let style = $li.attr('style') || '';
+
+            if ($li.length === 0 || !style.includes('display: none')) {
+                selected.push($(this).val());
+            }
         });
+
         return selected;
     }
 
@@ -538,6 +581,7 @@ $(document).ready(function() {
         if(table) { table.destroy(); }
         
         table = $('#performanceTable').DataTable({
+            bFilter: false,
             processing: true,
             serverSide: true,
             ajax: {
@@ -547,13 +591,22 @@ $(document).ready(function() {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 data: function(d) {
+                    let sidebarSearch = $('#deviceSearch').val()
+                        ? $('#deviceSearch').val().trim()
+                        : '';
+
+                    let dtSearch = (d.search && d.search.value)
+                        ? d.search.value.trim()
+                        : '';
+
                     d.device_ids = getSelectedDevices();
                     d.location = $('#locationFilter').val();
                     d.series = $('#seriesFilter').val();
                     d.date = $('#filterDate').val();
                     d.shift = $('#filterShift').val();
                     d.hour = $('#filterHour').val();
-                    d.search_keyword = (d.search && d.search.value) ? d.search.value : '';
+
+                    d.search_keyword = dtSearch || sidebarSearch;
                 },
                 dataSrc: function(json) {
                     // Update summary cards
@@ -691,14 +744,15 @@ $(document).ready(function() {
         updateSelectedCounter();
     });
 
-    // ---- Sidebar Filter Logic (Location & Series only) ----
+    // ---- Sidebar Filter Logic (Location, Series & Device Search) ----
     function filterTree() {
         let location = $('#locationFilter').val();
         let series = $('#seriesFilter').val();
+        let deviceSearch = $('#deviceSearch').val() ? $('#deviceSearch').val().toLowerCase().trim() : '';
 
-        // Jika kedua filter kosong → tampilkan SEMUA
-        if (!location && !series) {
-            $('.tree-child').attr('style', 'display: flex !important');
+        // Jika semua filter kosong → tampilkan SEMUA
+        if (!location && !series && !deviceSearch) {
+            $('.tree-child').attr('style', 'display: flex !important').css({ 'background-color': '', 'padding': '', 'border-radius': '', 'margin': '' });
             $('.tree-item').attr('style', 'display: list-item !important');
             $('.tree-parent').attr('style', 'display: flex !important');
             
@@ -730,21 +784,29 @@ $(document).ready(function() {
         }
 
         let totalMatches = 0;
+        let normQuery = deviceSearch ? deviceSearch.replace(/[\s\.-]/g, '') : '';
         
-        // First, hide all devices
-        $('.tree-child').each(function() {
-            $(this).attr('style', 'display: none !important');
-        });
-        
-        // Show only devices that match filter
+        // Show/hide devices based on matching filter
         $('.tree-child').each(function() {
             let $treeChild = $(this);
+            let deviceName = ($treeChild.data('device-name') || $treeChild.find('span').text()).toLowerCase();
+            let deviceId = ($treeChild.data('device-id') || '').toString().toLowerCase();
+            let normDevName = deviceName.replace(/[\s\.-]/g, '');
+            let normDevId = deviceId.replace(/[\s\.-]/g, '');
             let deviceLocation = $treeChild.data('location') || '';
             let deviceSeries = $treeChild.data('series') || '';
             let shouldShow = true;
+
+            // Check device search match (name or id)
+            if (deviceSearch) {
+                let nameOrIdMatches = deviceName.includes(deviceSearch) || deviceId.includes(deviceSearch) || normDevName.includes(normQuery) || normDevId.includes(normQuery);
+                if (!nameOrIdMatches) {
+                    shouldShow = false;
+                }
+            }
             
             // Check location match
-            if (location) {
+            if (location && shouldShow) {
                 let normLoc = location.trim().toUpperCase().replace(/[\s\.-]/g, '');
                 let normDevLoc = deviceLocation.trim().toUpperCase().replace(/[\s\.-]/g, '');
                 if (normDevLoc !== normLoc && !normDevLoc.includes(normLoc)) {
@@ -770,7 +832,14 @@ $(document).ready(function() {
             
             if (shouldShow) {
                 $treeChild.attr('style', 'display: flex !important');
+                if (deviceSearch) {
+                    $treeChild.css({ 'background-color': '#dbeafe', 'padding': '8px 12px', 'border-radius': '6px', 'margin': '2px 0' });
+                } else {
+                    $treeChild.css({ 'background-color': '', 'padding': '', 'border-radius': '', 'margin': '' });
+                }
                 totalMatches++;
+            } else {
+                $treeChild.attr('style', 'display: none !important');
             }
         });
         
@@ -778,10 +847,12 @@ $(document).ready(function() {
         let visibleGroups = 0;
         $('.tree-view > .tree-item > .tree-children > .tree-item').each(function() {
             let $groupItem = $(this);
-            let $groupChildren = $groupItem.find('> .tree-children > .tree-child');
+            let $groupParent = $groupItem.find('> .tree-parent');
+            let $groupChildren = $groupItem.find('> .tree-children');
+            let $devices = $groupChildren.find('> .tree-child');
             let visibleCount = 0;
             
-            $groupChildren.each(function() {
+            $devices.each(function() {
                 let style = $(this).attr('style') || '';
                 if (style.includes('display: flex')) {
                     visibleCount++;
@@ -790,27 +861,39 @@ $(document).ready(function() {
             
             if (visibleCount > 0) {
                 $groupItem.attr('style', 'display: list-item !important');
-                $groupItem.find('> .tree-parent').attr('style', 'display: flex !important');
+                $groupParent.attr('style', 'display: flex !important');
                 
-                // Allow children to be displayed IF parent is manually opened
-                let $children = $groupItem.find('> .tree-children');
-                if ($groupItem.find('> .tree-parent').hasClass('open')) {
-                    $children.attr('style', 'display: block !important');
+                // Auto-expand groups when searching
+                if (deviceSearch) {
+                    $groupParent.addClass('open');
+                    $groupChildren.attr('style', 'display: block !important');
                 } else {
-                    $children.css('display', '');
+                    if ($groupParent.hasClass('open')) {
+                        $groupChildren.attr('style', 'display: block !important');
+                    } else {
+                        $groupChildren.css('display', '');
+                    }
                 }
                 
                 // Update group counter
-                let $counter = $groupItem.find('> .tree-parent .group-count');
+                let $counter = $groupParent.find('.group-count');
                 $counter.html(`(${visibleCount}|<span style="color: #16a34a; font-weight: 700;">${visibleCount}</span>)`);
                 
                 visibleGroups++;
             } else {
                 $groupItem.attr('style', 'display: none !important');
-                $groupItem.find('> .tree-parent').removeClass('open');
-                $groupItem.find('> .tree-children').attr('style', 'display: none !important');
+                $groupParent.removeClass('open');
+                $groupChildren.attr('style', 'display: none !important');
             }
         });
+
+        // Expand ALL GPE parent when searching
+        let $masterParent = $('.tree-view > .tree-item').eq(0);
+        if (deviceSearch && totalMatches > 0) {
+            $masterParent.attr('style', 'display: list-item !important');
+            $masterParent.find('> .tree-parent').addClass('open');
+            $masterParent.find('> .tree-children').attr('style', 'display: block !important');
+        }
         
         // Update master ALL GPE counter
         let $masterCounter = $('.tree-view > .tree-item > .tree-parent .group-count').eq(0);
@@ -824,6 +907,11 @@ $(document).ready(function() {
         
         filterTree();
         triggerReload(); // trigger table reload for server-side
+    });
+
+    $('#deviceSearch').on('input', function() {
+        filterTree();
+        triggerReload();
     });
 
     function updateSelectedCounter() {
