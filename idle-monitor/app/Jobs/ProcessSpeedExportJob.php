@@ -47,12 +47,31 @@ class ProcessSpeedExportJob implements ShouldQueue
             // 1. Build Query
             // ⚡ Fast query purely on gps_tracks_raw (NO SQL JOINs)
             $query = GpsTrackRaw::query()
+                ->whereNotExists(function ($sub) {
+                    $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('gps_tracks_raw as d')
+                        ->whereColumn('d.device_id', 'gps_tracks_raw.device_id')
+                        ->whereColumn('d.gps_time', 'gps_tracks_raw.gps_time')
+                        ->whereColumn('d.id', '>', 'gps_tracks_raw.id');
+                })
                 ->select(
-                'id', 'device_id', 'device_name', 'longitude', 'latitude',
-                'altitude', \Illuminate\Support\Facades\DB::raw('COALESCE(speed_decimal, speed) as speed'), 'direction', 'satellites', 'gps_time',
-                'acc_state as is_acc_on', 'over_speed as is_overspeed', 'urgency as is_emergency',
-                'io_state as input_output_status'
-            )->orderBy('gps_time', 'desc');
+                    'gps_tracks_raw.id',
+                    'gps_tracks_raw.device_id',
+                    'gps_tracks_raw.device_name',
+                    'gps_tracks_raw.longitude',
+                    'gps_tracks_raw.latitude',
+                    'gps_tracks_raw.altitude',
+                    \Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed) as speed'),
+                    'gps_tracks_raw.direction',
+                    'gps_tracks_raw.satellites',
+                    'gps_tracks_raw.gps_time',
+                    'gps_tracks_raw.acc_state as is_acc_on',
+                    'gps_tracks_raw.over_speed as is_overspeed',
+                    'gps_tracks_raw.urgency as is_emergency',
+                    'gps_tracks_raw.io_state as input_output_status'
+                )
+                ->orderBy('gps_tracks_raw.gps_time', 'desc')
+                ->orderBy('gps_tracks_raw.id', 'desc');
 
             $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
                 return Device::all()->keyBy(function($item) {
@@ -103,20 +122,21 @@ class ProcessSpeedExportJob implements ShouldQueue
                 if (!empty($this->filters['speed_filter'])) {
                     switch ($this->filters['speed_filter']) {
                         case 'low':
-                            $query->where('speed', '>', 0)
-                                  ->where(\Illuminate\Support\Facades\DB::raw('COALESCE(speed_decimal, speed)'), '<', 15);
+                            // LOW: 0 < speed < 15 (sama dengan SpeedController)
+                            $query->where(\Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0)
+                                  ->where(\Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '<', 15);
                             break;
                         case 'high':
-                            $query->where('speed', '>', 0)
-                                  ->where(
-                                      \Illuminate\Support\Facades\DB::raw('COALESCE(speed_decimal, speed)'),
-                                      '>=',
-                                      41
-                                  );
+                            // HIGH: speed > 43 (sama dengan SpeedController)
+                            $query->where(
+                                \Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'),
+                                '>',
+                                43
+                            );
                             break;
                     }
                 } else {
-                    $query->where('speed', '>', 0);
+                    $query->where(\Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0);
                 }
             }
 
