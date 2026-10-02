@@ -91,32 +91,17 @@ class SpeedController extends Controller
             }
         }
 
-        // ⚡ Scoped, scalable deduplication subquery — scoped by request date & device filters
-        // to avoid scanning all 30+ million rows on production DB
-        $dedupSub = DB::table('gps_tracks_raw')
-            ->select(DB::raw('MAX(id) as max_id'));
-
-        if ($request->filled('start_date')) {
-            $dedupSub->where('gps_time', '>=', $request->start_date . ' 00:00:00');
-        } else {
-            $dedupSub->where('gps_time', '>=', now()->startOfDay());
-        }
-        if ($request->filled('end_date')) {
-            $dedupSub->where('gps_time', '<=', $request->end_date . ' 23:59:59');
-        }
-
-        if (!empty($uniqueCleanIds) && ($deviceMap->isEmpty() || count($uniqueCleanIds) < $deviceMap->count())) {
-            $dedupSub->whereIn('device_id', $uniqueCleanIds);
-        }
-
-        if ($filteredDevices) {
-            $dedupSub->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
-        }
-
-        $dedupSub->groupBy('device_id', 'gps_time');
-
+        // ⚡ NOT EXISTS dedup: keeps only the row with the largest id
+        // for each (device_id, gps_time) combination — faster than MAX+GROUP BY+JOIN
+        // on large tables with existing (device_id, gps_time) index.
         $query = GpsTrackRaw::query()
-            ->joinSub($dedupSub, 'dedup', 'gps_tracks_raw.id', '=', 'dedup.max_id')
+            ->whereNotExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('gps_tracks_raw as d')
+                    ->whereColumn('d.device_id', 'gps_tracks_raw.device_id')
+                    ->whereColumn('d.gps_time', 'gps_tracks_raw.gps_time')
+                    ->whereColumn('d.id', '>', 'gps_tracks_raw.id');
+            })
             ->select(
                 'gps_tracks_raw.id',
                 'gps_tracks_raw.device_id',
@@ -162,25 +147,26 @@ class SpeedController extends Controller
         if ($request->filled('speed_filter')) {
             switch ($request->speed_filter) {
                 case 'low':
-                    $query->where('gps_tracks_raw.speed', '>', 0)
+                    // LOW: 0 < speed < 15
+                    $query->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0)
                           ->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '<', 15);
                     break;
                 case 'high':
-                    $query->where('gps_tracks_raw.speed', '>', 0)
-                          ->where(
-                              DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'),
-                              '>=',
-                              15
-                          );
+                    // HIGH: speed > 43
+                    $query->where(
+                        DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'),
+                        '>',
+                        43
+                    );
                     break;
                 case 'all':
                     break;
                 default:
-                    $query->where('gps_tracks_raw.speed', '>', 0);
+                    $query->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0);
                     break;
             }
         } else {
-            $query->where('gps_tracks_raw.speed', '>', 0);
+            $query->where(DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0);
         }
 
         // ⚡ Validate DataTables pagination parameters
@@ -191,8 +177,9 @@ class SpeedController extends Controller
 
         $fetchLimit = $length + 1;
 
-        // ⚡ Order by gps_time DESC
-        $query->orderBy('gps_time', 'desc');
+        // ⚡ Deterministic ordering: gps_time DESC then id DESC
+        $query->orderBy('gps_time', 'desc')
+              ->orderBy('id', 'desc');
 
         // ⚡ Over-fetch data: fetch $length + 1 rows
         $rawItems = $query->offset($start)->limit($fetchLimit)->get();
