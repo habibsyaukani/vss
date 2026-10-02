@@ -505,7 +505,7 @@
         </button>
         <button type="button" class="btn-speed-filter" id="btnHighSpeed">
             <span class="speed-dot" style="background:#dc2626;"></span>
-            High Speed &ge;15 km/h
+            High Speed &gt;43 Km/h
         </button>
     </div>
 
