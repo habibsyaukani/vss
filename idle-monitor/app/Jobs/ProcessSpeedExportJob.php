@@ -45,48 +45,25 @@ class ProcessSpeedExportJob implements ShouldQueue
             $exportJob->update(['status' => 'processing']);
 
             // 1. Build Query
-            // ⚡ Fast query purely on gps_tracks_raw (NO SQL JOINs)
-            $query = GpsTrackRaw::query()
-                ->whereNotExists(function ($sub) {
-                    $sub->select(\Illuminate\Support\Facades\DB::raw(1))
-                        ->from('gps_tracks_raw as d')
-                        ->whereColumn('d.device_id', 'gps_tracks_raw.device_id')
-                        ->whereColumn('d.gps_time', 'gps_tracks_raw.gps_time')
-                        ->whereColumn('d.id', '>', 'gps_tracks_raw.id');
-                })
-                ->select(
-                    'gps_tracks_raw.id',
-                    'gps_tracks_raw.device_id',
-                    'gps_tracks_raw.device_name',
-                    'gps_tracks_raw.longitude',
-                    'gps_tracks_raw.latitude',
-                    'gps_tracks_raw.altitude',
-                    \Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed) as speed'),
-                    'gps_tracks_raw.direction',
-                    'gps_tracks_raw.satellites',
-                    'gps_tracks_raw.gps_time',
-                    'gps_tracks_raw.acc_state as is_acc_on',
-                    'gps_tracks_raw.over_speed as is_overspeed',
-                    'gps_tracks_raw.urgency as is_emergency',
-                    'gps_tracks_raw.io_state as input_output_status'
-                )
-                ->orderBy('gps_tracks_raw.gps_time', 'desc')
-                ->orderBy('gps_tracks_raw.id', 'desc');
-
+            // ⚡ Fast deduplication via MAX(id) per (device_id, gps_time) subquery joined back to gps_tracks_raw
             $deviceMap = cache()->remember('devices_map_by_id_dict', 300, function() {
                 return Device::all()->keyBy(function($item) {
                     return (string) $item->device_id;
                 });
             });
 
+            // Subquery for deduplication: find latest_id per (device_id, gps_time)
+            $latest = \Illuminate\Support\Facades\DB::table('gps_tracks_raw')
+                ->select('device_id', 'gps_time', \Illuminate\Support\Facades\DB::raw('MAX(id) as latest_id'));
+
             if (!empty($this->filters['selected_ids']) && is_array($this->filters['selected_ids'])) {
-                $query->whereIn('id', $this->filters['selected_ids']);
+                $latest->whereIn('id', $this->filters['selected_ids']);
             } else {
                 if (!empty($this->filters['device_ids']) && is_array($this->filters['device_ids'])) {
                     $totalDevices = count($deviceMap);
                     if (count($this->filters['device_ids']) < $totalDevices) {
                         $cleanIds = array_map(function($id) { return ltrim((string)$id, '0'); }, $this->filters['device_ids']);
-                        $query->whereIn('device_id', $cleanIds);
+                        $latest->whereIn('device_id', $cleanIds);
                     }
                 }
 
@@ -106,37 +83,66 @@ class ProcessSpeedExportJob implements ShouldQueue
                             $filteredDevices = $filteredDevices->where('series', $this->filters['series']);
                         }
                     }
-                    $query->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
+                    $latest->whereIn('device_id', $filteredDevices->pluck('device_id')->toArray());
                 }
 
                 if (!empty($this->filters['start_date'])) {
-                    $query->where('gps_time', '>=', $this->filters['start_date'] . ' 00:00:00');
+                    $latest->where('gps_time', '>=', $this->filters['start_date'] . ' 00:00:00');
                 } else {
-                    $query->where('gps_time', '>=', now()->startOfDay());
-                }
-                
-                if (!empty($this->filters['end_date'])) {
-                    $query->where('gps_time', '<=', $this->filters['end_date'] . ' 23:59:59');
+                    $latest->where('gps_time', '>=', now()->startOfDay());
                 }
 
+                if (!empty($this->filters['end_date'])) {
+                    $latest->where('gps_time', '<=', $this->filters['end_date'] . ' 23:59:59');
+                }
+            }
+
+            $latest->groupBy('device_id', 'gps_time');
+
+            // Main query: Join back to gps_tracks_raw using latest_id, then apply speed filter
+            $query = GpsTrackRaw::query()
+                ->from('gps_tracks_raw as r')
+                ->joinSub($latest, 'latest', function ($join) {
+                    $join->on('r.id', '=', 'latest.latest_id');
+                })
+                ->select(
+                    'r.id',
+                    'r.device_id',
+                    'r.device_name',
+                    'r.longitude',
+                    'r.latitude',
+                    'r.altitude',
+                    \Illuminate\Support\Facades\DB::raw('COALESCE(r.speed_decimal, r.speed) as speed'),
+                    'r.direction',
+                    'r.satellites',
+                    'r.gps_time',
+                    'r.acc_state as is_acc_on',
+                    'r.over_speed as is_overspeed',
+                    'r.urgency as is_emergency',
+                    'r.io_state as input_output_status'
+                )
+                ->orderBy('r.gps_time', 'desc')
+                ->orderBy('r.id', 'desc');
+
+            if (empty($this->filters['selected_ids'])) {
                 if (!empty($this->filters['speed_filter'])) {
                     switch ($this->filters['speed_filter']) {
                         case 'low':
                             // LOW: 0 < speed < 15 (sama dengan SpeedController)
-                            $query->where(\Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0)
-                                  ->where(\Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '<', 15);
+                            $query->where(\Illuminate\Support\Facades\DB::raw('COALESCE(r.speed_decimal, r.speed)'), '>', 0)
+                                  ->where(\Illuminate\Support\Facades\DB::raw('COALESCE(r.speed_decimal, r.speed)'), '<', 15);
                             break;
                         case 'high':
                             // HIGH: speed > 43 (sama dengan SpeedController)
                             $query->where(
-                                \Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'),
+                                \Illuminate\Support\Facades\DB::raw('COALESCE(r.speed_decimal, r.speed)'),
                                 '>',
                                 43
                             );
                             break;
                     }
                 } else {
-                    $query->where(\Illuminate\Support\Facades\DB::raw('COALESCE(gps_tracks_raw.speed_decimal, gps_tracks_raw.speed)'), '>', 0);
+                    $query->where(\Illuminate\Support\Facades\DB::raw('COALESCE(r.speed_decimal, r.speed)'), '>', 0);
                 }
             }
 
