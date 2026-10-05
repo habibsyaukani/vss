@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\GpsTrackRaw;
-use App\Models\GpsTrack;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -469,44 +468,9 @@ class GpsTrackSyncService
             }
         }
 
-        // 3. Ambil ID untuk semua guid (termasuk yang baru + yang sudah ada tapi belum punya track)
-        $allGuids    = array_keys($validRecords);
-        $rawIdByGuid = GpsTrackRaw::whereIn('guid', $allGuids)->pluck('id', 'guid')->toArray();
-
-        // 4. Cek track mana yang belum ada
-        $existingTrackRawIds = GpsTrack::whereIn('raw_id', array_values($rawIdByGuid))
-            ->pluck('raw_id')
-            ->flip()
-            ->toArray();
-
-        $newTracks = [];
-        foreach ($rawIdByGuid as $guid => $rawId) {
-            if (isset($existingTrackRawIds[$rawId])) continue; // sudah ada, skip
-
-            $item     = $validRecords[$guid];
-            $resolvedDeviceId = $deviceId ?? ($item['_injected_device_id'] ?? null);
-            $trackMap = $this->mapToDisplay($item, $resolvedDeviceId, $rawId);
-            if (isset($trackMap['gps_time']) && $trackMap['gps_time'] instanceof Carbon) {
-                $trackMap['gps_time'] = $trackMap['gps_time']->toDateTimeString();
-            }
-            if (isset($trackMap['report_time']) && $trackMap['report_time'] instanceof Carbon) {
-                $trackMap['report_time'] = $trackMap['report_time']->toDateTimeString();
-            }
-            $trackMap['created_at'] = $now;
-            $trackMap['updated_at'] = $now;
-            $newTracks[] = $trackMap;
-        }
-
-        // 5. BULK insertOrIgnore Track
-        if (!empty($newTracks)) {
-            foreach (array_chunk($newTracks, 300) as $chunk) {
-                try {
-                    GpsTrack::insertOrIgnore($chunk);
-                } catch (\Throwable $e) {
-                    Log::error("[GPS Sync] insertOrIgnore Track failed: " . $e->getMessage());
-                }
-            }
-        }
+        // gps_tracks tidak lagi ditulis dari sync service.
+        // gps_tracks_raw menjadi source of truth untuk data GPS.
+        // ProcessGpsTrackJob juga sudah dinonaktifkan dispatch-nya.
 
         return count($validRecords);
     }
