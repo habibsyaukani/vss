@@ -377,11 +377,40 @@ class GpsTrackSyncService
         if (empty($records)) return 0;
 
         $validRecords = [];
+        $seenDeviceTimes = [];
+
+        /*
+         * Dedup dalam batch berdasarkan (device_id, gps_time).
+         *
+         * Jika API mengirim beberapa GUID untuk event yang sama,
+         * record terakhir yang diterima menjadi winner.
+         */
         foreach ($records as $item) {
             $guid = $item['guid'] ?? null;
-            if ($guid) {
-                $validRecords[$guid] = $item;
+
+            if (!$guid) {
+                continue;
             }
+
+            $resolvedDeviceId = $deviceId ?? ($item['_injected_device_id'] ?? null);
+            $gpsTime = $item['createtime'] ?? null;
+
+            // Tidak bisa dedup tanpa device_id + gps_time.
+            if (!$resolvedDeviceId || !$gpsTime) {
+                $validRecords[$guid] = $item;
+                continue;
+            }
+
+            $deviceTimeKey = $resolvedDeviceId . '_' . $gpsTime;
+
+            // Last record wins.
+            if (isset($seenDeviceTimes[$deviceTimeKey])) {
+                $previousGuid = $seenDeviceTimes[$deviceTimeKey];
+                unset($validRecords[$previousGuid]);
+            }
+
+            $validRecords[$guid] = $item;
+            $seenDeviceTimes[$deviceTimeKey] = $guid;
         }
 
         if (empty($validRecords)) return 0;
@@ -501,6 +530,7 @@ class GpsTrackSyncService
             'latitude'         => $item['latitude']  ?? null,
             'altitude'         => isset($item['altitude'])  ? (int) $item['altitude']  : null,
             'speed'            => isset($item['speed'])     ? (float) $item['speed']   : null,
+            'speed_decimal'    => isset($item['speed'])     ? (float) $item['speed']   : null,
             'direction'        => isset($item['direct'])    ? (int) $item['direct']    : null,
             'satellites'       => isset($item['satellites'])? (int) $item['satellites']: null,
             'precision'        => isset($item['precision']) ? (int) $item['precision'] : null,
@@ -553,6 +583,7 @@ class GpsTrackSyncService
             'latitude'           => $item['latitude']   ?? null,
             'altitude'           => isset($item['altitude'])   ? (int) $item['altitude']   : null,
             'speed'              => isset($item['speed'])      ? (float) $item['speed']    : null,
+            'speed_decimal'      => isset($item['speed'])      ? (float) $item['speed']    : null,
             'direction'          => isset($item['direct'])     ? (int) $item['direct']     : null,
             'satellites'         => isset($item['satellites']) ? (int) $item['satellites'] : null,
             'gps_time'           => $this->parseTime($item['createtime'] ?? null),
@@ -588,6 +619,7 @@ class GpsTrackSyncService
             'longitude'     => $item['longitude']   ?? null,
             'latitude'      => $item['latitude']    ?? null,
             'speed'         => isset($item['speed'])     ? (float) $item['speed']   : null,
+            'speed_decimal' => isset($item['speed'])     ? (float) $item['speed']   : null,
             'altitude'      => isset($item['altitude'])  ? (int) $item['altitude']  : null,
             'direction'     => isset($item['direct'])    ? (int) $item['direct']    : null,
             'satellites'    => isset($item['satellites'])? (int) $item['satellites']: null,
