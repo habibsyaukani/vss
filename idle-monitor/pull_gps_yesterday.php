@@ -137,11 +137,11 @@ try {
     
     echo "Processing gps_tracks_raw → gps_tracks...\n";
     
-    // Dispatch ProcessGpsTrackJob
-    dispatch(new ProcessGpsTrackJob());
+    // [DISABLED] ProcessGpsTrackJob dispatch (frontend uses gps_tracks_raw directly)
+    // dispatch(new ProcessGpsTrackJob());
     
-    echo "✅ ProcessGpsTrackJob dispatched to queue\n";
-    echo "ℹ️  Run queue worker to process: php artisan queue:work\n";
+    // echo "✅ ProcessGpsTrackJob dispatched to queue\n";
+    // echo "ℹ️  Run queue worker to process: php artisan queue:work\n";
     
     echo "\n";
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";

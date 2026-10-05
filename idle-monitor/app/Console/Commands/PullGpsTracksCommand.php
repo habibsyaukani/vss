@@ -138,11 +138,11 @@ class PullGpsTracksCommand extends Command
                 return 0;
             }
 
-            // Dispatch process job
-            $this->info("🔄 Dispatching ProcessGpsTrackJob to Queue...");
-            ProcessGpsTrackJob::dispatch();
-            $this->info("✅ Job dispatched");
-            $this->newLine();
+            // [DISABLED] ProcessGpsTrackJob dispatch (frontend uses gps_tracks_raw directly)
+            // $this->info("🔄 Dispatching ProcessGpsTrackJob to Queue...");
+            // ProcessGpsTrackJob::dispatch();
+            // $this->info("✅ Job dispatched");
+            // $this->newLine();
 
             $this->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             $this->info("✅ COMPLETED SUCCESSFULLY");

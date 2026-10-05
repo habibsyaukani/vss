@@ -70,11 +70,11 @@ class PullGpsTracksRealtimeLoopCommand extends Command
                         
                         $this->info("✅ Fetched: {$totalFetched} records | Saved: {$totalSaved} new records");
                         
-                        // Jika ada data baru yang masuk, proses mapping ke idle alarm/tracking
-                        if ($totalSaved > 0) {
-                            $this->info("🔄 Dispatching ProcessGpsTrackJob...");
-                            ProcessGpsTrackJob::dispatchSync();
-                        }
+                        // [DISABLED] ProcessGpsTrackJob dispatch (frontend uses gps_tracks_raw directly)
+                        // if ($totalSaved > 0) {
+                        //     $this->info("🔄 Dispatching ProcessGpsTrackJob...");
+                        //     ProcessGpsTrackJob::dispatchSync();
+                        // }
                     }
                 }
                 
