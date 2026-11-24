@@ -33,7 +33,7 @@ class DeviceController extends Controller
 
         return DataTables::of($query)
             ->addColumn('group_badge', function ($device) {
-                return '<span class="badge bg-info">' . ($device->group_name ?? 'N/A') . '</span>';
+                return '<span class="badge bg-info">' . e($device->group_name ?? 'N/A') . '</span>';
             })
             ->addColumn('last_sync_formatted', function ($device) {
                 return $device->last_sync_at ? $device->last_sync_at->format('Y-m-d H:i') : 'Never';

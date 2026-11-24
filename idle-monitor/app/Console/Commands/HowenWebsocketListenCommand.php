@@ -148,8 +148,10 @@ class HowenWebsocketListenCommand extends Command
 
                 $action = $data['action'] ?? null;
 
-                // Log ALL incoming messages for debugging
-                Log::debug("[HowenWS] RAW IN action={$action}: " . substr($rawPayload, 0, 300));
+                // Debug log (disabled in production to prevent disk exhaustion)
+                if (config('app.debug')) {
+                    Log::debug("[HowenWS] RAW IN action={$action}: " . substr($rawPayload, 0, 300));
+                }
 
                 // Handle Login Response
                 if ($action === '80000') {
@@ -342,7 +344,10 @@ class HowenWebsocketListenCommand extends Command
             // gps_tracks tidak lagi ditulis dari WebSocket.
             // gps_tracks_raw menjadi source of truth untuk data GPS.
 
-            Log::info("[HowenWS] GPS: {$deviceName} ({$deviceId}) | Speed: {$speed} | ACC: " . ($acc ? 'ON' : 'OFF') . " | Time: {$gpsTimeStr}");
+            // High-frequency GPS logging disabled in production to prevent 16GB+ log files
+            if (config('app.debug')) {
+                Log::info("[HowenWS] GPS: {$deviceName} ({$deviceId}) | Speed: {$speed} | ACC: " . ($acc ? 'ON' : 'OFF') . " | Time: {$gpsTimeStr}");
+            }
             $this->line("📍 GPS: {$deviceName} | Speed: {$speed} km/h | {$gpsTimeStr}");
 
         } catch (\Exception $e) {

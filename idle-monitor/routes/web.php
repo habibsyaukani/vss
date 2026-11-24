@@ -33,7 +33,7 @@ Route::prefix('/admin')->name('admin.')->group(function () {
     // Guest routes (no auth required)
     Route::middleware('guest')->group(function () {
         Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login.form');
-        Route::post('/login', [AdminAuthController::class, 'login'])->name('login');
+        Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:10,1')->name('login');
     });
 
     // Protected routes (admin only) - logout only here
@@ -51,7 +51,7 @@ require __DIR__ . '/admin.php';
 // ================================
 Route::middleware('guest')->group(function () {
     Route::get('/login', [FrontendAuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [FrontendAuthController::class, 'login'])->name('frontend.login');
+    Route::post('/login', [FrontendAuthController::class, 'login'])->middleware('throttle:10,1')->name('frontend.login');
 });
 
 // CSRF Refresh — dipanggil otomatis oleh layout frontend & admin
@@ -64,6 +64,3 @@ Route::get('/csrf-refresh', function () {
 
 // Include frontend routes
 require __DIR__ . '/frontend.php';
-
-
-Route::get('/test-index', function() { return \Illuminate\Support\Facades\DB::select('SHOW INDEXES FROM gps_tracks'); });

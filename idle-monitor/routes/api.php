@@ -25,31 +25,38 @@ Route::prefix('dashboard')->group(function () {
     Route::get('/recent', [DashboardController::class, 'recentAlarms']);
 });
 
-// Idle Alarm API Routes - Public (no auth required for MVP)
+// Idle Alarm API Routes - Public (read-only)
 Route::prefix('idle-alarms')->group(function () {
     Route::get('/', [IdleAlarmController::class, 'index']);
     Route::get('/device/{deviceId}', [IdleAlarmController::class, 'byDevice']);
     Route::get('/group/{groupName}', [IdleAlarmController::class, 'byGroup']);
     Route::get('/{id}', [IdleAlarmController::class, 'show']);
-    Route::put('/{id}', [IdleAlarmController::class, 'update']);
-    Route::delete('/{id}', [IdleAlarmController::class, 'destroy']);
 });
 
-// Historical Data API Routes (Admin)
-Route::prefix('admin')->group(function () {
-    Route::post('/pull-idle-alarms-range', [HistoricalDataController::class, 'pullIdleAlarmsDateRange']);
-    Route::get('/historical-data-status', [HistoricalDataController::class, 'status']);
-});
-
-// GPS Tracks API Routes
+// GPS Tracks API Routes (Read-only preview)
 Route::prefix('gps-tracks')->group(function () {
     Route::get('preview', [GpsTrackController::class, 'preview']);
-    Route::post('sync',   [GpsTrackController::class, 'sync']);
 });
 
-// Authenticated routes (for future use)
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Protected Administrative API Routes (Requires Token)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    Route::prefix('idle-alarms')->group(function () {
+        Route::put('/{id}', [IdleAlarmController::class, 'update']);
+        Route::delete('/{id}', [IdleAlarmController::class, 'destroy']);
+    });
+
+    Route::prefix('admin')->group(function () {
+        Route::post('/pull-idle-alarms-range', [HistoricalDataController::class, 'pullIdleAlarmsDateRange']);
+        Route::get('/historical-data-status', [HistoricalDataController::class, 'status']);
+    });
+
+    Route::prefix('gps-tracks')->group(function () {
+        Route::post('sync', [GpsTrackController::class, 'sync']);
+    });
 });
 
 // Tracksolid Real-time Webhook Push
